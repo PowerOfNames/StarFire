@@ -1,0 +1,13 @@
+
+
+IncludeDir = {}
+
+
+LibraryDir = {}
+
+
+Library = {}
+
+
+
+
