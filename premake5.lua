@@ -3,7 +3,7 @@ include "Dependencies.lua"
 
 workspace "StarFire"
 	architecture "x86_64"
-	startproject "StarFire"
+	startproject "Sandbox"
 
 	configurations 
 	{
@@ -27,6 +27,7 @@ group "Dependencies"
 group ""
 
 include "StarFire"
+include "Sandbox"
 
 
 
