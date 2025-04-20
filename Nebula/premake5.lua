@@ -1,4 +1,4 @@
-project "Sandbox"
+project "Nebula"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++23"
@@ -11,6 +11,11 @@ project "Sandbox"
 	{
 		"src/**.h",
 		"src/**.cpp"
+	}
+	
+	defines
+	{
+		"_CRT_SECURE_NO_WARNINGS"
 	}
 	
 	includedirs
