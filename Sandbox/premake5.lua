@@ -6,9 +6,6 @@ project "Sandbox"
 
 	targetdir("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
-
-	pchheader "sfpch.h"
-	pchsource "src/sfpch.cpp"
 	
 	files
 	{
@@ -16,14 +13,9 @@ project "Sandbox"
 		"src/**.cpp"
 	}
 	
-	defines
-	{
-		"_CRT_SECURE_NO_WARNINGS"
-	}
-	
 	includedirs
 	{
-		"src"
+		"%{wks.location}/StarFire/src"
 	}
 	
 	links
