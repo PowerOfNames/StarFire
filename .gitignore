@@ -1,0 +1,14 @@
+# binaries
+**/bin/
+**/bin-int/
+
+# VS
+.vs/
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user
+
+# StarFire
+
+
