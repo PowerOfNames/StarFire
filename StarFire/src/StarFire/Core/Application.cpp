@@ -22,7 +22,7 @@ namespace StarFire {
 	{
 		while (m_Running)
 		{
-			std::cout << "Hello World" << std::endl;
+			std::cout << "Hello World from " << m_Specification.Name << "!" << std::endl;
 		}
 	}
 
