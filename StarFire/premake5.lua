@@ -13,7 +13,10 @@ project "StarFire"
 	files
 	{
 		"src/**.h",
-		"src/**.cpp"
+		"src/**.cpp",
+		
+		"vendor/glm/glm/**.hpp",
+		"vendor/glm/glm/**.inl"
 	}
 	
 	defines
@@ -23,7 +26,8 @@ project "StarFire"
 	
 	includedirs
 	{
-		"src"
+		"src",		
+		"%{IncludeDir.glm}"
 	}
 	
 	links

@@ -1,7 +1,6 @@
 #include <StarFire.h>
 #include <StarFire/Core/EntryPoint.h>
 
-
 class NebulaApp : public StarFire::Application
 {
 public:
