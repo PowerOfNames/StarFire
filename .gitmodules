@@ -1,3 +1,7 @@
 [submodule "StarFire/vendor/glm"]
 	path = StarFire/vendor/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "StarFire/vendor/GLFW"]
+	path = StarFire/vendor/GLFW
+	url = https://github.com/PowerOfNames/glfw.git
+	branch = StarFire
