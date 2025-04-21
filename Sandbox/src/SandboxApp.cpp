@@ -1,8 +1,6 @@
 #include <StarFire.h>
 #include <StarFire/Core/EntryPoint.h>
 
-#include <glm/glm.hpp>
-
 class Sandbox : public StarFire::Application
 {
 public:
