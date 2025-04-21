@@ -2,6 +2,7 @@
 #include "StarFire/Core/Application.h"
 
 #include <GLFW/glfw3.h>
+#include <spdlog/spdlog.h>
 
 namespace StarFire {
 
@@ -30,6 +31,16 @@ namespace StarFire {
 			<< GLFW_VERSION_MINOR << "." 
 			<< GLFW_VERSION_REVISION 
 			<< std::endl;
+
+		spdlog::info("Info");
+		spdlog::error("Error");
+		spdlog::warn("Warn");
+		spdlog::critical("Critical");
+		
+		spdlog::debug("Debug");
+		spdlog::set_level(spdlog::level::debug);
+		spdlog::debug("Debug");
+
 		
 		GLFWwindow* m_Window = glfwCreateWindow(640, 480, m_Specification.Name.c_str(), NULL, NULL);
 

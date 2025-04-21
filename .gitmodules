@@ -5,3 +5,6 @@
 	path = StarFire/vendor/GLFW
 	url = https://github.com/PowerOfNames/glfw.git
 	branch = StarFire
+[submodule "StarFire/vendor/spdlog"]
+	path = StarFire/vendor/spdlog
+	url = https://github.com/gabime/spdlog.git
