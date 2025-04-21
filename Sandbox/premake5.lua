@@ -16,7 +16,8 @@ project "Sandbox"
 	includedirs
 	{
 		"%{wks.location}/StarFire/src",		
-		"%{IncludeDir.glm}"
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.spdlog}"
 	}
 	
 	links
