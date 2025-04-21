@@ -18,3 +18,8 @@
 #include <set>
 #include <unordered_set>
 
+
+#ifdef SF_PLATFORM_WINDOWS
+#include <Windows.h>
+#endif
+

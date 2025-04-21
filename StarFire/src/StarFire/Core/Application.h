@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 
+
 #include "StarFire/Core/Core.h"
 
 namespace StarFire {
