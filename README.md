@@ -15,6 +15,12 @@ Visual Studio 2022, C++20, x64
 
 StarFire currently only supports Windows.
 
+## Dependencies
+|Name|Version|Repo|Branch|Commit|
+|---|---|---|---|---|
+|glm|1.x.x|[Github]()|master|'2d4c4b4'|
+|GLFW|3.5.0|[Github]()|StarFire|''|
+
 ## How to Build
 1. Clone the repository. 
   - git clone --recursive https://github.com/PowerOfNames/StarFire or
