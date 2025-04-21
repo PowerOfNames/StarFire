@@ -16,14 +16,14 @@ Visual Studio 2022, C++20, x64
 StarFire currently only supports Windows.
 
 ## Dependencies
-|Name|Version|Repo|Branch|Commit|
-|---|---|---|---|---|
-|glm|1.x.x|[Github]()|master|'2d4c4b4'|
-|GLFW|3.5.0|[Github]()|StarFire|''|
+|Name|Version|Repo|Branch|Commit|Last Updated|
+|---|---|---|---|---|---|
+|[glm](https://github.com/g-truc/glm/tree/2d4c4b4dd31fde06cfffad7915c2b3006402322f)|1.0.1|Original|master|'2d4c4b4'|21.04.2025|
+|[GLFW](https://github.com/PowerOfNames/glfw/tree/06d9a46f5b0bb4ffed91a87411bfa051f03b95f6)|3.5.0|Forked|StarFire|'06d9a46'|21.04.2025|
 
 ## How to Build
 1. Clone the repository. 
   - git clone --recursive https://github.com/PowerOfNames/StarFire or
   - git clone https://github.com/PowerOfNames/StarFire + git submodule update --init
-2. Navigate to /scripts/build and run win-genProjects. You might need to change the respective line in the scripts to whereever you put your premake5.exe
-3. Open the StarFire solution and run. Make sure that VulkanSDK is set correctly as a system path variable.
+2. Navigate to /scripts/build and run win-genProjects. You might need to change the respective line in the scripts if premake5.exe was moved.
+3. Open the StarFire solution. Sandbox is selected as StatUp project by default.
