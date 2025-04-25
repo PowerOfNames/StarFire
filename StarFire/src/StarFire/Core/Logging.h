@@ -1,7 +1,8 @@
 #pragma once
 
-namespace StarFire {
+#include <spdlog/spdlog.h>
 
+namespace StarFire {
 
 
 }

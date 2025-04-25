@@ -1,8 +1,9 @@
 #pragma once
 #include <string>
 
-
 #include "StarFire/Core/Core.h"
+#include "StarFire/Core/LayerStack.h"
+
 
 namespace StarFire {
 	
@@ -19,6 +20,10 @@ namespace StarFire {
 
 		void Run();
 
+
+		void PushOverlay(Layer* overlay);
+		void PushLayer(Layer* layer);
+
 		void Close();
 
 
@@ -27,10 +32,11 @@ namespace StarFire {
 
 	private:
 		ApplicationSpecification m_Specification;
-
-
 		static Application* s_Instance;
+
 		bool m_Running;
+
+		LayerStack m_LayerStack;
 	};
 
 	Application* CreateApplication(int argc, char** argv);

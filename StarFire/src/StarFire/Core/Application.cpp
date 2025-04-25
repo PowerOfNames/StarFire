@@ -46,15 +46,35 @@ namespace StarFire {
 
 		while (m_Running)
 		{
-			std::cout << "Hello World from " << m_Specification.Name << "!" << std::endl;
-			std::cin.get();
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(0.16);
+			}
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnGuiRender();
+			}			
 		}
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
 	}
 
+	void Application::PushOverlay(Layer* overlay)
+	{
+		m_LayerStack.PushOverlay(overlay);
+		overlay->OnAttach();
+	}
+
+	void Application::PushLayer(Layer* layer)
+	{
+		m_LayerStack.PushLayer(layer);
+		layer->OnAttach();
+	}
+
 	void Application::Close()
 	{
-		m_Running = false;
+		m_Running = false;		
 	}
 }
