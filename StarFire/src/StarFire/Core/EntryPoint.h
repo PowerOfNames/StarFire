@@ -5,7 +5,7 @@ extern StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	//StarFire::Log::Init();
+	StarFire::Log::Init();
 
 	//SF_PROFILE_BEGIN_SESSION("Startup", "profiling/StarFireProfile-Startup.json");
 	auto app = StarFire::CreateApplication(argc, argv);
@@ -18,6 +18,8 @@ int main(int argc, char** argv)
 	//SF_PROFILE_BEGIN_SESSION("Shutdown", "profiling/StarFireProfile-Shutdown.json");
 	delete app;
 	//SF_PROFILE_END_SESSION();
+
+	StarFire::Log::Shutdown();
 }
 #endif
 
