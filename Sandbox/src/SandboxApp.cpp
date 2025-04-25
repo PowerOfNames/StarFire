@@ -11,6 +11,13 @@ namespace Sandbox {
 		SandboxApp(const StarFire::ApplicationSpecification& specs)
 			: Application(specs)
 		{
+			SF_TRACE("LogTest: Trace!");
+			SF_INFO("LogTest: Info!");
+			SF_WARN("LogTest: Warn!");
+			SF_ERROR("LogTest: Error!");
+			SF_CRITICAL("LogTest: Critical!");
+			SF_DEBUG("LogTest: Debug!");
+
 			PushLayer(new SandboxLayer());
 		}
 

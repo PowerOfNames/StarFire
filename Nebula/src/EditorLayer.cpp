@@ -11,19 +11,16 @@ namespace Nebula {
 
 	void EditorLayer::OnAttach()
 	{
-		std::cout << "Attached layer " << m_DebugName << "!" << std::endl;
 
 	}
 
 	void EditorLayer::OnDetach()
 	{
-		std::cout << "Detached layer " << m_DebugName << "!" << std::endl;
 
 	}
 
 	void EditorLayer::OnUpdate(double deltaTime)
 	{
-		std::cout << "Hello World from " << m_DebugName << "!" << std::endl;
 		std::cin.get();
 	}
 

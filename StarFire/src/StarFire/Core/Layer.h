@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 namespace StarFire {
 
@@ -15,6 +16,8 @@ namespace StarFire {
 		virtual void OnUpdate(double deltaTime) {};
 		virtual void OnGuiRender() {};
 
+
+		inline std::string_view GetDebugName() { return m_DebugName; }
 	protected:
 		std::string m_DebugName;
 	};
