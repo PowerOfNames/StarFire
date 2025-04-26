@@ -1,6 +1,5 @@
 #pragma once
 #include <StarFire.h>
-#include <StarFire/Events/Event.h>
 
 namespace Sandbox {
 
