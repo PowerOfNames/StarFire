@@ -1,5 +1,6 @@
 #include "SandboxLayer.h"
 
+
 #include <iostream>
 
 namespace Sandbox {
@@ -27,4 +28,10 @@ namespace Sandbox {
 	{
 
 	}	
+
+	void SandboxLayer::OnEvent(StarFire::Event& e)
+	{
+		StarFire::EventDispatcher dispatcher(e);
+
+	}
 }

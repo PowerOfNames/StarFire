@@ -27,6 +27,10 @@ group "Dependencies"
 	include "StarFire/vendor/GLFW"
 group ""
 
+filter {"StarFire/vendor/**.cpp"}
+	warnings "Off"
+filter {}
+
 include "StarFire"
 include "Sandbox"
 include "Nebula"

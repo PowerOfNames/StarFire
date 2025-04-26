@@ -28,5 +28,10 @@ namespace Nebula {
 	{
 
 	}
+
+	void EditorLayer::OnEvent(StarFire::Event& e)
+	{
+		StarFire::EventDispatcher dispatcher(e);
+	}
 	
 }

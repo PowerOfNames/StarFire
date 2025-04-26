@@ -2,6 +2,7 @@
 #include <string>
 
 #include "StarFire/Core/Core.h"
+#include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Core/LayerStack.h"
 
 
@@ -20,6 +21,7 @@ namespace StarFire {
 
 		void Run();
 
+		void OnEvent(Event& e);
 
 		void PushOverlay(Layer* overlay);
 		void PushLayer(Layer* layer);
@@ -31,10 +33,15 @@ namespace StarFire {
 		inline ApplicationSpecification& GetSpecification() { return m_Specification; }
 
 	private:
+		bool OnWindowClose(WindowCloseEvent& e);
+		bool OnWindowResize(WindowResizeEvent& e);
+
+	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;
 
-		bool m_Running;
+		bool m_Running = true;
+		bool m_Minimized = false;
 
 		LayerStack m_LayerStack;
 	};
