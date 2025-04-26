@@ -13,9 +13,7 @@ namespace StarFire {
 
 	void Log::Init()
 	{
-		// Sets the pattern for the logging in the form of: 'color in range' of ['time'] 'logger name': 'message''end of color range'
-		// Color depends on severity of the message
-
+		// %^: start color range; %T:time; %e:ms; %n logger name; %v: message; %$: end color range
 		s_CoreLogger = spdlog::stdout_color_mt("STARFIRE");
 		s_CoreLogger->set_pattern("%^[%T%e] [%n] %v%$");
 		s_CoreLogger->set_level(spdlog::level::level_enum::trace);

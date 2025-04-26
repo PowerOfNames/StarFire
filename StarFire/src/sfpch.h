@@ -18,6 +18,7 @@
 #include <set>
 #include <unordered_set>
 
+#include "StarFire/Core/Logging.h"
 
 #ifdef SF_PLATFORM_WINDOWS
 #include <Windows.h>

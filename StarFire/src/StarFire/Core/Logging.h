@@ -42,7 +42,7 @@ namespace StarFire {
 #define SF_CORE_ERROR(...)	SPDLOG_LOGGER_ERROR(StarFire::Log::GetCoreLogger(), __VA_ARGS__)
 #define SF_CORE_CRITICAL(...)	SPDLOG_LOGGER_CRITICAL(StarFire::Log::GetCoreLogger(), __VA_ARGS__)
 
-#define SF_CORE_DEBUG(...)	SPDLOG_LOGGER_DEBUG(StarFire::Log::GetCoreDebugLogger(), __VA_ARGS__)
+#define SF_CORE_DEBUG_LOG(...)	SPDLOG_LOGGER_DEBUG(StarFire::Log::GetCoreDebugLogger(), __VA_ARGS__)
 
 
 #define SF_TRACE(...)	SPDLOG_LOGGER_TRACE(StarFire::Log::GetClientLogger(), __VA_ARGS__)
@@ -51,7 +51,7 @@ namespace StarFire {
 #define SF_ERROR(...)	SPDLOG_LOGGER_ERROR(StarFire::Log::GetClientLogger(), __VA_ARGS__)
 #define SF_CRITICAL(...)	SPDLOG_LOGGER_CRITICAL(StarFire::Log::GetClientLogger(), __VA_ARGS__)
 
-#define SF_DEBUG(...)	SPDLOG_LOGGER_DEBUG(StarFire::Log::GetClientDebugLogger(), __VA_ARGS__)
+#define SF_DEBUG_LOG(...)	SPDLOG_LOGGER_DEBUG(StarFire::Log::GetClientDebugLogger(), __VA_ARGS__)
 
 
 

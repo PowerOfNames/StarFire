@@ -14,6 +14,8 @@ namespace Nebula {
 		virtual void OnUpdate(double deltaTime) override;
 		virtual void OnGuiRender() override;
 
+		virtual void OnEvent(StarFire::Event& e) override;
+
 	private:
 
 	};

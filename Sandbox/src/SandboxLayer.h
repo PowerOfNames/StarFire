@@ -1,5 +1,6 @@
 #pragma once
 #include <StarFire.h>
+#include <StarFire/Events/Event.h>
 
 namespace Sandbox {
 
@@ -13,6 +14,8 @@ namespace Sandbox {
 		virtual void OnDetach() override;
 		virtual void OnUpdate(double deltaTime) override;
 		virtual void OnGuiRender() override;
+
+		virtual void OnEvent(StarFire::Event& e) override;
 
 	private:
 

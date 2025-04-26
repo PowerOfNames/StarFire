@@ -1,13 +1,12 @@
 #include "sfpch.h"
 #include "StarFire/Core/Application.h"
 
-#include "StarFire/Core/Logging.h"
 
 #include <GLFW/glfw3.h>
 
 namespace StarFire {
 
-
+	
 	Application* Application::s_Instance = nullptr;
 
 	Application::Application(const ApplicationSpecification& specs)
@@ -19,7 +18,7 @@ namespace StarFire {
 		SF_CORE_WARN("LogTest: Warn!");
 		SF_CORE_ERROR("LogTest: Error!");
 		SF_CORE_CRITICAL("LogTest: Critical!");
-		SF_CORE_DEBUG("LogTest: Debug!");
+		SF_CORE_DEBUG_LOG("LogTest: Debug!");
 
 		s_Instance = this;
 		SF_CORE_INFO("Application: Finished initialization.");
@@ -44,6 +43,11 @@ namespace StarFire {
 		SF_CORE_INFO("Starting main loop...");
 		while (m_Running)
 		{
+			if (m_Minimized)
+			{
+				SF_CORE_INFO("Application minimized");
+				return;
+			}
 
 			for (Layer* layer : m_LayerStack)
 			{
@@ -58,6 +62,39 @@ namespace StarFire {
 		SF_CORE_INFO("Ending main loop...");
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
+	}
+
+	void Application::OnEvent(Event& e)
+	{
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
+		dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
+
+		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+		{
+			(*it)->OnEvent(e);
+			if (e.Handled)
+				break;
+		}		
+	}
+
+	bool Application::OnWindowClose(WindowCloseEvent& e)
+	{
+		m_Running = false;
+		return true;
+	}
+
+	bool Application::OnWindowResize(WindowResizeEvent& e)
+	{
+		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+		{
+			m_Minimized = true;
+			return false;
+		}		
+		m_Minimized = false;
+		SF_CORE_DEBUG_LOG(" to {};{}", e.GetWidth(), e.GetHeight());
+
+		return false;
 	}
 
 	void Application::PushOverlay(Layer* overlay)

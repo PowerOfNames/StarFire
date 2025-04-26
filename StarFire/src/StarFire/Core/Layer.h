@@ -1,4 +1,5 @@
 #pragma once
+#include "StarFire/Events/Event.h"
 
 #include <string>
 #include <string_view>
@@ -16,6 +17,7 @@ namespace StarFire {
 		virtual void OnUpdate(double deltaTime) {};
 		virtual void OnGuiRender() {};
 
+		virtual void OnEvent(Event& event) {};
 
 		inline std::string_view GetDebugName() { return m_DebugName; }
 	protected:

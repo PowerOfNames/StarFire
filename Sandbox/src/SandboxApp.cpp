@@ -16,7 +16,7 @@ namespace Sandbox {
 			SF_WARN("LogTest: Warn!");
 			SF_ERROR("LogTest: Error!");
 			SF_CRITICAL("LogTest: Critical!");
-			SF_DEBUG("LogTest: Debug!");
+			SF_DEBUG_LOG("LogTest: Debug!");
 
 			PushLayer(new SandboxLayer());
 		}
