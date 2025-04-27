@@ -23,7 +23,7 @@ namespace StarFire {
 		}
 
 		EVENT_CLASS_TYPE(MOUSE_MOVE)
-		EVENT_CLASS_CATEGORY(MOUSE | INPUT)
+		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::INPUT)
 
 	private:
 		float m_MouseX, m_MouseY;
@@ -48,7 +48,7 @@ namespace StarFire {
 		}
 
 		EVENT_CLASS_TYPE(MOUSE_SCROLLED)
-			EVENT_CLASS_CATEGORY(MOUSE | INPUT)
+		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::INPUT)
 
 	private:
 		float m_OffsetX, m_OffsetY;
@@ -59,7 +59,7 @@ namespace StarFire {
 	public:
 		inline int GetKeyCode() const { return m_Button; }
 
-		EVENT_CLASS_CATEGORY(MOUSE | MOUSE_BUTTON | INPUT)
+		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::MOUSE_BUTTON | EventCategory::INPUT)
 	protected:
 		MouseButtonEvent(int mouseCode)
 			: m_Button(mouseCode)
@@ -69,7 +69,7 @@ namespace StarFire {
 		int m_Button;
 	};
 
-	class MousePressEvent : MouseButtonEvent
+	class MousePressEvent : public MouseButtonEvent
 	{
 	public:
 		MousePressEvent(int mouseCode, int repeatCount)

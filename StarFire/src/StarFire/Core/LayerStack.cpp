@@ -10,7 +10,6 @@ namespace StarFire {
 	{
 		for (Layer* layer : m_Layers)
 		{
-			layer->OnDetach();
 			delete layer;
 		}
 	}
@@ -19,6 +18,7 @@ namespace StarFire {
 	void LayerStack::PushLayer(Layer* layer)
 	{
 		m_Layers.emplace(m_Layers.begin() + m_LayerInsertIndex, layer);
+		layer->OnAttach();
 		m_LayerInsertIndex++;
 	}
 
@@ -38,6 +38,7 @@ namespace StarFire {
 	void LayerStack::PushOverlay(Layer* overlay)
 	{
 		m_Layers.emplace_back(overlay);
+		overlay->OnAttach();
 	}
 
 

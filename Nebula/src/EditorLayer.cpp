@@ -6,7 +6,6 @@ namespace Nebula {
 
 	EditorLayer::EditorLayer() : StarFire::Layer("Nebula - EditorLayer")
 	{
-
 	}
 
 	void EditorLayer::OnAttach()
@@ -21,7 +20,7 @@ namespace Nebula {
 
 	void EditorLayer::OnUpdate(double deltaTime)
 	{
-		std::cin.get();
+
 	}
 
 	void EditorLayer::OnGuiRender()

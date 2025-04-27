@@ -10,7 +10,7 @@ namespace StarFire {
 	public:
 		inline int GetKeyCode() const { return m_KeyCode; }
 
-		EVENT_CLASS_CATEGORY(KEYBOARD | INPUT)
+		EVENT_CLASS_CATEGORY(EventCategory::KEYBOARD | EventCategory::INPUT)
 	protected:
 		KeyEvent(int keyCode)
 			: m_KeyCode(keyCode)
@@ -20,10 +20,10 @@ namespace StarFire {
 		int m_KeyCode;
 	};
 
-	class KeyPressEvent : KeyEvent
+	class KeyPressedEvent : public KeyEvent
 	{
 	public:
-		KeyPressEvent(int keyCode, int repeatCount)
+		KeyPressedEvent(int keyCode, int repeatCount)
 			: KeyEvent(keyCode), m_RepeatCount(repeatCount)
 		{
 		}

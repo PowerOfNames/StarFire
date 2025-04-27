@@ -1,10 +1,12 @@
 #pragma once
-#include <string>
-
-#include "StarFire/Core/Core.h"
 #include "StarFire/Events/ApplicationEvent.h"
+#include "StarFire/Core/Core.h"
 #include "StarFire/Core/LayerStack.h"
+#include "StarFire/Core/Window.h"
 
+
+#include <memory>
+#include <string>
 
 namespace StarFire {
 	
@@ -26,11 +28,14 @@ namespace StarFire {
 		void PushOverlay(Layer* overlay);
 		void PushLayer(Layer* layer);
 
+		//Call from the code to stop the update loop
 		void Close();
 
 
 		inline static Application* Get() { return s_Instance; }
 		inline ApplicationSpecification& GetSpecification() { return m_Specification; }
+
+		inline Window* GetMainWindowPtr() const { return m_MainWindow.get(); }
 
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
@@ -39,6 +44,8 @@ namespace StarFire {
 	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;
+		std::unique_ptr<Window> m_MainWindow = nullptr;
+
 
 		bool m_Running = true;
 		bool m_Minimized = false;

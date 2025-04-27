@@ -21,7 +21,7 @@ namespace Sandbox {
 
 	void SandboxLayer::OnUpdate(double deltaTime)
 	{
-		std::cin.get();
+
 	}
 
 	void SandboxLayer::OnGuiRender()

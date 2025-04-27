@@ -1,4 +1,7 @@
 #pragma once
+#ifdef SF_DEBUG
+#include <iostream>
+#endif
 
 #ifdef SF_PLATFORM_WINDOWS
 extern StarFire::Application* StarFire::CreateApplication(int argc, char** argv);
@@ -20,6 +23,10 @@ int main(int argc, char** argv)
 	//SF_PROFILE_END_SESSION();
 
 	StarFire::Log::Shutdown();
+
+#ifdef SF_DEBUG
+	std::cin.get();
+#endif
 }
 #endif
 
