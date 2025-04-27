@@ -1,9 +1,6 @@
 #include "sfpch.h"
 #include "StarFire/Core/Application.h"
 
-
-#include <GLFW/glfw3.h>
-
 namespace StarFire {
 
 	
@@ -21,49 +18,72 @@ namespace StarFire {
 		SF_CORE_DEBUG_LOG("LogTest: Debug!");
 
 		s_Instance = this;
+
+
+		WindowSpecification windowSpecs{};
+		m_MainWindow = Window::Create(windowSpecs);
+		SF_CORE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
+		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
+		m_MainWindow->Init();
+
+
 		SF_CORE_INFO("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
-	}
-
+		m_MainWindow->Close();
+		//LayerStack is cleaned automatically
+	}	
 
 	void Application::Run()
-	{
-		if (!glfwInit())
-		{
-			// Handle initialization failure
-			std::cout << "Failed to initialize GLFW" << std::endl;
-			SF_CORE_ERROR("Failed to initialize GLFW!");
-		}
-		SF_CORE_INFO("Initialized GLFW (Version {}.{}.{})", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION);
-				
-		GLFWwindow* m_Window = glfwCreateWindow(640, 480, m_Specification.Name.c_str(), NULL, NULL);
-
+	{		
 		SF_CORE_INFO("Starting main loop...");
 		while (m_Running)
 		{
-			if (m_Minimized)
+			if (!m_Minimized)
+			{
+				for (Layer* layer : m_LayerStack)
+				{
+					layer->OnUpdate(0.16);
+				}
+
+				for (Layer* layer : m_LayerStack)
+				{
+					layer->OnGuiRender();
+				}
+			
+				m_MainWindow->OnUpdate();
+			}
+			else
 			{
 				SF_CORE_INFO("Application minimized");
-				return;
 			}
 
-			for (Layer* layer : m_LayerStack)
-			{
-				layer->OnUpdate(0.16);
-			}
-
-			for (Layer* layer : m_LayerStack)
-			{
-				layer->OnGuiRender();
-			}			
+			m_MainWindow->PollEvents();
 		}
-		SF_CORE_INFO("Ending main loop...");
-		glfwDestroyWindow(m_Window);
-		glfwTerminate();
+		SF_CORE_INFO("Ending main loop...");		
 	}
 
+	void Application::PushOverlay(Layer* overlay)
+	{
+		SF_CORE_WARN("Pushing {}", overlay->GetDebugName());
+
+		m_LayerStack.PushOverlay(overlay);
+	}
+
+	void Application::PushLayer(Layer* layer)
+	{
+		SF_CORE_WARN("Pushing {}", layer->GetDebugName());
+
+		m_LayerStack.PushLayer(layer);
+	}
+
+	void Application::Close()
+	{
+		SF_CORE_INFO("Stopping update loop...");
+		m_Running = false;
+	}
+	
 	void Application::OnEvent(Event& e)
 	{
 		EventDispatcher dispatcher(e);
@@ -75,12 +95,13 @@ namespace StarFire {
 			(*it)->OnEvent(e);
 			if (e.Handled)
 				break;
-		}		
+		}
 	}
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
-		m_Running = false;
+		SF_CORE_DEBUG_LOG("Closing window...");
+		Close();
 		return true;
 	}
 
@@ -90,32 +111,10 @@ namespace StarFire {
 		{
 			m_Minimized = true;
 			return false;
-		}		
+		}
 		m_Minimized = false;
-		SF_CORE_DEBUG_LOG(" to {};{}", e.GetWidth(), e.GetHeight());
+		SF_CORE_DEBUG_LOG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
 
 		return false;
-	}
-
-	void Application::PushOverlay(Layer* overlay)
-	{
-		SF_CORE_WARN("Pushing {}", overlay->GetDebugName());
-
-		m_LayerStack.PushOverlay(overlay);
-		overlay->OnAttach();
-	}
-
-	void Application::PushLayer(Layer* layer)
-	{
-		SF_CORE_WARN("Pushing {}", layer->GetDebugName());
-
-		m_LayerStack.PushLayer(layer);
-		layer->OnAttach();
-	}
-
-	void Application::Close()
-	{
-		SF_CORE_INFO("Closing...");
-		m_Running = false;		
 	}
 }

@@ -35,6 +35,6 @@ namespace StarFire {
 
 	void Log::Shutdown()
 	{
-		spdlog::shutdown();
+		spdlog::shutdown();		
 	}
 }
