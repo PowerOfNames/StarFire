@@ -21,7 +21,6 @@ namespace Sandbox {
 
 	void SandboxLayer::OnUpdate(double deltaTime)
 	{
-		SF_TRACE("Frame took {}ms", deltaTime);
 	}
 
 	void SandboxLayer::OnGuiRender()

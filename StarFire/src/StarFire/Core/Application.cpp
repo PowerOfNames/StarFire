@@ -42,8 +42,9 @@ namespace StarFire {
 		Utils::Timer timer;
 		while (m_Running)
 		{
-			double deltaTime = timer.TimestampMilli();
-			timer.ResetTimestamp();
+			double deltaTime = timer.Timestamp();
+
+
 			if (!m_Minimized)
 			{
 				for (Layer* layer : m_LayerStack)
