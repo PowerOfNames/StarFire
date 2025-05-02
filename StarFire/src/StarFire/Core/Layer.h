@@ -1,4 +1,5 @@
 #pragma once
+#include "StarFire/Core/Timestep.h"
 #include "StarFire/Events/Event.h"
 
 #include <string>
@@ -14,7 +15,7 @@ namespace StarFire {
 
 		virtual void OnAttach() {};
 		virtual void OnDetach() {};
-		virtual void OnUpdate(double deltaTime) {};
+		virtual void OnUpdate(Timestep deltaTime) {};
 		virtual void OnGuiRender() {};
 
 		virtual void OnEvent(Event& event) {};

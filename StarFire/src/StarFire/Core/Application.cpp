@@ -1,5 +1,7 @@
 #include "sfpch.h"
 #include "StarFire/Core/Application.h"
+#include "StarFire/Core/Timestep.h"
+#include "StarFire/Utility/Timer.h"
 
 namespace StarFire {
 
@@ -38,13 +40,17 @@ namespace StarFire {
 	void Application::Run()
 	{		
 		SF_CORE_INFO("Starting main loop...");
+		Utils::Timer timer;
 		while (m_Running)
 		{
+			m_DeltaTimeInS = timer.Timestamp();
+
+
 			if (!m_Minimized)
 			{
 				for (Layer* layer : m_LayerStack)
 				{
-					layer->OnUpdate(0.16);
+					layer->OnUpdate(Timestep(m_DeltaTimeInS));
 				}
 
 				for (Layer* layer : m_LayerStack)
