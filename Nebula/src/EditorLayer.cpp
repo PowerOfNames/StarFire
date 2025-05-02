@@ -20,7 +20,6 @@ namespace Nebula {
 
 	void EditorLayer::OnUpdate(double deltaTime)
 	{
-
 	}
 
 	void EditorLayer::OnGuiRender()
@@ -32,5 +31,5 @@ namespace Nebula {
 	{
 		StarFire::EventDispatcher dispatcher(e);
 	}
-	
+
 }
