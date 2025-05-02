@@ -10,21 +10,18 @@ namespace Nebula {
 
 	void EditorLayer::OnAttach()
 	{
-
 	}
 
 	void EditorLayer::OnDetach()
 	{
-
 	}
 
-	void EditorLayer::OnUpdate(double deltaTime)
-	{
+	void EditorLayer::OnUpdate(StarFire::Timestep deltaTime)
+	{		
 	}
 
 	void EditorLayer::OnGuiRender()
 	{
-
 	}
 
 	void EditorLayer::OnEvent(StarFire::Event& e)

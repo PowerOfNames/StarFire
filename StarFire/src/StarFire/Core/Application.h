@@ -46,6 +46,7 @@ namespace StarFire {
 		static Application* s_Instance;
 		std::unique_ptr<Window> m_MainWindow = nullptr;
 
+		double m_DeltaTimeInS = 0.0;
 
 		bool m_Running = true;
 		bool m_Minimized = false;
