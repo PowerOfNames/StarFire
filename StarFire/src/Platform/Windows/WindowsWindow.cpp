@@ -1,7 +1,7 @@
 #include "sfpch.h"
 #include "Platform/Windows/WindowsWindow.h"
 
-#include "StarFire/Core/Core.h"
+#include "StarFire/Core/Assert.h"
 #include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Events/KeyEvent.h"
 #include "StarFire/Events/MouseEvent.h"

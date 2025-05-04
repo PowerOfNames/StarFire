@@ -5,11 +5,9 @@
 #include "StarFire/Core/Window.h"
 
 
-#include <memory>
 #include <string>
 
 namespace StarFire {
-	
 	struct ApplicationSpecification
 	{
 		std::string Name;
@@ -44,7 +42,8 @@ namespace StarFire {
 	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;
-		std::unique_ptr<Window> m_MainWindow = nullptr;
+
+		Scope<Window> m_MainWindow = nullptr;
 
 		double m_DeltaTimeInS = 0.0;
 
