@@ -1,11 +1,13 @@
 #pragma once
 #include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Core/Core.h"
+#include "StarFire/Events/EventQueue.h"
 #include "StarFire/Core/LayerStack.h"
 #include "StarFire/Core/Window.h"
 
 
 #include <string>
+#include <atomic>
 
 namespace StarFire {
 	struct ApplicationSpecification
@@ -21,7 +23,7 @@ namespace StarFire {
 
 		void Run();
 
-		void OnEvent(Event& e);
+		void OnEvent(Scope<Event> e);
 
 		void PushOverlay(Layer* overlay);
 		void PushLayer(Layer* layer);
@@ -36,18 +38,23 @@ namespace StarFire {
 		inline Window* GetMainWindowPtr() const { return m_MainWindow.get(); }
 
 	private:
+		void AppLoop();
+		void HandleUserInput();
+
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
 
 	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;
-
+				
 		Scope<Window> m_MainWindow = nullptr;
+		Scope<EventQueue> m_EventQueue = nullptr;
+
 
 		double m_DeltaTimeInS = 0.0;
 
-		bool m_Running = true;
+		std::atomic_bool m_Running = true;
 		bool m_Minimized = false;
 		LayerStack m_LayerStack;
 	};

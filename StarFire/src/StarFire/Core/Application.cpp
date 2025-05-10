@@ -4,6 +4,8 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
+#include <thread>
+
 namespace StarFire {
 
 	
@@ -22,6 +24,8 @@ namespace StarFire {
 
 		s_Instance = this;
 
+
+		m_EventQueue = CreateScope<EventQueue>(100);
 		RefRegistry::Init();
 
 		WindowSpecification windowSpecs{};
@@ -40,37 +44,6 @@ namespace StarFire {
 
 		RefRegistry::Get()->PrintRegister();
 		//LayerStack is cleaned automatically
-	}	
-
-	void Application::Run()
-	{		
-		SF_CORE_INFO("Starting main loop...");
-		Utils::Timer timer;
-		while (m_Running)
-		{
-			m_DeltaTimeInS = timer.Timestamp();
-			if (!m_Minimized)
-			{
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnUpdate(Timestep(m_DeltaTimeInS));
-				}
-
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnGuiRender();
-				}
-			
-				m_MainWindow->OnUpdate();
-			}
-			else
-			{
-				SF_CORE_INFO("Application minimized");
-			}
-
-			m_MainWindow->PollEvents();
-		}
-		SF_CORE_INFO("Ending main loop...");		
 	}
 
 	void Application::PushOverlay(Layer* overlay)
@@ -92,20 +65,74 @@ namespace StarFire {
 		SF_CORE_INFO("Stopping update loop...");
 		m_Running = false;
 	}
-	
-	void Application::OnEvent(Event& e)
-	{
-		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
-		dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
 
-		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+	void Application::Run()
+	{		
+		SF_CORE_INFO("Starting main loop...");
+
+		//temp
+		std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
+		while (m_Running)
+		{			
+			m_MainWindow->PollEvents();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+
+		appThread.join();
+		SF_CORE_INFO("Ending main loop...");		
+	}
+
+	void Application::AppLoop()
+	{
+		Utils::Timer timer;
+		while (m_Running)
 		{
-			(*it)->OnEvent(e);
-			if (e.Handled)
-				break;
+			m_DeltaTimeInS = timer.Timestamp();
+			if (!m_Minimized)
+			{
+				HandleUserInput();
+
+				for (Layer* layer : m_LayerStack)
+				{
+					layer->OnUpdate(Timestep(m_DeltaTimeInS));
+				}
+
+				for (Layer* layer : m_LayerStack)
+				{
+					layer->OnGuiRender();
+				}
+
+				m_MainWindow->OnUpdate();
+			}
+			else
+			{
+				SF_CORE_INFO("Application minimized");
+			}
 		}
 	}
+
+	void Application::HandleUserInput()
+	{
+		Scope<Event> e;
+		while (m_EventQueue->Pop(e))
+		{
+			EventDispatcher dispatcher(*(e.get()));
+			dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
+			dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
+
+			for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+			{
+				(*it)->OnEvent(*(e.get()));
+				if ((*(e.get())).Handled)
+					break;
+			}
+		}
+	}
+	
+	void Application::OnEvent(Scope<Event> e)
+	{
+		m_EventQueue->Push(std::move(e));
+	}	
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
