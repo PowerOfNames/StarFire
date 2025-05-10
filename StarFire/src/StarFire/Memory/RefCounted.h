@@ -9,36 +9,43 @@
 namespace StarFire {
 
 	
-	template<typename Derived>
-	class RefCounted
+	template<typename T>
+	class RefCounted : public std::enable_shared_from_this<T>
 	{
 	public:
 		~RefCounted()
 		{
 			s_RefCount.fetch_add(-1);
-			SF_CORE_INFO("RefCount removed: {}", static_cast<uint64_t>(s_RefCount.load()));
-			if (static_cast<uint64_t>(s_RefCount.load() == 0))
-				RefRegistry::Get()->Unregister(typeid(Derived));
+			std::lock_guard<std::mutex> lock(m_Mutex);
+			if (static_cast<uint64_t>(s_RefCount.load()) == 0)
+				RefRegistry::Get()->Unregister(typeid(T));
 		}
 
-		//template<typename T>
-		//std::shared_ptr<T> As()
-		//{
-		//	return std::dynamic_pointer_cast<T>(shared_from_this());
-		//}
+		template<typename Derived>
+		std::enable_if_t<std::is_base_of_v<T, Derived>, std::shared_ptr<Derived>> As()
+		{
+			return std::dynamic_pointer_cast<Derived>(this->shared_from_this());
+		}
+
+		std::shared_ptr<T> GetPtr()
+		{
+			return this->shared_from_this();
+		}
 		
 	protected:
 		RefCounted()
 		{
 			s_RefCount.fetch_add(1);
-			SF_CORE_INFO("RefCount added: {}", static_cast<uint64_t>(s_RefCount.load()));
+			std::lock_guard<std::mutex> lock(m_Mutex);
 			if (static_cast<uint64_t>(s_RefCount.load() == 1))
-				RefRegistry::Get()->Register(typeid(Derived), &s_RefCount);
+				RefRegistry::Get()->Register(typeid(T), &s_RefCount);
 		}
-		RefCounted<Derived>(const RefCounted<Derived>&) = default;
-		RefCounted<Derived>& operator=(const RefCounted<Derived>&) = default;
+		RefCounted<T>(const RefCounted<T>&) = default;
+		RefCounted<T>& operator=(const RefCounted<T>&) = default;
 
 	private:
 		inline static std::atomic<uint64_t> s_RefCount = 0;
+
+		std::mutex m_Mutex;
 	};
 }

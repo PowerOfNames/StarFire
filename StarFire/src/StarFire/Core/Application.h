@@ -49,7 +49,6 @@ namespace StarFire {
 
 		bool m_Running = true;
 		bool m_Minimized = false;
-
 		LayerStack m_LayerStack;
 	};
 

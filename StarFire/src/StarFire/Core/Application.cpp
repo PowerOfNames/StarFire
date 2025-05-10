@@ -4,7 +4,6 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
-
 namespace StarFire {
 
 	
@@ -31,6 +30,7 @@ namespace StarFire {
 		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
 		m_MainWindow->Init();
 
+		RefRegistry::Get()->PrintRegister();
 
 		SF_CORE_INFO("Application: Finished initialization.");
 	}
