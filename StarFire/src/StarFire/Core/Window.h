@@ -1,5 +1,6 @@
 #pragma once
 #include "StarFire/Events/Event.h"
+#include "StarFire/Core/Core.h"
 
 #include <memory>
 
@@ -66,6 +67,6 @@ namespace StarFire {
 		virtual void* GetNativeWindow() const = 0;
 
 
-		static std::unique_ptr<Window> Create(const WindowSpecification& specs = WindowSpecification());
+		static Scope<Window> Create(const WindowSpecification& specs = WindowSpecification());
 	};
 }

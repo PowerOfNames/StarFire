@@ -1,6 +1,7 @@
 #include "sfpch.h"
 #include "StarFire/Core/Application.h"
 #include "StarFire/Core/Timestep.h"
+#include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
 namespace StarFire {
@@ -21,6 +22,7 @@ namespace StarFire {
 
 		s_Instance = this;
 
+		RefRegistry::Init();
 
 		WindowSpecification windowSpecs{};
 		m_MainWindow = Window::Create(windowSpecs);
@@ -28,12 +30,15 @@ namespace StarFire {
 		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
 		m_MainWindow->Init();
 
+		RefRegistry::Get()->PrintRegister();
 
 		SF_CORE_INFO("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
 		m_MainWindow->Close();
+
+		RefRegistry::Get()->PrintRegister();
 		//LayerStack is cleaned automatically
 	}	
 
@@ -44,8 +49,6 @@ namespace StarFire {
 		while (m_Running)
 		{
 			m_DeltaTimeInS = timer.Timestamp();
-
-
 			if (!m_Minimized)
 			{
 				for (Layer* layer : m_LayerStack)
