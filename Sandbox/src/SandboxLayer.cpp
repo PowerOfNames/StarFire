@@ -18,6 +18,7 @@ namespace Sandbox {
 
 	void SandboxLayer::OnUpdate(StarFire::Timestep deltaTime)
 	{
+		SF_INFO("OnUpdate");
 	}
 
 	void SandboxLayer::OnGuiRender()

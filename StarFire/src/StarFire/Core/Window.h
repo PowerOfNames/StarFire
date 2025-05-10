@@ -39,7 +39,7 @@ namespace StarFire {
 	class Window
 	{
 	public:
-		using EventCallbackFN = std::function<void(Event&)>;
+		using EventCallbackFN = std::function<void(Scope<Event>)>;
 		virtual ~Window() = default;
 
 		virtual void Init() = 0;

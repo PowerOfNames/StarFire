@@ -49,7 +49,7 @@ namespace StarFire {
 		}
 
 		EVENT_CLASS_TYPE(FRAMEBUFFER_RESIZE)
-			EVENT_CLASS_CATEGORY(EventCategory::APPLICATION)
+		EVENT_CLASS_CATEGORY(EventCategory::APPLICATION)
 
 	private:
 		uint32_t m_Width, m_Height;

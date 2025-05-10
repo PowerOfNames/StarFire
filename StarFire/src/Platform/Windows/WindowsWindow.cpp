@@ -67,8 +67,8 @@ namespace StarFire{
 			glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-					WindowCloseEvent event;
-					data.EventCallback(event);			
+					Scope<Event> e = CreateScope<WindowCloseEvent>();
+					data.EventCallback(std::move(e));			
 				});
 
 			//In screen coordinates
@@ -78,8 +78,8 @@ namespace StarFire{
 					*data.Width = width;
 					*data.Height = height;
 					
-					WindowResizeEvent event(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-					data.EventCallback(event);
+					Scope<Event> e = CreateScope<WindowResizeEvent>(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+					data.EventCallback(std::move(e));
 				});
 
 			//In pixels
@@ -87,8 +87,8 @@ namespace StarFire{
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 
-					FramebufferResizeEvent event(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-					data.EventCallback(event);
+					Scope<Event> e = CreateScope<FramebufferResizeEvent>(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+					data.EventCallback(std::move(e));
 				});
 
 			//Key event callbacks
@@ -100,20 +100,20 @@ namespace StarFire{
 					{
 						case GLFW_PRESS:
 						{
-							KeyPressedEvent event(key, 0);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<KeyPressedEvent>(key, 0);
+							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_RELEASE:
 						{
-							KeyReleasedEvent event(key);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<KeyReleasedEvent>(key);
+							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_REPEAT:
 						{
-							KeyPressedEvent event(key, 1);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<KeyPressedEvent>(key, 1);
+							data.EventCallback(std::move(e));
 							break;
 						}
 					}
@@ -123,8 +123,8 @@ namespace StarFire{
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 					
-					KeyTypedEvent event(keycode);
-					data.EventCallback(event);
+					Scope<Event> e = CreateScope<KeyTypedEvent>(keycode);
+					data.EventCallback(std::move(e));
 				});
 
 			//Mouse event callbacks
@@ -133,8 +133,8 @@ namespace StarFire{
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 
-					MouseMoveEvent event(static_cast<float>(xPos), static_cast<float>(yPos));
-					data.EventCallback(event);
+					Scope<Event> e = CreateScope<MouseMoveEvent>(static_cast<float>(xPos), static_cast<float>(yPos));
+					data.EventCallback(std::move(e));
 				});
 
 			glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods)
@@ -145,20 +145,20 @@ namespace StarFire{
 					{
 						case GLFW_PRESS:
 						{
-							MousePressEvent event(button, 0);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<MousePressEvent>(button, 0);
+							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_RELEASE:
 						{
-							MouseReleasedEvent event(button);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<MouseReleasedEvent>(button);
+							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_REPEAT:
 						{
-							MousePressEvent event(button, 1);
-							data.EventCallback(event);
+							Scope<Event> e = CreateScope<MousePressEvent>(button, 1);
+							data.EventCallback(std::move(e));
 							break;
 						}
 					}
@@ -168,8 +168,8 @@ namespace StarFire{
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 					
-					MouseScrolledEvent event(static_cast<float>(xOffset), static_cast<float>(yOffset));
-					data.EventCallback(event);
+					Scope<Event> e = CreateScope<MouseScrolledEvent>(static_cast<float>(xOffset), static_cast<float>(yOffset));
+					data.EventCallback(std::move(e));
 				});
 
 			//TODO: Joystick

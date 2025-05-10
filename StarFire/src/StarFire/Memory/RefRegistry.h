@@ -23,7 +23,7 @@ namespace StarFire {
 				
 		inline static RefRegistry* Get()
 		{
-			SF_CORE_ASSERT(s_Instance != nullptr, "Registry was not created yet Application needs to call Init first!");
+			SF_CORE_ASSERT(s_Instance != nullptr, "Registry was not created yet! Application needs to call Init first!");
 			return s_Instance.get(); 
 		}
 

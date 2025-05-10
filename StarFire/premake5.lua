@@ -16,7 +16,7 @@ project "StarFire"
 		"src/**.cpp",
 		
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl",
+		"vendor/glm/glm/**.inl"
 	}
 	
 	defines
@@ -30,7 +30,8 @@ project "StarFire"
 		"src",		
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.concurrentqueue}"
 	}
 	
 	links
