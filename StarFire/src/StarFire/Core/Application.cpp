@@ -79,7 +79,7 @@ namespace StarFire {
 		}
 
 		appThread.join();
-		SF_CORE_INFO("Ending main loop...");		
+		SF_CORE_INFO("Ending main loop...");	
 	}
 
 	void Application::AppLoop()
