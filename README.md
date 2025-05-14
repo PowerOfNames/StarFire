@@ -21,7 +21,7 @@ StarFire currently only supports Windows.
 |[glm](https://github.com/g-truc/glm/tree/2d4c4b4dd31fde06cfffad7915c2b3006402322f)|1.0.1|Original|master|'2d4c4b4'|21.04.2025|StarFire;Aurora;Nebula;Sandbox;
 |[GLFW](https://github.com/PowerOfNames/glfw/tree/06d9a46f5b0bb4ffed91a87411bfa051f03b95f6)|3.5.0|Forked|StarFire|'06d9a46'|21.04.2025|StarFire;Aurora
 |[spdlog](https://github.com/gabime/spdlog/tree/847db3375f35dca23e45f9daf7ad3c7b19027f8b)|1.25.2|Original|v1.x|'847db33'|21.04.2025|StarFire;Nebula;Sandbox
-|[concurrentqueue](https://github.com/cameron314/concurrentqueue/tree/24b78782bd6ca5a5853ef46917708806112dc142)|1.0.4|Original|'24b7878'|14.05.2025|StarFire
+|[concurrentqueue](https://github.com/cameron314/concurrentqueue/tree/24b78782bd6ca5a5853ef46917708806112dc142)|1.0.4|Original|master|'24b7878'|14.05.2025|StarFire
 
 Disclaimer: The branches in GLFW were a test. There is no difference between the premake5 files in this project and the old engine [Povox](https://github.com/PowerOfNames/Povox).
 
