@@ -31,9 +31,12 @@ filter {"StarFire/vendor/**.cpp"}
 	warnings "Off"
 filter {}
 
-include "StarFire"
-include "Sandbox"
-include "Nebula"
+group "Core"
+	include "StarFire"
+	include "Aurora"
+	include "Sandbox"
+	include "Nebula"
+group ""
 
 
 

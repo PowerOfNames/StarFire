@@ -1,4 +1,4 @@
-project "StarFire"
+project "Aurora"
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++23"
@@ -7,12 +7,10 @@ project "StarFire"
 	targetdir("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
-	pchheader "sfpch.h"
-	pchsource "src/sfpch.cpp"
 	
 	files
 	{
-		"src/**.h",
+		"include/**.h",
 		"src/**.cpp",
 		
 		"vendor/glm/glm/**.hpp",
@@ -22,24 +20,19 @@ project "StarFire"
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
-		"GLFW_INCLUDE_NONE",
-		"AURORA_GLFW"
+		"GLFW_INCLUDE_NONE"
 	}
 	
 	includedirs
 	{
-		"src",		
+		"include",		
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.GLFW}",
-		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.concurrentqueue}"
+		"%{IncludeDir.GLFW}"
 	}
 	
 	links
 	{
-		"GLFW",
-		"Aurora"
+		"GLFW"
 	}
 	
 	
@@ -54,7 +47,7 @@ project "StarFire"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "SF_DEBUG"
+		defines "AURORA_DEBUG"
 		runtime "Debug"
 		symbols "on"
 		
@@ -63,7 +56,7 @@ project "StarFire"
 		}
 		
 	filter "configurations:Release"
-		defines "SF_RELEASE"
+		defines "AURORA_RELEASE"
 		runtime "Release"
 		optimize "on"
 		
