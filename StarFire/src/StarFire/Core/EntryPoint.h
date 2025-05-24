@@ -16,20 +16,20 @@ int main(int argc, char** argv)
 	auto app = StarFire::CreateApplication(argc, argv);
 	//SF_PROFILE_END_SESSION();
 
-	SF_CORE_INFO("App creation took {}ms", timer.TimestampMilli());
+	SF_CORE_TRACE("App creation took {}ms", timer.TimestampMilli());
 
 	//SF_PROFILE_BEGIN_SESSION("Running", "profiling/StarFireProfile-Running.json");
 	app->Run();
 	//SF_PROFILE_END_SESSION();
 
-	SF_CORE_INFO("Application ran {}s", timer.Timestamp());
+	SF_CORE_TRACE("Application ran {}s", timer.Timestamp());
 
 	//SF_PROFILE_BEGIN_SESSION("Shutdown", "profiling/StarFireProfile-Shutdown.json");
 	delete app;
 	//SF_PROFILE_END_SESSION();
 
-	SF_CORE_INFO("Application shutdown took {}ms", timer.TimestampMilli());
-	SF_CORE_INFO("Closing application after {}s", timer.ElapsedTime());
+	SF_CORE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
+	SF_CORE_TRACE("Closing application after {}s", timer.ElapsedTime());
 	StarFire::Log::Shutdown();
 
 #ifdef SF_DEBUG
