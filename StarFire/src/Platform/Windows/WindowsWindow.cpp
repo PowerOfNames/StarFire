@@ -46,8 +46,8 @@ namespace StarFire{
 				glfwSetErrorCallback(GLFWErrorCallback);
 			}
 			//We only run with Vulkan!
-			//glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-			//m_GLFW_NO_API = true;
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+			m_GLFW_NO_API = true;
 
 			m_Window = glfwCreateWindow(
 				m_Specification.Width, 
@@ -179,7 +179,7 @@ namespace StarFire{
 
 		void WindowsWindow::OnUpdate()
 		{
-			glfwSwapBuffers(m_Window);
+			//glfwSwapBuffers(m_Window);
 		}
 
 
