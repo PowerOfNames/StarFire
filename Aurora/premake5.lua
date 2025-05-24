@@ -11,6 +11,7 @@ project "Aurora"
 	files
 	{
 		"include/**.h",
+		"src/**.h",
 		"src/**.cpp",
 		
 		"vendor/glm/glm/**.hpp",
@@ -25,14 +26,17 @@ project "Aurora"
 	
 	includedirs
 	{
-		"include",		
+		"%{wks.location}/Aurora/include",		
+		"%{wks.location}/Aurora/src",		
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.GLFW}"
+		"%{IncludeDir.GLFW}",
+		"%{IncludeDir.VulkanSDK}"
 	}
 	
 	links
 	{
-		"GLFW"
+		"GLFW",
+		"%{Library.Vulkan}"
 	}
 	
 	
@@ -52,7 +56,7 @@ project "Aurora"
 		symbols "on"
 		
 		links
-		{			
+		{
 		}
 		
 	filter "configurations:Release"

@@ -36,10 +36,16 @@ namespace StarFire {
 
 		RefRegistry::Get()->PrintRegister();
 
+		Aurora::Log::SetCallback(SF_BIND_EVENT_FN(Application::RenderLogCallback));
+		m_Aurora = CreateScope<Aurora::Renderer>();
+		m_Aurora->Init("*wink*");
+
+
 		SF_CORE_INFO("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
+		m_Aurora->Shutdown();
 		m_MainWindow->Close();
 
 		RefRegistry::Get()->PrintRegister();
@@ -153,4 +159,19 @@ namespace StarFire {
 
 		return false;
 	}
+
+	void Application::RenderLogCallback(Aurora::LogLevel level, const std::string& msg)
+	{
+		switch (level)
+		{
+			case Aurora::LogLevel::ALL_TRACE: SF_R_CORE_TRACE(msg); break;
+			case Aurora::LogLevel::ALL_INFO: SF_R_CORE_INFO(msg); break;
+			case Aurora::LogLevel::ALL_DEBUG: SF_R_CORE_DEBUG_LOG(msg); break;
+			case Aurora::LogLevel::ALL_WARN: SF_R_CORE_WARN(msg); break;
+			case Aurora::LogLevel::ALL_ERROR: SF_R_CORE_ERROR(msg); break;
+			case Aurora::LogLevel::ALL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
+			default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
+		}
+	}
+
 }
