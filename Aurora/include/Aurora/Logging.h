@@ -33,9 +33,8 @@ namespace Aurora {
 			Log::Message(severityLevel, formatted);
 		}
 
-		static void Message(LogLevel level, const std::string& message);
-
 	private:
+		static void Message(LogLevel level, const std::string& message);
 		inline static LogCallbackFn s_Callback;
 	};
 
@@ -44,19 +43,20 @@ namespace Aurora {
 
 // LEGEND
 // TRACE	: (White)	Used for value tracing 		
+// DEBUG	: (Cyan)	Used for debugging. Should be removed after debug happend.
 // INFO		: (Green)	Used for Information (System, States...)
 // WARN		: (Yellow)	Used for highlighting of potentially problematic behavior
 // ERROR	: (Red)		Used for broken code paths / results
 // CRITICAL	: (Marked)	Used for big NONOs -> should never be hit
 
-// DEBUG	: (Cyan)	Used for debugging. Should be removed after debug happend.
+
 
 
 #define AURA_TRACE(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_TRACE, __VA_ARGS__)
+#define AURA_DEBUG(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_DEBUG, __VA_ARGS__)
 #define AURA_INFO(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_INFO, __VA_ARGS__)
 #define AURA_WARN(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_WARN, __VA_ARGS__)
 #define AURA_ERROR(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_ERROR, __VA_ARGS__)
 #define AURA_CRITICAL(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_CRITICAL, __VA_ARGS__)
 							   
-#define AURA_DEBUG_LOG(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_DEBUG, __VA_ARGS__)
 

@@ -24,11 +24,13 @@ namespace Aurora {
 
 
 		AURA_INFO("Renderer initialized");
+
 	}
 
 
 	void Renderer::Shutdown()
 	{
+
 
 
 		AURA_INFO("Renderer shutdown");

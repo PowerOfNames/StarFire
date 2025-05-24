@@ -14,13 +14,7 @@ namespace StarFire {
 	Application::Application(const ApplicationSpecification& specs)
 		: m_Specification(specs)
 	{
-		SF_CORE_INFO("Application: Starting initialization...");
-		SF_CORE_TRACE("LogTest: Trace!");
-		SF_CORE_INFO("LogTest: Info!");
-		SF_CORE_WARN("LogTest: Warn!");
-		SF_CORE_ERROR("LogTest: Error!");
-		SF_CORE_CRITICAL("LogTest: Critical!");
-		SF_CORE_DEBUG_LOG("LogTest: Debug!");
+		SF_CORE_TRACE("Application: Starting initialization...");
 
 		s_Instance = this;
 
@@ -41,7 +35,7 @@ namespace StarFire {
 		m_Aurora->Init();
 
 
-		SF_CORE_INFO("Application: Finished initialization.");
+		SF_CORE_TRACE("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
@@ -54,27 +48,27 @@ namespace StarFire {
 
 	void Application::PushOverlay(Layer* overlay)
 	{
-		SF_CORE_WARN("Pushing {}", overlay->GetDebugName());
+		SF_CORE_INFO("Pushing {}", overlay->GetDebugName());
 
 		m_LayerStack.PushOverlay(overlay);
 	}
 
 	void Application::PushLayer(Layer* layer)
 	{
-		SF_CORE_WARN("Pushing {}", layer->GetDebugName());
+		SF_CORE_INFO("Pushing {}", layer->GetDebugName());
 
 		m_LayerStack.PushLayer(layer);
 	}
 
 	void Application::Close()
 	{
-		SF_CORE_INFO("Stopping update loop...");
+		SF_CORE_INFO("Closing...");
 		m_Running = false;
 	}
 
 	void Application::Run()
 	{		
-		SF_CORE_INFO("Starting main loop...");
+		SF_CORE_TRACE("Starting main loop...");
 
 		//temp
 		std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
@@ -85,7 +79,7 @@ namespace StarFire {
 		}
 
 		appThread.join();
-		SF_CORE_INFO("Ending main loop...");	
+		SF_CORE_TRACE("Ending main loop...");	
 	}
 
 	void Application::AppLoop()
@@ -142,7 +136,7 @@ namespace StarFire {
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
-		SF_CORE_DEBUG_LOG("Closing window...");
+		SF_CORE_DEBUG("Closing window...");
 		Close();
 		return true;
 	}
@@ -155,7 +149,7 @@ namespace StarFire {
 			return false;
 		}
 		m_Minimized = false;
-		SF_CORE_DEBUG_LOG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
+		SF_CORE_DEBUG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
 
 		return false;
 	}
@@ -166,7 +160,7 @@ namespace StarFire {
 		{
 			case Aurora::LogLevel::ALL_TRACE: SF_R_CORE_TRACE(msg); break;
 			case Aurora::LogLevel::ALL_INFO: SF_R_CORE_INFO(msg); break;
-			case Aurora::LogLevel::ALL_DEBUG: SF_R_CORE_DEBUG_LOG(msg); break;
+			case Aurora::LogLevel::ALL_DEBUG: SF_R_CORE_DEBUG(msg); break;
 			case Aurora::LogLevel::ALL_WARN: SF_R_CORE_WARN(msg); break;
 			case Aurora::LogLevel::ALL_ERROR: SF_R_CORE_ERROR(msg); break;
 			case Aurora::LogLevel::ALL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
