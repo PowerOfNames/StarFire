@@ -18,16 +18,20 @@ namespace Aurora {
 	}
 
 
-	void Renderer::Init(const char* message)
+	void Renderer::Init()
 	{
-		m_Message = message;
-		AURORA_INFO("Hi from Aurora {}", message);
+
+
+
+		AURORA_INFO("Renderer initialized");
 	}
 
 
 	void Renderer::Shutdown()
 	{
-		AURORA_INFO("Hi from Aurora {}{}", m_Message, "!");
+
+
+		AURORA_INFO("Renderer shutdown");
 	}
 
 }

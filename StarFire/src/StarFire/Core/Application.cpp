@@ -38,7 +38,7 @@ namespace StarFire {
 
 		Aurora::Log::SetCallback(SF_BIND_EVENT_FN(Application::RenderLogCallback));
 		m_Aurora = CreateScope<Aurora::Renderer>();
-		m_Aurora->Init("*wink*");
+		m_Aurora->Init();
 
 
 		SF_CORE_INFO("Application: Finished initialization.");

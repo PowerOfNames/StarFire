@@ -11,12 +11,11 @@ namespace Aurora {
 		Renderer();
 		~Renderer();
 
-		void Init(const char* message);
+		void Init();
 		void Shutdown();
 
 
 	private:
-		const char* m_Message = nullptr;
 	};
 
 }
