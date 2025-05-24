@@ -23,7 +23,7 @@ namespace Aurora {
 
 
 
-		AURORA_INFO("Renderer initialized");
+		AURA_INFO("Renderer initialized");
 	}
 
 
@@ -31,7 +31,7 @@ namespace Aurora {
 	{
 
 
-		AURORA_INFO("Renderer shutdown");
+		AURA_INFO("Renderer shutdown");
 	}
 
 }

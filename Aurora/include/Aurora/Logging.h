@@ -52,11 +52,11 @@ namespace Aurora {
 // DEBUG	: (Cyan)	Used for debugging. Should be removed after debug happend.
 
 
-#define AURORA_TRACE(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_TRACE, __VA_ARGS__)
-#define AURORA_INFO(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_INFO, __VA_ARGS__)
-#define AURORA_WARN(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_WARN, __VA_ARGS__)
-#define AURORA_ERROR(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_ERROR, __VA_ARGS__)
-#define AURORA_CRITICAL(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_CRITICAL, __VA_ARGS__)
-													   
-#define AURORA_DEBUG_LOG(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_DEBUG, __VA_ARGS__)
+#define AURA_TRACE(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_TRACE, __VA_ARGS__)
+#define AURA_INFO(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_INFO, __VA_ARGS__)
+#define AURA_WARN(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_WARN, __VA_ARGS__)
+#define AURA_ERROR(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_ERROR, __VA_ARGS__)
+#define AURA_CRITICAL(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_CRITICAL, __VA_ARGS__)
+							   
+#define AURA_DEBUG_LOG(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_DEBUG, __VA_ARGS__)
 
