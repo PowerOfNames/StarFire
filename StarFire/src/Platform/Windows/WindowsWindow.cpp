@@ -57,7 +57,7 @@ namespace StarFire{
 				NULL);
 			SF_CORE_ASSERT(m_Window != nullptr, "Failed to create GLFW Window");
 			s_GLFWwindowCount++;
-			SF_CORE_INFO("Created window number {}", s_GLFWwindowCount);
+			SF_CORE_TRACE("Created window number {}", s_GLFWwindowCount);
 			
 
 

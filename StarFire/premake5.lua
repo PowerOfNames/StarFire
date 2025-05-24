@@ -54,7 +54,7 @@ project "StarFire"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "SF_DEBUG"
+		defines "STARFIRE_DEBUG"
 		runtime "Debug"
 		symbols "on"
 		
@@ -63,7 +63,7 @@ project "StarFire"
 		}
 		
 	filter "configurations:Release"
-		defines "SF_RELEASE"
+		defines "STARFIRE_RELEASE"
 		runtime "Release"
 		optimize "on"
 		
