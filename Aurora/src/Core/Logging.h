@@ -1,23 +1,12 @@
 #pragma once
+#include "Aurora/Logging/LogLevel.h"
 
 #include <format>
-#include <functional>
 #include <string>
 
-namespace Aurora {
+namespace Aurora {	
 
-	enum class LogLevel
-	{
-		ALL_NONE = 0,
-		ALL_TRACE,
-		ALL_INFO,
-		ALL_DEBUG,
-		ALL_WARN,
-		ALL_ERROR,
-		ALL_CRITICAL
-	};
-
-	using LogCallbackFn = std::function<void(LogLevel, const std::string&)>;
+	using LogCallbackFn = void(*)(LogLevel, const std::string&);
 
 	class Log
 	{
@@ -49,14 +38,11 @@ namespace Aurora {
 // ERROR	: (Red)		Used for broken code paths / results
 // CRITICAL	: (Marked)	Used for big NONOs -> should never be hit
 
-
-
-
-#define AURA_TRACE(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_TRACE, __VA_ARGS__)
-#define AURA_DEBUG(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_DEBUG, __VA_ARGS__)
-#define AURA_INFO(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_INFO, __VA_ARGS__)
-#define AURA_WARN(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_WARN, __VA_ARGS__)
-#define AURA_ERROR(...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_ERROR, __VA_ARGS__)
-#define AURA_CRITICAL(...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::ALL_CRITICAL, __VA_ARGS__)
+#define AURORA_TRACE(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_TRACE, fmt, __VA_ARGS__)
+#define AURORA_DEBUG(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_DEBUG, fmt, __VA_ARGS__)
+#define AURORA_INFO(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_INFO, fmt, __VA_ARGS__)
+#define AURORA_WARN(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_WARN, fmt, __VA_ARGS__)
+#define AURORA_ERROR(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_ERROR, fmt, __VA_ARGS__)
+#define AURORA_CRITICAL(fmt, ...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_CRITICAL, fmt, __VA_ARGS__)
 							   
 

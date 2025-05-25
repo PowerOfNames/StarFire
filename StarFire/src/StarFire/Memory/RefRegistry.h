@@ -5,7 +5,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <typeindex>
+#include <string>
 #include <unordered_map>
 
 namespace StarFire {
@@ -27,8 +27,8 @@ namespace StarFire {
 			return s_Instance.get(); 
 		}
 
-		void Register(std::type_index index, std::atomic<uint64_t>* counter);
-		void Unregister(std::type_index index);
+		void Register(const std::string& typeName, std::atomic<uint64_t>* counter);
+		void Unregister(const std::string& typeName);
 
 		void PrintRegister();
 
@@ -46,7 +46,7 @@ namespace StarFire {
 		friend class StarFire::Application;
 
 		inline static Scope<RefRegistry> s_Instance = nullptr;
-		std::unordered_map<std::type_index, std::atomic<uint64_t>*> m_Registry;
+		std::unordered_map<std::string, std::atomic<uint64_t>*> m_Registry;
 		std::mutex m_RegistryMutex;
 	};
 }

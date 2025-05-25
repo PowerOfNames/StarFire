@@ -42,7 +42,7 @@ project "Nebula"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "STARFIRE_DEBUG"
+		defines "STARFIRE_DEBUG_MODE"
 		runtime "Debug"
 		symbols "on"
 		
@@ -51,7 +51,7 @@ project "Nebula"
 		}
 		
 	filter "configurations:Release"
-		defines "STARFIRE_RELEASE"
+		defines "STARFIRE_RELEASE_MODE"
 		runtime "Release"
 		optimize "on"
 		

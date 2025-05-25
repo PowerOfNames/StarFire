@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SF_DEBUG
+#ifdef STARFIRE_DEBUG_MODE
 #define SF_ENABLE_ASSERT
 #endif
 

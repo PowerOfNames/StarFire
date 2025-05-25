@@ -1,6 +1,7 @@
 #pragma once
 #include "StarFire/Core/Window.h"
 
+#include <Aurora/Renderer/Surface.h>
 #include <GLFW/glfw3.h>
 
 namespace StarFire {

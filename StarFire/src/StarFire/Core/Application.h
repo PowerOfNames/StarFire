@@ -5,9 +5,6 @@
 #include "StarFire/Core/LayerStack.h"
 #include "StarFire/Core/Window.h"
 
-#include <Aurora/Renderer.h>
-#include <Aurora/Logging.h>
-
 #include <string>
 #include <atomic>
 
@@ -46,15 +43,12 @@ namespace StarFire {
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
 
-		void RenderLogCallback(Aurora::LogLevel level, const std::string& msg);
-
 	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;
 				
 		Scope<Window> m_MainWindow = nullptr;
 		Scope<EventQueue> m_EventQueue = nullptr;
-		Scope<Aurora::Renderer> m_Aurora = nullptr;
 
 
 		double m_DeltaTimeInS = 0.0;

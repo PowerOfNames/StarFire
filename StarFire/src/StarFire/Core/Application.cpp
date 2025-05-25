@@ -4,6 +4,10 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
+
+#include <Aurora/Aurora.h>
+#include <Aurora/Logging/LogLevel.h>
+
 #include <thread>
 
 namespace StarFire {
@@ -22,6 +26,28 @@ namespace StarFire {
 		m_EventQueue = CreateScope<EventQueue>(100);
 		RefRegistry::Init();
 
+		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg)
+			{
+				switch (level)
+				{
+					case Aurora::LogLevel::LOG_LEVEL_TRACE: SF_R_CORE_TRACE(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_INFO: SF_R_CORE_INFO(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_DEBUG: SF_R_CORE_DEBUG(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_WARN: SF_R_CORE_WARN(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_ERROR: SF_R_CORE_ERROR(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
+					default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
+				}
+			});
+		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
+			{
+				RefRegistry::Get()->Register(typeName, counter);
+			});
+		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
+			{
+				RefRegistry::Get()->Unregister(typeName);
+			});
+		
 		WindowSpecification windowSpecs{};
 		m_MainWindow = Window::Create(windowSpecs);
 		SF_CORE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
@@ -30,16 +56,13 @@ namespace StarFire {
 
 		RefRegistry::Get()->PrintRegister();
 
-		Aurora::Log::SetCallback(SF_BIND_EVENT_FN(Application::RenderLogCallback));
-		m_Aurora = CreateScope<Aurora::Renderer>();
-		m_Aurora->Init();
 
 
 		SF_CORE_TRACE("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
-		m_Aurora->Shutdown();
+		Aurora::Shutdown();
 		m_MainWindow->Close();
 
 		RefRegistry::Get()->PrintRegister();
@@ -152,20 +175,6 @@ namespace StarFire {
 		SF_CORE_DEBUG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
 
 		return false;
-	}
-
-	void Application::RenderLogCallback(Aurora::LogLevel level, const std::string& msg)
-	{
-		switch (level)
-		{
-			case Aurora::LogLevel::ALL_TRACE: SF_R_CORE_TRACE(msg); break;
-			case Aurora::LogLevel::ALL_INFO: SF_R_CORE_INFO(msg); break;
-			case Aurora::LogLevel::ALL_DEBUG: SF_R_CORE_DEBUG(msg); break;
-			case Aurora::LogLevel::ALL_WARN: SF_R_CORE_WARN(msg); break;
-			case Aurora::LogLevel::ALL_ERROR: SF_R_CORE_ERROR(msg); break;
-			case Aurora::LogLevel::ALL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
-			default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
-		}
 	}
 
 }
