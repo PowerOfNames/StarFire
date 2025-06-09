@@ -55,6 +55,14 @@ namespace Aurora { namespace VK {
 		return VK_FALSE;
 	}
 
+	static VkResult SetDebugUtilsObjectNameEXT(VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo)
+	{
+		auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
+		if (func != nullptr)		
+			return func(device, pNameInfo);
+		return VK_INCOMPLETE;
+	}
+
 	inline static bool s_EnabledDebugUtils = false;
 	static constexpr void SetVkObjDebugName(VkDevice device, VkObjectType objType, uint64_t objHandle, const char* name)
 	{
@@ -92,12 +100,5 @@ namespace Aurora { namespace VK {
 		}
 	}
 
-	static VkResult SetDebugUtilsObjectNameEXT(VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo)
-	{
-		auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
-		if (func != nullptr)		
-			return func(device, pNameInfo);
-		return VK_INCOMPLETE;
-	}
 }
 }

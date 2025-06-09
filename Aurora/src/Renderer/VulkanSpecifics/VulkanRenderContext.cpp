@@ -26,9 +26,13 @@ namespace Aurora { namespace VK {
 			return;
 		}
 
+		if (!CreateSurface(m_Specification.SurfaceSpecs))
+		{
+			AURORA_ERROR("Failed to create surface! VulkanContext could not be instanziated!");
+			return;
+		}
 
 
-		CreateSurface(m_Specification.SurfaceSpecs);
 
 		DeviceRequirements deviceReqs{};
 		ChoosePhysicalDevice(deviceReqs);
@@ -39,9 +43,21 @@ namespace Aurora { namespace VK {
 
 	void VulkanRenderContext::Shutdown()
 	{
+
+
+		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+		m_Surface = VK_NULL_HANDLE;
+
 		if (s_EnabledDebugUtils)
+		{
 			DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+			m_DebugMessenger = VK_NULL_HANDLE;
+		}
+
 		vkDestroyInstance(m_Instance, nullptr);
+		m_Instance = VK_NULL_HANDLE;
+
+		AURORA_INFO("Destroyed all vulkan context objects.");
 	}
 
 
@@ -127,7 +143,26 @@ namespace Aurora { namespace VK {
 
 	bool VulkanRenderContext::CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs)
 	{
+		switch (surfaceSpecs.WSI)
+		{
+			case WSIPlatformType::SURFACE_PLATFORM_GLFW:
+			{
+				AURORA_VK_CHECK(glfwCreateWindowSurface(m_Instance, (GLFWwindow*)surfaceSpecs.WindowHandle, nullptr, &m_Surface), VK_SUCCESS, "Failed to create GLFWWindow Surface.");
+				break;
+			}
+			case WSIPlatformType::SURFACE_PLAFORM_NONE:				
+			default:
+			{
+				AURORA_ERROR("WSI currently not supported!");
+				return false;
+			}
+		}
 
+		if (m_Surface == nullptr)
+		{
+			AURORA_CRITICAL("Failed to create a Vulkan Surface!");
+			return false;
+		}
 		return true;
 	}
 
