@@ -4,17 +4,17 @@
 
 #include <vulkan/vulkan.h>
 
-#ifdef AURORA_DEBUG_MODE
+#if defined(AURORA_DEBUG_MODE)
 #define AURORA_VK_VALIDATION 1
 #else
 #define AURORA_VK_VALIDATION 0
 #endif
 
 
-#ifdef AURORA_ASSERT_ENABLED && AURORA_VK_VALIDATION
+#if defined(AURORA_ASSERT_ENABLED) && AURORA_VK_VALIDATION
 #define AURORA_VK_CHECK(x, y, ...) { if(!CheckVkResult(x, y)) { AURORA_ERROR("Unexpected VkResult. Message: {}",  __VA_ARGS__); __debugbreak(); } }
 #else
-#define AURORA_VK_CHECK(x, y, ...) x  //we need to pass the function without log message when not in debug mode!
+#define AURORA_VK_CHECK(x, y, ...) x;  //we need to pass the function without log message when not in debug mode!
 #endif
 
 namespace Aurora { namespace VK {

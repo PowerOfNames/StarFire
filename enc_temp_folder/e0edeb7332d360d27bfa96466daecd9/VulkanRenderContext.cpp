@@ -210,7 +210,7 @@ namespace Aurora { namespace VK {
 			if (!layerFound)
 			{
 				allLayerFound = false;
-				AURORA_ERROR("Requested instance layer {} not available!", layer);
+				AURORA_ERROR("Requested layer {} not available!", layer);
 			}
 		}
 		return allLayerFound;
@@ -237,15 +237,15 @@ namespace Aurora { namespace VK {
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
 
 		bool foundAll = true;
-		for (const auto& required : requiredExtensions)
+		for (const auto& extension : requiredExtensions)
 		{
 			bool foundExtension = false;
 			for (const auto& available : availableExtensions)
 			{
-				if(strcmp(required, available.extensionName) == 0)
+				if(strcmp(extension, available.extensionName) == 0)
 				{
 					foundExtension = true;
-					AURORA_INFO("Required instance extension {} found.", required);
+					AURORA_INFO("Instance extension {} found.", extension);
 					break;
 				}
 			}
@@ -253,7 +253,7 @@ namespace Aurora { namespace VK {
 			if (!foundExtension)
 			{
 				foundAll = false;
-				AURORA_ERROR("Required instance extension {} not availale!", required);
+				AURORA_ERROR("Required extension {} not availale!", extension);
 			}
 		}
 

@@ -41,8 +41,8 @@ namespace Aurora { namespace VK {
 		bool CheckRequiredExtensionsSupport(const std::vector<const char*>& requiredExtensions);
 
 		//DebugName
-		void SetupDebugMessenger(VkInstance instance);
-		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
+		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel = false);
 
 	private:
 		RenderContextSpecification m_Specification;

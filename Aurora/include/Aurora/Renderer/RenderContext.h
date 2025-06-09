@@ -39,6 +39,7 @@ namespace Aurora {
 		struct InstanceSpecification
 		{
 			bool EnableDebugUtils = false;
+			bool EnableInfoDebugLevel = false;
 			
 		} InstanceSpecs;
 	};
