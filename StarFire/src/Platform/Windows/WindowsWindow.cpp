@@ -25,7 +25,8 @@ namespace StarFire{
 		{
 			glfwDestroyWindow(m_Window);
 			--s_GLFWwindowCount;
-			glfwTerminate();
+			if(s_GLFWwindowCount <= 0)
+				glfwTerminate();
 		}
 
 		void WindowsWindow::Init()

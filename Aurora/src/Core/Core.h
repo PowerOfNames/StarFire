@@ -7,7 +7,7 @@
 #endif
 
 #ifdef AURORA_ASSERT_ENABLED
-#define AURORA_ASSERT(x, ...) {if(!x) { AURORA_CRITICAL("Assertion failes: {0}", __VA_ARGS__); __debugbreak();} }
+#define AURORA_ASSERT(x, ...) {if(!(x)) { AURORA_CRITICAL("Assertion failes: {0}", __VA_ARGS__); __debugbreak();} }
 #else
 #define AURORA_ASSERT(x, ...) 
 #endif

@@ -1,6 +1,6 @@
 #include "Aurora/Aurora.h"
 
-#include "Core/Logging.h"
+#include "Core/Core.h"
 #include "Core/RefRegistry.h"
 
 namespace Aurora {
@@ -20,17 +20,19 @@ namespace Aurora {
 		RefRegistry::SetUnregisterCallback(callback);
 	}
 
-
 	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs)
 	{
-
-
-
+		s_RenderContext = RenderContext::Create(contextSpecs);
+		AURORA_ASSERT(s_RenderContext != nullptr, "Failed to create RenderContext.");			
+		s_RenderContext->Init();
 		return true;
 	}
 
 	bool Shutdown()
 	{
+		if (s_RenderContext)
+			s_RenderContext->Shutdown();
+
 		return true;
 	}
 

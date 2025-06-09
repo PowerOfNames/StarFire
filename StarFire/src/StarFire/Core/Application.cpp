@@ -22,9 +22,16 @@ namespace StarFire {
 
 		s_Instance = this;
 
-
 		m_EventQueue = CreateScope<EventQueue>(100);
 		RefRegistry::Init();
+
+
+		WindowSpecification windowSpecs{};
+		m_MainWindow = Window::Create(windowSpecs);
+		SF_CORE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
+		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
+		m_MainWindow->Init();
+
 
 		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg)
 			{
@@ -48,14 +55,21 @@ namespace StarFire {
 				RefRegistry::Get()->Unregister(typeName);
 			});
 		
-		WindowSpecification windowSpecs{};
-		m_MainWindow = Window::Create(windowSpecs);
-		SF_CORE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
-		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
-		m_MainWindow->Init();
+		Aurora::RenderContextSpecification renderSpecs{};
+		renderSpecs.AppName = m_Specification.Name.c_str();
+		renderSpecs.AppVersion = { 1, 0, 0 };
+		renderSpecs.API = Aurora::APIType::API_TYPE_VULKAN;
+		renderSpecs.AuroraVersion = { 1, 0, 0 };
+		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
+		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
+		renderSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
+		renderSpecs.SurfaceSpecs.FramesPerFlight = 2;
+		Aurora::InitializeRenderContext(renderSpecs);
+		
+		
+
 
 		RefRegistry::Get()->PrintRegister();
-
 
 
 		SF_CORE_TRACE("Application: Finished initialization.");
