@@ -30,12 +30,12 @@ namespace Aurora { namespace VK {
 			RenderContextSpecification::ApplicationVersionNumber appVersion,
 			RenderContextSpecification::AuroraVersionNumber auroraVersion,
 			WSIPlatformType wsi);
-
 		bool CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
-		bool ChoosePhysicalDevice(const DeviceRequirements& deviceRequirements);
-		bool CreatePhysicalDevice();
+		bool PickPhysicalDevice(const DeviceRequirements& deviceRequirements);
 		bool CreateLogicalDevice();
 
+		//replace bool with score later (#76)
+		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements);
 		bool CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers);
 		std::vector<const char*> GetRequiredExtensions(WSIPlatformType wsi);
 		bool CheckRequiredExtensionsSupport(const std::vector<const char*>& requiredExtensions);

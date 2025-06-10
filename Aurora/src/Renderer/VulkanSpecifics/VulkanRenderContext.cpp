@@ -4,8 +4,33 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <map>
 
 namespace Aurora { namespace VK {
+
+	namespace Utils {
+
+		static constexpr std::string DeviceTypeToString(VkPhysicalDeviceType type)
+		{
+			switch (type)
+			{
+				case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
+				case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
+				case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
+				case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
+				default: return "Other";
+			}
+		}
+
+		static constexpr std::string ApiVersionToString(uint32_t version)
+		{
+			uint32_t major = VK_API_VERSION_MAJOR(version);
+			uint32_t minor = VK_API_VERSION_MINOR(version);
+			uint32_t variant = VK_API_VERSION_VARIANT(version);
+			return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(variant);
+		}
+	}
+
 
 	VulkanRenderContext::VulkanRenderContext(const RenderContextSpecification& specs)
 		: m_Specification(specs)
@@ -22,29 +47,33 @@ namespace Aurora { namespace VK {
 			m_Specification.AuroraVersion,
 			m_Specification.SurfaceSpecs.WSI))
 		{
-			AURORA_ERROR("Failed to create instance! VulkanContext could not be initialized!");
+			AURORA_ERROR("Failed to create instance. VulkanContext could not be initialized.");
 			return;
 		}
 
 		if (!CreateSurface(m_Specification.SurfaceSpecs))
 		{
-			AURORA_ERROR("Failed to create surface! VulkanContext could not be instanziated!");
+			AURORA_ERROR("Failed to create surface. VulkanContext could not be instanziated.");
 			return;
 		}
 
-
-
 		DeviceRequirements deviceReqs{};
-		ChoosePhysicalDevice(deviceReqs);
-		CreatePhysicalDevice();
-		CreateLogicalDevice();
+		if (!PickPhysicalDevice(deviceReqs))
+		{
+			AURORA_ERROR("Failed to pick a physical device. VulkanContext could not be instantiated.");
+			return;
+		}
+
+		if (!CreateLogicalDevice())
+		{
+			AURORA_ERROR("Failed to create logical device. VulkanContext could not be instantiated.");
+			return;
+		}
 	}
 
 
 	void VulkanRenderContext::Shutdown()
 	{
-
-
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 		m_Surface = VK_NULL_HANDLE;
 
@@ -165,26 +194,71 @@ namespace Aurora { namespace VK {
 		}
 		return true;
 	}
-
-
-	bool VulkanRenderContext::ChoosePhysicalDevice(const DeviceRequirements& deviceRequirements)
+	
+	bool VulkanRenderContext::PickPhysicalDevice(const DeviceRequirements& deviceRequirements)
 	{
+		uint32_t deviceCount;
+		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
+		if (deviceCount == 0)
+		{
+			AURORA_CRITICAL("No devices found.");
+			return false;
+		}
+		std::vector<VkPhysicalDevice> availableDevices(deviceCount);
+		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, availableDevices.data());
+
+		std::multimap<int, VkPhysicalDevice> candidates;
+		for (const auto& phDevice : availableDevices)
+		{
+			//TODO (#76): 
+			int score = EvaluatePhysicalDevice(phDevice, deviceRequirements);
+			candidates.insert(std::make_pair(score, phDevice));
+		}
+		if (candidates.rbegin()->first <= 0)
+		{
+			AURORA_CRITICAL("No suitable device found.");
+			return false;
+		}
+		m_PhysicalDevice = candidates.rbegin()->second;
+
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(m_PhysicalDevice, &props);
+
+		AURORA_INFO("Picked physical device with properties");
+		AURORA_INFO("==========================================================");
+		AURORA_INFO("Name			: {}", props.deviceName);
+		AURORA_INFO("Type			: {}", Utils::DeviceTypeToString(props.deviceType));
+		AURORA_INFO("API Version	: {}", Utils::ApiVersionToString(props.apiVersion));
+		AURORA_INFO("DeviceID		: {}", props.deviceID);
+		AURORA_INFO("==========================================================");
 
 		return true;
 	}
-
-
-	bool VulkanRenderContext::CreatePhysicalDevice()
-	{
-
-		return true;
-	}
-
 
 	bool VulkanRenderContext::CreateLogicalDevice()
 	{
 
 		return true;
+	}
+
+	// ========== Privat helper ==========
+
+	int VulkanRenderContext::EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements)
+	{
+		int score = 0;
+		
+		VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(phDevice, &deviceProperties);
+
+		VkPhysicalDeviceFeatures deviceFeatures;
+		vkGetPhysicalDeviceFeatures(phDevice, &deviceFeatures);
+
+		if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+			score += 1000;
+
+
+
+		return score;
 	}
 
 	bool VulkanRenderContext::CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers)
@@ -284,7 +358,7 @@ namespace Aurora { namespace VK {
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT 
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT 
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = VulkanDebugCallback;		
+		createInfo.pfnUserCallback = VulkanDebugCallback;
 	}
 }
 }

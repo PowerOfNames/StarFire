@@ -3,6 +3,7 @@
 
 #include <format>
 #include <string>
+#include <string_view>
 
 namespace Aurora {	
 
@@ -15,11 +16,25 @@ namespace Aurora {
 		static void SetCallback(LogCallbackFn callback);
 		static void Shutdown();
 
-		template<typename... Args>
+		/*template<typename... Args>
 		static void CombineCallbackArgs(LogLevel severityLevel, std::format_string<Args...> format, Args&&... args)
-		{			
+		{
 			std::string formatted = std::format(format, std::forward<Args>(args)...);
 			Log::Message(severityLevel, formatted);
+		}*/
+
+		template<typename... Args>
+		static void CombineCallbackArgs(LogLevel severityLevel, std::string_view format, Args&&... args)
+		{
+			try
+			{
+				std::string formatted = std::vformat(format, std::make_format_args(args...));
+				Log::Message(severityLevel, formatted);
+			}
+			catch (const std::format_error& e)
+			{				
+				Log::Message(severityLevel, std::string("Format error: ") + e.what());
+			}
 		}
 
 	private:
