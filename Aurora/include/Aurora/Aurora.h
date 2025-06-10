@@ -10,7 +10,7 @@ namespace Aurora {
 
 	static std::shared_ptr<RenderContext> s_RenderContext = nullptr;
 	
-	using LogCallback = void(*)(LogLevel, const std::string&);
+	using LogCallback = void(*)(LogLevel, const std::string&, const char* file, const char* func, int line);
 	using RegistryRegisterCallback = void(*)(const std::string& typeName, std::atomic<uint64_t>*);
 	using RegistryUnregisterCallback = void(*)(const std::string& typeName);
 

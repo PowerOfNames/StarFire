@@ -23,15 +23,15 @@ namespace StarFire {
 
 		// %^: start color range; %T:time; %e:ms; %n logger name; %v: message; %$: end color range
 		s_CoreLogger = spdlog::stdout_color_mt("STARFIRE");
-		s_CoreLogger->set_pattern("%^[%T%e] [%n] %! [Line:%#] %v%$");
+		s_CoreLogger->set_pattern("%^[%T%e] [%n] \t %! [Line:%#] %v%$");
 		s_CoreLogger->set_level(level);
 
 		s_ClientLogger = spdlog::stdout_color_mt("CLIENT");
-		s_ClientLogger->set_pattern("%^[%T%e] [%n] %! [Line:%#] %v%$");
+		s_ClientLogger->set_pattern("%^[%T%e] [%n] \t\t %! [Line:%#] %v%$");
 		s_ClientLogger->set_level(level);
 
 		s_RendererLogger = spdlog::stdout_color_mt("AURORA");
-		s_RendererLogger->set_pattern("%^[%T%e] [%n] %! [Line:%#] %v%$");
+		s_RendererLogger->set_pattern("%^[%T%e] [%n] \t\t %s::%! [Line:%#] %v%$");
 		s_RendererLogger->set_level(level);
 
 		SF_CORE_INFO("Initialized spdlog (Version {}.{}.{})", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);

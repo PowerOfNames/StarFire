@@ -33,16 +33,16 @@ namespace StarFire {
 		m_MainWindow->Init();
 
 
-		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg)
+		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg, const char* file, const char* func, int line)
 			{
 				switch (level)
 				{
-					case Aurora::LogLevel::LOG_LEVEL_TRACE: SF_R_CORE_TRACE(msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_INFO: SF_R_CORE_INFO(msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_DEBUG: SF_R_CORE_DEBUG(msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_WARN: SF_R_CORE_WARN(msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_ERROR: SF_R_CORE_ERROR(msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_TRACE: SF_R_CORE_TRACE(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_INFO: SF_R_CORE_INFO(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_DEBUG: SF_R_CORE_DEBUG(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_WARN: SF_R_CORE_WARN(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_ERROR: SF_R_CORE_ERROR(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: SF_R_CORE_CRITICAL(file, func, line, msg); break;
 					default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
 				}
 			});

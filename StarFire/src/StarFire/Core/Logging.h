@@ -48,12 +48,12 @@ namespace StarFire {
 #define SF_ERROR(...)			SPDLOG_LOGGER_ERROR(StarFire::Log::GetClientLogger(), __VA_ARGS__)
 #define SF_CRITICAL(...)		SPDLOG_LOGGER_CRITICAL(StarFire::Log::GetClientLogger(), __VA_ARGS__)
 
-#define SF_R_CORE_TRACE(...)	SPDLOG_LOGGER_TRACE(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
-#define SF_R_CORE_DEBUG(...)	SPDLOG_LOGGER_DEBUG(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
-#define SF_R_CORE_INFO(...)		SPDLOG_LOGGER_INFO(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
-#define SF_R_CORE_WARN(...)		SPDLOG_LOGGER_WARN(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
-#define SF_R_CORE_ERROR(...)	SPDLOG_LOGGER_ERROR(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
-#define SF_R_CORE_CRITICAL(...)	SPDLOG_LOGGER_CRITICAL(StarFire::Log::GetRendererLogger(), __VA_ARGS__)
+#define SF_R_CORE_TRACE(file, func, line, ...)		StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::trace, __VA_ARGS__)
+#define SF_R_CORE_DEBUG(file, func, line, ...)		StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::debug, __VA_ARGS__)
+#define SF_R_CORE_INFO(file, func, line, ...)		StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::info, __VA_ARGS__)
+#define SF_R_CORE_WARN(file, func, line, ...)		StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::warn, __VA_ARGS__)
+#define SF_R_CORE_ERROR(file, func, line, ...)		StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::err, __VA_ARGS__)
+#define SF_R_CORE_CRITICAL(file, func, line, ...)	StarFire::Log::GetRendererLogger()->log(spdlog::source_loc{file, line, func}, spdlog::level::critical, __VA_ARGS__)
 //TODO: for release builds, log to files and error and critical to console
 #elif defined(STARFIRE_RELEASE_MODE)
 #define SF_CORE_TRACE(...)	
