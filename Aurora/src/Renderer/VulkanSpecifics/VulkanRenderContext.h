@@ -11,6 +11,15 @@ namespace Aurora { namespace VK {
 	{
 		
 	};
+
+	struct QueueFamilies
+	{
+		VkQueue Graphics = VK_NULL_HANDLE;
+		VkQueue Present = VK_NULL_HANDLE;
+		VkQueue Compute = VK_NULL_HANDLE;
+		//Move this out when time into transfer operation handler
+		VkQueue Transfer = VK_NULL_HANDLE;
+	};
 		
 	class VulkanRenderContext : public RenderContext
 	{
@@ -32,13 +41,16 @@ namespace Aurora { namespace VK {
 			WSIPlatformType wsi);
 		bool CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 		bool PickPhysicalDevice(const DeviceRequirements& deviceRequirements);
-		bool CreateLogicalDevice();
+		bool CreateLogicalDevice(const DeviceRequirements& deviceRequirements);
 
-		//replace bool with score later (#76)
+		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice phDevice);
+		//keep scoring up-to-date later (#76)
 		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements);
+		bool CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements);
+
 		bool CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers);
-		std::vector<const char*> GetRequiredExtensions(WSIPlatformType wsi);
-		bool CheckRequiredExtensionsSupport(const std::vector<const char*>& requiredExtensions);
+		std::vector<const char*> GetRequiredInstanceExtensions(WSIPlatformType wsi);
+		bool CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions);
 
 		//DebugName
 		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
@@ -53,6 +65,10 @@ namespace Aurora { namespace VK {
 		VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice m_Device = VK_NULL_HANDLE;
+				
+		QueueFamilies m_QueueFamilies{};
+
+		PhysicalDeviceLimits m_PhDeviceLimits{};
 
 		Ref<VkSwapchainKHR> m_Swapchain = nullptr;
 	};
