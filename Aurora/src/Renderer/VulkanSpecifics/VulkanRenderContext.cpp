@@ -93,13 +93,10 @@ namespace Aurora::VK {
 
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 		m_Surface = VK_NULL_HANDLE;
-
-		if (s_EnabledDebugUtils)
-		{
-			DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
-			m_DebugMessenger = VK_NULL_HANDLE;
-		}
-
+				
+		Debug::DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+		m_DebugMessenger = VK_NULL_HANDLE;
+		
 		vkDestroyInstance(m_Instance, nullptr);
 		m_Instance = VK_NULL_HANDLE;
 
@@ -530,7 +527,7 @@ namespace Aurora::VK {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		PopulateDebugMessengerCreateInfo(createInfo, enableInfoDebugLevel);
 
-		AURORA_VK_CHECK(CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &m_DebugMessenger), VK_SUCCESS, "Failed to create debug messenger.");
+		AURORA_VK_CHECK(Debug::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &m_DebugMessenger), VK_SUCCESS, "Failed to create debug messenger.");
 	}
 
 	void VulkanRenderContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel /*= false*/)
@@ -548,7 +545,7 @@ namespace Aurora::VK {
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT 
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT 
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = VulkanDebugCallback;
+		createInfo.pfnUserCallback = Debug::VulkanDebugCallback;
 	}
 
 	
