@@ -2,10 +2,11 @@
 #include "Aurora/Renderer/RenderContext.h"
 
 #include "Renderer/VulkanSpecifics/VulkanCore.h"
+#include "Renderer/VulkanSpecifics/Swapchain.h"
 
 #include <vector>
 
-namespace Aurora { namespace VK {
+namespace Aurora::VK {
 
 	struct DeviceRequirements
 	{
@@ -28,7 +29,7 @@ namespace Aurora { namespace VK {
 		~VulkanRenderContext() = default;
 
 		virtual void Init() override;
-		virtual void Shutdown() override;
+		virtual void Destroy() override;
 
 		inline virtual const RenderContextSpecification& GetSpecification() const override { return m_Specification; }
 
@@ -39,18 +40,20 @@ namespace Aurora { namespace VK {
 			RenderContextSpecification::ApplicationVersionNumber appVersion,
 			RenderContextSpecification::AuroraVersionNumber auroraVersion,
 			WSIPlatformType wsi);
+
 		bool CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 		bool PickPhysicalDevice(const DeviceRequirements& deviceRequirements);
 		bool CreateLogicalDevice(const DeviceRequirements& deviceRequirements);
+		bool CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 
-		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice phDevice);
 		//keep scoring up-to-date later (#76)
-		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements);
-		bool CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements);
+		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
+		bool CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
+		const std::vector<const char*> GetRequiredDeviceExtensions(const DeviceRequirements& deviceRequirements) const;
 
-		bool CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers);
-		std::vector<const char*> GetRequiredInstanceExtensions(WSIPlatformType wsi);
-		bool CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions);
+		bool CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers) const;
+		std::vector<const char*> GetRequiredInstanceExtensions(WSIPlatformType wsi) const;
+		bool CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions) const;
 
 		//DebugName
 		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
@@ -70,8 +73,7 @@ namespace Aurora { namespace VK {
 
 		PhysicalDeviceLimits m_PhDeviceLimits{};
 
-		Ref<VkSwapchainKHR> m_Swapchain = nullptr;
+		Ref<Swapchain> m_Swapchain = nullptr;
 	};
 
-}
 }

@@ -33,6 +33,8 @@ namespace StarFire {
 		{}
 
 
+		uint32_t FramebufferWidth = 0;
+		uint32_t FramebufferHeight = 0;
 		CursorState MouseCursorState = CursorState::NORMAL;
 	};
 
@@ -50,6 +52,8 @@ namespace StarFire {
 
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
+		virtual uint32_t GetFramebufferWidth() const = 0;
+		virtual uint32_t GetFramebufferHeight() const = 0;
 
 		virtual const WindowSpecification& GetSpecification() const = 0;
 

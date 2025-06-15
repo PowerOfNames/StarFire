@@ -31,7 +31,7 @@ namespace Aurora {
 	bool Shutdown()
 	{
 		if (s_RenderContext)
-			s_RenderContext->Shutdown();
+			s_RenderContext->Destroy();
 
 		return true;
 	}

@@ -34,6 +34,9 @@ namespace Aurora {
 			WSIPlatformType WSI = WSIPlatformType::SURFACE_PLAFORM_NONE;
 			void* WindowHandle = nullptr;
 			uint8_t FramesPerFlight = 1;
+			bool VSync = false;
+			uint32_t Width = 0;
+			uint32_t Height = 0;
 		} SurfaceSpecs;
 
 		struct InstanceSpecification
@@ -51,7 +54,7 @@ namespace Aurora {
 		virtual ~RenderContext() = default;
 
 		virtual void Init() = 0;
-		virtual void Shutdown() = 0;
+		virtual void Destroy() = 0;
 
 		virtual const RenderContextSpecification& GetSpecification() const = 0;
 

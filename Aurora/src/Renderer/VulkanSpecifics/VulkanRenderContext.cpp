@@ -1,13 +1,15 @@
 #include "Renderer/VulkanSpecifics/VulkanCore.h"
 #include "Renderer/VulkanSpecifics/VulkanRenderContext.h"
 
+#include "Renderer/VulkanSpecifics/VulkanHelper.h"
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <map>
 #include <set>
 
-namespace Aurora { namespace VK {
+namespace Aurora::VK {
 
 	namespace Utils {
 
@@ -70,11 +72,22 @@ namespace Aurora { namespace VK {
 			AURORA_ERROR("Failed to create logical device. VulkanContext could not be instantiated.");
 			return;
 		}
+
+		if (!CreateSwapchain(m_Specification.SurfaceSpecs))
+		{
+			AURORA_ERROR("Failed to create swapchain. VulkanContext could not be initialized.");
+			return;
+		}		
+
+		AURORA_INFO("Successfully initialized vulkan rendering context");
 	}
 
 
-	void VulkanRenderContext::Shutdown()
+	void VulkanRenderContext::Destroy()
 	{
+		m_Swapchain->Destroy();
+		m_Swapchain = nullptr;
+
 		vkDestroyDevice(m_Device, nullptr);
 		m_Device = nullptr;
 
@@ -98,7 +111,7 @@ namespace Aurora { namespace VK {
 		const std::string& appName,
 		const RenderContextSpecification::InstanceSpecification instanceSpecs, 
 		RenderContextSpecification::ApplicationVersionNumber appVersion, 
-		RenderContextSpecification::AuroraVersionNumber auroraVersion, 
+		RenderContextSpecification::AuroraVersionNumber auroraVersion,
 		WSIPlatformType wsi)
 	{		
 
@@ -170,6 +183,8 @@ namespace Aurora { namespace VK {
 			SetupDebugMessenger(m_Instance);
 #endif // AURORA_VK_VALIDATION
 
+
+		AURORA_TRACE("Created vulkan instance.");
 		return true;
 	}
 
@@ -196,6 +211,8 @@ namespace Aurora { namespace VK {
 			AURORA_CRITICAL("Failed to create a Vulkan Surface!");
 			return false;
 		}
+
+		AURORA_TRACE("Created vulkan surface.");
 		return true;
 	}
 	
@@ -237,12 +254,14 @@ namespace Aurora { namespace VK {
 		AURORA_INFO("DeviceID		: {}", props.deviceID);
 		AURORA_INFO("==========================================================\n");
 
+
+		AURORA_TRACE("Picked physical device");
 		return true;
 	}
 
 	bool VulkanRenderContext::CreateLogicalDevice(const DeviceRequirements& deviceRequirements)
 	{
-		QueueFamilyIndices indices = FindQueueFamilies(m_PhysicalDevice);
+		QueueFamilyIndices indices = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface);
 		size_t uniqueQueueFamilies = indices.UniqueFamilyIndices();
 		AURORA_INFO("Picked physical device queue families");
 		AURORA_INFO("==========================================================");
@@ -277,12 +296,12 @@ namespace Aurora { namespace VK {
 		}
 
 		VkPhysicalDeviceFeatures features{};
-
+		auto requiredExtension = GetRequiredDeviceExtensions(deviceRequirements);
 		VkDeviceCreateInfo deviceInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 		deviceInfo.pNext = nullptr;
 		deviceInfo.flags = 0;
-		deviceInfo.enabledExtensionCount = 0;
-		deviceInfo.ppEnabledExtensionNames = nullptr;
+		deviceInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtension.size());
+		deviceInfo.ppEnabledExtensionNames = requiredExtension.data();
 		deviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
 		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.pEnabledFeatures = &features;
@@ -321,84 +340,62 @@ namespace Aurora { namespace VK {
 		vkGetDeviceQueue(m_Device, indices.Transfer, finalTransferSlot, &m_QueueFamilies.Transfer);
 		AURORA_TRACE("Got transfer queue from queue family {} at slot {}", indices.Transfer, finalTransferSlot);
 
+
+		AURORA_TRACE("Created vulkan logical device and gathered queues");
 		return true;
 	}
 
-
-	QueueFamilyIndices VulkanRenderContext::FindQueueFamilies(VkPhysicalDevice phDevice)
+	bool VulkanRenderContext::CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs)
 	{
-		uint32_t queueFamilyCount;
-		vkGetPhysicalDeviceQueueFamilyProperties(phDevice, &queueFamilyCount, nullptr);
-		std::vector<VkQueueFamilyProperties> queueFamilyProps(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(phDevice, &queueFamilyCount, queueFamilyProps.data());
+		SwapchainSpecification swapchainSpecs{};
+		swapchainSpecs.Device = m_Device;
+		swapchainSpecs.PhysicalDevice = m_PhysicalDevice;
+		swapchainSpecs.Surface = m_Surface;
+		swapchainSpecs.FramesInFlight = surfaceSpecs.FramesPerFlight;
+		swapchainSpecs.VSync = surfaceSpecs.VSync;
+		swapchainSpecs.InitialExtent = { surfaceSpecs.Width, surfaceSpecs.Height };
+		m_Swapchain = CreateRef<Swapchain>(swapchainSpecs);
 
-		// We try to find distinct Graphics, Present, Transfer and Compute Queues				
-		QueueFamilyIndices indices{};
-		//Best case: combined
-		bool foundBestPresent = false;
-		bool foundUnified = false;
-		
-		//Best case: dedicated
-		bool foundBestTransfer = false;
-		bool foundBestCompute = false;	
-
-		int i = 0;
-		//Look for UnifiedGraphics queue (with present, graphics and compute support (most integrated GPUs have that))
-		for (const auto& family : queueFamilyProps)
+		if (m_Swapchain == nullptr)
 		{
-			//look until a family was found that supports both present and graphics
-			if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT
-				&& !foundBestPresent)
-			{
-				indices.Graphics = i;
-			}			
-			VkBool32 presentSupport;
-			vkGetPhysicalDeviceSurfaceSupportKHR(phDevice, i, m_Surface, &presentSupport);
-			if (presentSupport && !foundBestPresent)
-			{
-				indices.Present = i;
-				foundBestPresent = family.queueFlags & VK_QUEUE_GRAPHICS_BIT;
-			}
-						
-			if (!foundBestTransfer && family.queueFlags & VK_QUEUE_TRANSFER_BIT)
-			{
-				indices.Transfer = i;				
-				foundBestTransfer = !(family.queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(family.queueFlags & VK_QUEUE_COMPUTE_BIT);				
-			}
-
-			if (!foundBestCompute && family.queueFlags & VK_QUEUE_COMPUTE_BIT)
-			{
-				indices.Compute = i;
-				foundBestCompute = !(family.queueFlags & VK_QUEUE_GRAPHICS_BIT);
-			}
-
-			//mainly for integrated chips
-			if (!foundUnified
-				&& family.queueFlags & VK_QUEUE_COMPUTE_BIT 
-				&& family.queueFlags & VK_QUEUE_TRANSFER_BIT
-				&& foundBestPresent)
-			{
-				indices.Unified = i;
-				indices.UnifiedCount = family.queueCount;
-				foundUnified = true;
-			}
-			i++;
+			AURORA_TRACE("Failed to create swapchain object.");
+			return false;
 		}
-		indices.SamePresentGraphics = foundBestPresent;
-		indices.HasDedicatedTransfer = foundBestTransfer;
-		indices.HasDedicatedCompute = foundBestCompute;
 
-		return indices;
+		m_Swapchain->Init();
+
+		if (m_Swapchain->GetHandle() == VK_NULL_HANDLE)
+		{
+			AURORA_TRACE("Failed to initialize swapchain.");
+			return false;
+		}
+		
+		
+		AURORA_TRACE("Created and initialized swapchain.");
+		return true;
 	}
+	
 
 	// ========== Privat helper ==========
 
-	int VulkanRenderContext::EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements)
+	int VulkanRenderContext::EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const
 	{
 		int score = 0;
 		
-		QueueFamilyIndices indices = FindQueueFamilies(phDevice);
-		if (!indices.IsComplete() || !CheckRequiredDeviceExtensionSupport(phDevice, deviceRequirements))
+		QueueFamilyIndices indices = Helper::FindQueueFamilies(phDevice, m_Surface);
+		if (!indices.IsComplete())
+			return 0;
+
+		if (!CheckRequiredDeviceExtensionSupport(phDevice, deviceRequirements))
+			return 0;
+
+		auto swapchainSupportDetails = Swapchain::GetSupportDetails(phDevice, m_Surface);
+		if (!swapchainSupportDetails.Formats.empty() && !swapchainSupportDetails.PresentModes.empty() && swapchainSupportDetails.Capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+		{
+			//TODO: handle more detailed selection here (look for specific format etc)
+			score += 10; //magic number
+		}
+		else
 			return 0;
 
 		if (indices.HasDedicatedCompute)
@@ -418,25 +415,26 @@ namespace Aurora { namespace VK {
 		return score;
 	}
 
-	bool VulkanRenderContext::CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements)
+	bool VulkanRenderContext::CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const
 	{
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(phDevice, nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateDeviceExtensionProperties(phDevice, nullptr, &extensionCount, availableExtensions.data());
 
-		std::set<std::string> requiredExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		auto requiredExtensionsList = GetRequiredDeviceExtensions(deviceRequirements);
+		std::set<std::string> requiredExtensions(requiredExtensionsList.begin(), requiredExtensionsList.end());
 
 		for (const auto& extension : availableExtensions)
 		{
-			if (requiredExtensions.find(extension.extensionName) != requiredExtensions.end())
-			{
-				AURORA_INFO("Found required device extension {}", extension.extensionName);
-				requiredExtensions.erase(extension.extensionName);
-				
-				if (requiredExtensions.empty())
-					return true;
-			}
+			if (requiredExtensions.find(extension.extensionName) == requiredExtensions.end())
+				continue;
+			
+			AURORA_INFO("Found required device extension {}", extension.extensionName);
+			requiredExtensions.erase(extension.extensionName);
+
+			if (requiredExtensions.empty())
+				return true;
 		}
 		for (const auto& extension : requiredExtensions)
 		{
@@ -446,7 +444,14 @@ namespace Aurora { namespace VK {
 		return false;
 	}
 
-	bool VulkanRenderContext::CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers)
+	const std::vector<const char*> VulkanRenderContext::GetRequiredDeviceExtensions(const DeviceRequirements& deviceRequirements) const
+	{
+		//TODO: Write parsing between devideRequirements and the actual extensions
+
+		return { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	}
+
+	bool VulkanRenderContext::CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers) const
 	{
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -475,7 +480,7 @@ namespace Aurora { namespace VK {
 		return allLayerFound;
 	}
 
-	std::vector<const char*> VulkanRenderContext::GetRequiredInstanceExtensions(WSIPlatformType wsi)
+	std::vector<const char*> VulkanRenderContext::GetRequiredInstanceExtensions(WSIPlatformType wsi) const
 	{
 		std::vector<const char*> extensions;
 		if (wsi == WSIPlatformType::SURFACE_PLATFORM_GLFW)
@@ -488,7 +493,7 @@ namespace Aurora { namespace VK {
 		return extensions;
 	}
 
-	bool VulkanRenderContext::CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions)
+	bool VulkanRenderContext::CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions) const
 	{
 		uint32_t extensionCount;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -545,6 +550,9 @@ namespace Aurora { namespace VK {
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = VulkanDebugCallback;
 	}
+
+	
+
 }
-}
+
 

@@ -64,6 +64,9 @@ namespace StarFire {
 		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
 		renderSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
 		renderSpecs.SurfaceSpecs.FramesPerFlight = 2;
+		renderSpecs.SurfaceSpecs.VSync = false;
+		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
+		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
 		Aurora::InitializeRenderContext(renderSpecs);
 		
 		

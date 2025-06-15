@@ -20,6 +20,8 @@ namespace StarFire {
 
 			virtual inline uint32_t GetWidth() const override { return m_Specification.Width; }
 			virtual inline uint32_t GetHeight() const override { return m_Specification.Height; }
+			virtual inline uint32_t GetFramebufferWidth() const override { return m_Specification.FramebufferWidth; }
+			virtual inline uint32_t GetFramebufferHeight() const override { return m_Specification.FramebufferHeight; }
 
 			virtual const WindowSpecification& GetSpecification() const override { return m_Specification; }
 
@@ -45,6 +47,9 @@ namespace StarFire {
 				std::string* Title = nullptr;
 				int* Width = nullptr;
 				int* Height = nullptr;
+
+				uint32_t* FramebufferWidth = nullptr;
+				uint32_t* FramebufferHeight = nullptr;
 
 				float* ContentScaleX = nullptr;
 				float* ContentScaleY = nullptr;

@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace Aurora { namespace VK {
+namespace Aurora::VK {
 
 	struct PhysicalDeviceLimits
 	{
@@ -14,5 +14,4 @@ namespace Aurora { namespace VK {
 
 	};
 
-
-} }
+}

@@ -34,6 +34,8 @@ namespace StarFire{
 			m_Data.Title = &m_Specification.Title;
 			m_Data.Width = (int*) & m_Specification.Width;
 			m_Data.Height = (int*)&m_Specification.Height;
+			m_Data.FramebufferWidth = (uint32_t*)&m_Specification.FramebufferWidth;
+			m_Data.FramebufferHeight = (uint32_t*)&m_Specification.FramebufferHeight;
 
 			if (s_GLFWwindowCount == 0)
 			{
@@ -87,6 +89,8 @@ namespace StarFire{
 			glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+					*data.FramebufferWidth = static_cast<uint32_t>(width);
+					*data.FramebufferHeight = static_cast<uint32_t>(height);
 
 					Scope<Event> e = CreateScope<FramebufferResizeEvent>(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 					data.EventCallback(std::move(e));
