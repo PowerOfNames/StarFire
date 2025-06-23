@@ -132,17 +132,19 @@ namespace StarFire {
 			{
 				HandleUserInput();
 
+				Aurora::BeginFrame();
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnUpdate(Timestep(m_DeltaTimeInS));
 				}
-
+				Aurora::EndFrame();
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnGuiRender();
 				}
 
-				m_MainWindow->OnUpdate();
+				//m_MainWindow->OnUpdate();
+				Aurora::SwapFrame();
 			}
 			else
 			{
@@ -183,13 +185,16 @@ namespace StarFire {
 
 	bool Application::OnWindowResize(WindowResizeEvent& e)
 	{
-		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+		uint32_t newWidth = e.GetWidth();
+		uint32_t newHeight = e.GetHeight();
+		if (newWidth == 0 || newHeight == 0)
 		{
 			m_Minimized = true;
 			return false;
 		}
 		m_Minimized = false;
-		SF_CORE_DEBUG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
+		SF_CORE_DEBUG("Window resize to to [{}|{}]", newWidth, newHeight);
+		Aurora::Resize(newWidth, newHeight);
 
 		return false;
 	}

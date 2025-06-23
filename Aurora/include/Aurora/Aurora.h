@@ -8,7 +8,7 @@
 
 namespace Aurora {
 
-	static std::shared_ptr<RenderContext> s_RenderContext = nullptr;
+	static std::unique_ptr<RenderContext> s_RenderContext = nullptr;
 	
 	using LogCallback = void(*)(LogLevel, const std::string&, const char* file, const char* func, int line);
 	using RegistryRegisterCallback = void(*)(const std::string& typeName, std::atomic<uint64_t>*);
@@ -19,6 +19,11 @@ namespace Aurora {
 	void SetRefRegistryUnregisterCallback(RegistryUnregisterCallback callback);
 
 	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs);
+
+	void BeginFrame();
+	void EndFrame();
+	void SwapFrame();
+	void Resize(uint32_t width, uint32_t height);
 
 	bool Shutdown();
 }

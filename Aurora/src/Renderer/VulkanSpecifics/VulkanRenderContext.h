@@ -1,8 +1,9 @@
 #pragma once
 #include "Aurora/Renderer/RenderContext.h"
 
-#include "Renderer/VulkanSpecifics/VulkanCore.h"
+#include "Renderer/VulkanSpecifics/DataStructs/PhysicalDeviceLimits.h"
 #include "Renderer/VulkanSpecifics/Swapchain.h"
+#include "Renderer/VulkanSpecifics/VulkanCore.h"
 
 #include <vector>
 
@@ -29,6 +30,10 @@ namespace Aurora::VK {
 		~VulkanRenderContext() = default;
 
 		virtual void Init() override;
+		virtual void BeginFrame() override;
+		virtual void EndFrame() override;
+		virtual void SwapFrame() override;
+		virtual void Resize(uint32_t width, uint32_t height) override;
 		virtual void Destroy() override;
 
 		inline virtual const RenderContextSpecification& GetSpecification() const override { return m_Specification; }
@@ -44,6 +49,7 @@ namespace Aurora::VK {
 		bool CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 		bool PickPhysicalDevice(const DeviceRequirements& deviceRequirements);
 		bool CreateLogicalDevice(const DeviceRequirements& deviceRequirements);
+		bool CreateGraphicsCmdPool();
 		bool CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 
 		//keep scoring up-to-date later (#76)
@@ -68,7 +74,8 @@ namespace Aurora::VK {
 		VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice m_Device = VK_NULL_HANDLE;
-				
+		VkCommandPool m_GraphicsCmdPool = VK_NULL_HANDLE;
+
 		QueueFamilies m_QueueFamilies{};
 
 		PhysicalDeviceLimits m_PhDeviceLimits{};

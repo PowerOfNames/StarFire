@@ -2,6 +2,7 @@
 #include "Renderer/VulkanSpecifics/VulkanRenderContext.h"
 
 #include "Renderer/VulkanSpecifics/VulkanHelper.h"
+#include "Renderer/VulkanSpecifics/DataStructs/QueueFamilies.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -73,6 +74,12 @@ namespace Aurora::VK {
 			return;
 		}
 
+		if (!CreateGraphicsCmdPool())
+		{
+			AURORA_TRACE("Failed to create graphics command pool. VulkanContext could not be initialized.");
+			return;
+		}
+
 		if (!CreateSwapchain(m_Specification.SurfaceSpecs))
 		{
 			AURORA_ERROR("Failed to create swapchain. VulkanContext could not be initialized.");
@@ -85,8 +92,13 @@ namespace Aurora::VK {
 
 	void VulkanRenderContext::Destroy()
 	{
+		vkDeviceWaitIdle(m_Device);
+
 		m_Swapchain->Destroy();
 		m_Swapchain = nullptr;
+
+		vkDestroyCommandPool(m_Device, m_GraphicsCmdPool, nullptr);
+		m_GraphicsCmdPool = VK_NULL_HANDLE;
 
 		vkDestroyDevice(m_Device, nullptr);
 		m_Device = nullptr;
@@ -104,6 +116,29 @@ namespace Aurora::VK {
 	}
 
 
+	void VulkanRenderContext::BeginFrame()
+	{
+		//Acquire next image available image from swapchain
+		//pass relevant information to renderers
+	}
+
+	void VulkanRenderContext::EndFrame()
+	{
+		//finalize command buffers
+		//pass relevant information to swapchain (submit)
+	}
+
+	void VulkanRenderContext::SwapFrame()
+	{
+		m_Swapchain->SwapImages();
+	}
+
+	void VulkanRenderContext::Resize(uint32_t width, uint32_t height)
+	{
+		m_Swapchain->OnResize(width, height);
+	}
+
+	// ========== Object Creation ==========
 	bool VulkanRenderContext::CreateInstance(
 		const std::string& appName,
 		const RenderContextSpecification::InstanceSpecification instanceSpecs, 
@@ -342,12 +377,30 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	bool VulkanRenderContext::CreateGraphicsCmdPool()
+	{
+		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		poolInfo.pNext = nullptr;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+		
+		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_GraphicsCmdPool), VK_SUCCESS, "Failed to create graphics command pool.");
+		if (m_GraphicsCmdPool == VK_NULL_HANDLE)
+			return false;
+		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_GraphicsCmdPool, "GraphicsCommandPool");
+
+		return true;
+	}
+
 	bool VulkanRenderContext::CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs)
 	{
 		SwapchainSpecification swapchainSpecs{};
 		swapchainSpecs.Device = m_Device;
 		swapchainSpecs.PhysicalDevice = m_PhysicalDevice;
 		swapchainSpecs.Surface = m_Surface;
+		swapchainSpecs.GraphicsCmdPool = m_GraphicsCmdPool;
+		swapchainSpecs.GraphicsQueue = m_QueueFamilies.Graphics;
+		swapchainSpecs.PresentQueue = m_QueueFamilies.Present;
 		swapchainSpecs.FramesInFlight = surfaceSpecs.FramesPerFlight;
 		swapchainSpecs.VSync = surfaceSpecs.VSync;
 		swapchainSpecs.InitialExtent = { surfaceSpecs.Width, surfaceSpecs.Height };
@@ -386,7 +439,7 @@ namespace Aurora::VK {
 		if (!CheckRequiredDeviceExtensionSupport(phDevice, deviceRequirements))
 			return 0;
 
-		auto swapchainSupportDetails = Swapchain::GetSupportDetails(phDevice, m_Surface);
+		auto swapchainSupportDetails = Helper::GetSwapSupportDetails(phDevice, m_Surface);
 		if (!swapchainSupportDetails.Formats.empty() && !swapchainSupportDetails.PresentModes.empty() && swapchainSupportDetails.Capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		{
 			//TODO: handle more detailed selection here (look for specific format etc)
@@ -548,7 +601,7 @@ namespace Aurora::VK {
 		createInfo.pfnUserCallback = Debug::VulkanDebugCallback;
 	}
 
-	
+
 
 }
 

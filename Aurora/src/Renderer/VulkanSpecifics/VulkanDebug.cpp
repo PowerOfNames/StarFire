@@ -43,6 +43,10 @@ namespace Aurora::VK::Debug {
 		return VK_INCOMPLETE;
 	}
 
+	void SetVkObjDebugName(VkDevice device, VkObjectType objType, uint64_t objHandle, const std::string& name)
+	{
+		SetVkObjDebugName(device, objType, objHandle, name.c_str());
+	}
 	void SetVkObjDebugName(VkDevice device, VkObjectType objType, uint64_t objHandle, const char* name)
 	{
 		if (!s_DebugNameEnabled)

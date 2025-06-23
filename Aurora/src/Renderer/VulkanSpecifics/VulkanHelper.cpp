@@ -1,6 +1,8 @@
 #include "Renderer/VulkanSpecifics/VulkanHelper.h"
 
 #include <vector>
+#include <algorithm>
+
 
 namespace Aurora::VK::Helper {
 
@@ -68,5 +70,66 @@ namespace Aurora::VK::Helper {
 		indices.HasDedicatedCompute = foundBestCompute;
 
 		return indices;
+	}
+
+	//========== Swapchain ==========
+	const SwapchainSupportDetails GetSwapSupportDetails(VkPhysicalDevice phDevice, VkSurfaceKHR surface)
+	{
+		SwapchainSupportDetails details{};
+
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phDevice, surface, &details.Capabilities);
+
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(phDevice, surface, &formatCount, nullptr);
+		if (formatCount != 0)
+		{
+			details.Formats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(phDevice, surface, &formatCount, details.Formats.data());
+		}
+
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(phDevice, surface, &presentModeCount, nullptr);
+		if (presentModeCount != 0)
+		{
+			details.PresentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(phDevice, surface, &presentModeCount, details.PresentModes.data());
+		}
+
+		return details;
+	}
+
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat, VkColorSpaceKHR preferredColorSpace)
+	{
+		for (const auto& availableFormat : availableFormats)
+		{
+			if (availableFormat.format == preferredFormat && availableFormat.colorSpace == preferredColorSpace)
+				return availableFormat;
+		}
+		return availableFormats[0];
+	}
+
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availableModes, VkPresentModeKHR preferred)
+	{
+		for (const auto& availableMode : availableModes)
+		{
+			if (availableMode == preferred)
+				availableMode;
+		}
+
+		return VK_PRESENT_MODE_FIFO_KHR;
+	}
+
+	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t framebufferWidth, uint32_t framebufferHeight)
+	{
+		if (capabilities.currentExtent.width != UINT32_MAX)
+			return capabilities.currentExtent;
+
+		VkExtent2D actualExtent =
+		{
+			std::clamp(framebufferWidth, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+			std::clamp(framebufferHeight, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
+		};
+
+		return actualExtent;
 	}
 }

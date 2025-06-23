@@ -5,11 +5,11 @@
 
 namespace Aurora {
 
-	Ref<RenderContext> RenderContext::Create(const RenderContextSpecification& specs)
+	Scope<RenderContext> RenderContext::Create(const RenderContextSpecification& specs)
 	{
 		switch (specs.API)
 		{
-			case APIType::API_TYPE_VULKAN: return std::make_shared<VK::VulkanRenderContext>(specs);
+			case APIType::API_TYPE_VULKAN: return CreateScope<VK::VulkanRenderContext>(specs);
 			default:
 			{
 				AURORA_ERROR("Chosen API ({}) not supported! Returning nullptr", static_cast<uint32_t>(specs.API));

@@ -13,6 +13,10 @@ namespace Aurora::VK {
 		VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice Device = VK_NULL_HANDLE;
 
+		VkCommandPool GraphicsCmdPool = VK_NULL_HANDLE;
+		VkQueue GraphicsQueue = VK_NULL_HANDLE;
+		VkQueue PresentQueue = VK_NULL_HANDLE;
+
 		uint32_t FramesInFlight = 1;
 
 		bool VSync = true;
@@ -24,11 +28,11 @@ namespace Aurora::VK {
 		} InitialExtent;
 	};
 
-	struct SwapchainSupportDetails
+	struct FrameData
 	{
-		VkSurfaceCapabilitiesKHR Capabilities;
-		std::vector<VkSurfaceFormatKHR> Formats;
-		std::vector<VkPresentModeKHR> PresentModes;
+		VkCommandBuffer CommandBuffer;
+		uint64_t FrameIndex;
+		VkExtent2D Extent;
 	};
 
 	class Swapchain
@@ -38,25 +42,14 @@ namespace Aurora::VK {
 		~Swapchain() = default;
 
 		void Init();
+		const FrameData* AcquireNextFrame();
+		void SwapImages();
+		void OnResize(uint32_t width, uint32_t height);
 		void Destroy();
-
 
 		inline const SwapchainSpecification& GetSpecification() const { return m_Specification; }
 		inline SwapchainSpecification& GetSpecification() { return m_Specification; }
-		inline VkSwapchainKHR GetHandle() const { return m_Swapchain; }
-
-		static const SwapchainSupportDetails GetSupportDetails(VkPhysicalDevice phDevice, VkSurfaceKHR surface);
-		static VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat, VkColorSpaceKHR preferredColorSpace);
-		static VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availableModes, VkPresentModeKHR preferred);
-
-		/// <summary>
-		/// Method to query the swap extent. If currentExtent is set to UINT32_MAX, use framebufferWidth/Height clamped to min/max image extent.
-		/// </summary>
-		/// <param name="capabilities"></param>
-		/// <param name="framebufferWidth">In pixels e.g. from glfwGetFramebufferSize</param>
-		/// <param name="framebufferHeight">In pixels e.g. from glfwGetFramebufferSize</param>
-		/// <returns></returns>
-		static VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t framebufferWidth, uint32_t framebufferHeight);
+		inline VkSwapchainKHR GetHandle() const { return m_Swapchain; }	
 
 	private:
 		bool CreateSwapchain();
@@ -64,18 +57,35 @@ namespace Aurora::VK {
 		bool CreatePipeline();
 		bool CreateRenderPass();
 		bool CreateFramebuffers();
+		bool AllocateCommandBuffers();
+		bool CreateSyncObjects();
+		bool InitializeFrames();
+
+		void Submit();
+		void Present();
 	private:
-		SwapchainSpecification m_Specification;
+		SwapchainSpecification m_Specification{};
 		VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
 		VkRenderPass m_RenderPass = VK_NULL_HANDLE;
 		VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
 
-		VkFormat m_SwapchainImageFormat;
-		VkExtent2D m_SwapchainExtent;
+		VkFormat m_ImageFormat = VK_FORMAT_UNDEFINED;
+		VkExtent2D m_Extent{};
 		
-		std::vector<VkImage> m_SwapchainImages;
-		std::vector<VkImageView> m_SwapchainImageViews;
-		std::vector<VkFramebuffer> m_SwapchainFramebuffers;
+		uint32_t m_ImageIndex = 0;
+		//Per image data
+		std::vector<VkImage> m_Images;
+		std::vector<VkImageView> m_ImageViews;
+		std::vector<VkFramebuffer> m_Framebuffers;
+
+		uint64_t m_TotalFrames = 0;
+		uint64_t m_FrameIndex = 0;
+		//per frame data
+		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
+		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+		std::vector<VkFence> m_InFlightFences;
+		std::vector<VkCommandBuffer> m_CommandBuffers;
+		std::vector<FrameData> m_FramesInFlight;
 	};
 
 

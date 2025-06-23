@@ -54,11 +54,15 @@ namespace Aurora {
 		virtual ~RenderContext() = default;
 
 		virtual void Init() = 0;
+		virtual void BeginFrame() = 0;
+		virtual void EndFrame() = 0;
+		virtual void SwapFrame() = 0;
+		virtual void Resize(uint32_t width, uint32_t height) = 0;
 		virtual void Destroy() = 0;
 
 		virtual const RenderContextSpecification& GetSpecification() const = 0;
 
-		static std::shared_ptr<RenderContext> Create(const RenderContextSpecification& contextSpecs);
+		static std::unique_ptr<RenderContext> Create(const RenderContextSpecification& contextSpecs);
 	};
 
 }

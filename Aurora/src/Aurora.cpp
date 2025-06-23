@@ -5,6 +5,34 @@
 
 namespace Aurora {
 
+	void BeginFrame()
+	{
+		s_RenderContext->BeginFrame();
+	}
+
+	void EndFrame()
+	{
+		s_RenderContext->EndFrame();
+	}
+
+	void SwapFrame()
+	{
+		s_RenderContext->SwapFrame();
+	}
+
+	void Resize(uint32_t width, uint32_t height)
+	{
+		s_RenderContext->Resize(width, height);
+	}
+
+	bool Shutdown()
+	{
+		if (s_RenderContext)
+			s_RenderContext->Destroy();
+
+		return true;
+	}
+
 	void SetLoggingCallback(LogCallback callback)
 	{
 		Log::SetCallback(callback);
@@ -27,14 +55,5 @@ namespace Aurora {
 		s_RenderContext->Init();
 		return true;
 	}
-
-	bool Shutdown()
-	{
-		if (s_RenderContext)
-			s_RenderContext->Destroy();
-
-		return true;
-	}
-
 }
 

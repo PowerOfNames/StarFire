@@ -10,8 +10,6 @@ namespace Aurora::VK {
 			bool HasDedicatedComputeQueue;
 			bool HasDedicatedTransferQueue;
 		} QueueFamLimits;
-
-
 	};
 
 }
