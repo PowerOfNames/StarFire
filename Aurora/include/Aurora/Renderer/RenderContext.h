@@ -37,6 +37,15 @@ namespace Aurora {
 			bool VSync = false;
 			uint32_t Width = 0;
 			uint32_t Height = 0;
+
+			struct ClearColor
+			{
+				float R = 0.0f;
+				float G = 0.0f;
+				float B = 0.0f;
+				float A = 1.0f;
+			} ClearColor;
+
 		} SurfaceSpecs;
 
 		struct InstanceSpecification
@@ -44,7 +53,7 @@ namespace Aurora {
 			bool EnableDebugUtils = false;
 			bool EnableInfoDebugLevel = false;
 			
-		} InstanceSpecs;
+		} InstanceSpecs;		
 	};
 
 
@@ -54,7 +63,7 @@ namespace Aurora {
 		virtual ~RenderContext() = default;
 
 		virtual void Init() = 0;
-		virtual void BeginFrame() = 0;
+		virtual void BeginFrame() = 0;		
 		virtual void EndFrame() = 0;
 		virtual void SwapFrame() = 0;
 		virtual void Resize(uint32_t width, uint32_t height) = 0;

@@ -48,6 +48,13 @@ namespace Aurora::VK {
 		}
 
 		InitializeFrames();
+
+		if (!CreateFallbackPipeline())
+		{
+			AURORA_TRACE("Failed to create fallabck pipeline");
+			//we technically do not need this EO, but will do anyways for development purposes
+			return;
+		}
 	}
 
 	void Swapchain::Destroy()
@@ -86,34 +93,47 @@ namespace Aurora::VK {
 		AURORA_INFO("Destroyed swapchain.");
 	}
 	
-	const FrameData* Swapchain::AcquireNextFrame()
+	void Swapchain::PrepareFrame()
 	{
-		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FrameIndex], VK_TRUE, UINT64_MAX);
-		vkResetFences(m_Specification.Device, 1, &m_InFlightFences[m_FrameIndex]);
+		m_FramesInFlightIdx = (m_FramesInFlightIdx + 1) % m_Specification.FramesInFlight;
+		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
+		AURORA_TRACE("Preparing total frame: {}", m_TotalFinishedFrames+1);
+	}
 
-		vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_FrameIndex], VK_NULL_HANDLE, &m_ImageIndex);
+	void Swapchain::FinalizeFrame()
+	{
+		m_TotalFinishedFrames++;
+		AURORA_TRACE("Finished frame {}.", m_TotalFinishedFrames);
+	}
 
-		vkResetCommandBuffer(m_CommandBuffers[m_FrameIndex], 0);
-		m_FramesInFlight[m_FrameIndex].CommandBuffer = m_CommandBuffers[m_FrameIndex];
-		m_FramesInFlight[m_FrameIndex].FrameIndex = m_FrameIndex;
+	const FrameData* Swapchain::AcquireNextFrameData()
+	{
+		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
+
+		//EO if frameData was already acquired this frame.
+		if (frame.TotalFrameCount == m_TotalFinishedFrames)
+			return &frame;
+
+		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx], VK_TRUE, UINT64_MAX);
+		vkResetFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx]);
+
+		vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_FramesInFlightIdx], VK_NULL_HANDLE, &m_ImageIndex);
+
+		vkResetCommandBuffer(m_CommandBuffers[m_FramesInFlightIdx], 0);
+
+		frame.CommandBuffer = m_CommandBuffers[m_FramesInFlightIdx];
+		frame.FrameIndex = m_FramesInFlightIdx;
+		frame.TotalFrameCount = m_TotalFinishedFrames;
 		
-		
-		return &m_FramesInFlight[m_FrameIndex];
+		return &m_FramesInFlight[m_FramesInFlightIdx];
 	}
 
 	void Swapchain::SwapImages()
 	{
-		AURORA_INFO("Current frame: {}", m_TotalFrames);
-		AURORA_INFO("Swapping frame {}", m_FrameIndex);
-		
-		//temp
-		AcquireNextFrame();
-		
+		AURORA_TRACE("Swapping frame {}", m_FramesInFlightIdx);
+				
 		Submit();
-		Present();
-		m_FrameIndex = (m_FrameIndex + 1) % m_Specification.FramesInFlight;
-		m_TotalFrames++;
-		AURORA_INFO("New frame index: {}", m_FrameIndex);
+		Present();		
 	}
 
 	void Swapchain::Submit()
@@ -123,16 +143,16 @@ namespace Aurora::VK {
 		submitInfo.pNext = nullptr;
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_FramesInFlight[m_FrameIndex].CommandBuffer;
+		submitInfo.pCommandBuffers = &m_FramesInFlight[m_FramesInFlightIdx].CommandBuffer;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[m_FrameIndex]; //wait until image is available to render/draw to
+		submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[m_FramesInFlightIdx]; //wait until image is available to render/draw to
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &m_RenderFinishedSemaphores[m_FrameIndex]; //signal when drawing is finished and ready to be presented
+		submitInfo.pSignalSemaphores = &m_RenderFinishedSemaphores[m_FramesInFlightIdx]; //signal when drawing is finished and ready to be presented
 
-		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, m_InFlightFences[m_FrameIndex]), VK_SUCCESS, "Failed to submit draw render buffer!");
+		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, m_InFlightFences[m_FramesInFlightIdx]), VK_SUCCESS, "Failed to submit draw render buffer!");
 	}
 
 	void Swapchain::Present()
@@ -142,7 +162,7 @@ namespace Aurora::VK {
 
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &m_Swapchain;
-		presentInfo.pWaitSemaphores = &m_RenderFinishedSemaphores[m_FrameIndex]; //wait until ready to be presented
+		presentInfo.pWaitSemaphores = &m_RenderFinishedSemaphores[m_FramesInFlightIdx]; //wait until ready to be presented
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &m_ImageIndex;
 		presentInfo.pResults = nullptr;
@@ -406,5 +426,48 @@ namespace Aurora::VK {
 
 		return true;
 	}	
+
+	//========== Fallback ==========
+	void Swapchain::RecordFallbackSwapchainRenderPass()
+	{
+		AURORA_INFO("Rendering fallback swapchain pass");
+
+		VkRenderPassBeginInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		rpInfo.pNext = nullptr;
+		rpInfo.renderPass = m_RenderPass;
+		rpInfo.framebuffer = m_Framebuffers[m_ImageIndex];
+		rpInfo.renderArea.extent = m_Extent;
+		rpInfo.renderArea.offset = { 0,0 };
+		VkClearValue clearColor = { {{m_Specification.ClearColor.B, m_Specification.ClearColor.G, m_Specification.ClearColor.R, 1.0f}} };
+		rpInfo.clearValueCount = 1;
+		rpInfo.pClearValues = &clearColor;
+
+		VkCommandBuffer cmd = m_CommandBuffers[m_FramesInFlightIdx];
+		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FallbackPipeline);
+
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(m_Extent.width);
+		viewport.height = static_cast<float>(m_Extent.height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = m_Extent;
+		vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+		//vkCmdDraw(cmd, 0, 0, 0, 0);
+
+		vkCmdEndRenderPass(cmd);
+	}
+
+	bool Swapchain::CreateFallbackPipeline()
+	{
+
+	}
 
 }

@@ -138,10 +138,13 @@ namespace StarFire {
 					layer->OnUpdate(Timestep(m_DeltaTimeInS));
 				}
 				Aurora::EndFrame();
+
+				//Todo: add Aurora::BeginUiFrame
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnGuiRender();
 				}
+				//Todo: add Aurora::EndUiFrame
 
 				//m_MainWindow->OnUpdate();
 				Aurora::SwapFrame();
