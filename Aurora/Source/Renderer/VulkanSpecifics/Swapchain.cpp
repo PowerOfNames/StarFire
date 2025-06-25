@@ -4,6 +4,8 @@
 
 namespace Aurora::VK {
 
+	
+
 	Swapchain::Swapchain(const SwapchainSpecification& spec)
 		: m_Specification(spec)
 	{
@@ -468,6 +470,8 @@ namespace Aurora::VK {
 	bool Swapchain::CreateFallbackPipeline()
 	{
 
+
+		return true;
 	}
 
 }

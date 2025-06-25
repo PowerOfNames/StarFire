@@ -10,9 +10,10 @@ project "Aurora"
 	
 	files
 	{
-		"src/**.h",
-		"src/**.cpp",
-		"include/**.h",
+		"Source/**.h",
+		"Source/**.cpp",
+		"Include/**.h",
+		"Resources/**.h",
 		
 		"vendor/glm/glm/**.hpp",
 		"vendor/glm/glm/**.inl"
@@ -26,8 +27,9 @@ project "Aurora"
 	
 	includedirs
 	{
-		"src",
-		"include",
+		"Source",
+		"Include",
+		"Resources/**.h",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}"
