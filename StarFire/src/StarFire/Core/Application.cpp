@@ -67,6 +67,7 @@ namespace StarFire {
 		renderSpecs.SurfaceSpecs.VSync = false;
 		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
 		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
+		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
 		Aurora::InitializeRenderContext(renderSpecs);
 		
 		

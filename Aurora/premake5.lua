@@ -29,7 +29,7 @@ project "Aurora"
 	{
 		"Source",
 		"Include",
-		"Resources/**.h",
+		"Resources",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}"

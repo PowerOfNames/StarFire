@@ -9,13 +9,15 @@
 **.vcxproj.filters
 **.vcxproj.user
 
+# Resources
+**.spv
+
 # StarFire
 
 # Aurora
-
 #Fallback shaders - shipped as compiled binary FallbackShaders.h
 **/Resources/Shaders/SwapchainFallback.vert
 **/Resources/Shaders/SwapchainFallback.frag
-**.spv
+
 
 

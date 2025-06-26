@@ -21,15 +21,15 @@ namespace Aurora::VK {
 
 		bool VSync = true;
 
-		struct Extent
+		struct SwapExtent
 		{
 			uint32_t Width;
 			uint32_t Height;
 		} InitialExtent;
 
-		struct ClearColor
+		struct SwapClearColor
 		{
-			float R = 0.5f;
+			float R = 0.0f;
 			float G = 0.0f;
 			float B = 0.0f;
 			float A = 1.0f;
@@ -38,10 +38,13 @@ namespace Aurora::VK {
 
 	struct FrameData
 	{
-		VkCommandBuffer CommandBuffer;
-		uint8_t FrameIndex;
-		uint64_t TotalFrameCount;
-		VkExtent2D Extent;
+		VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
+		uint8_t FrameIndex = 0;
+		//The index of all frames. Inclusive (When this is the 5th frame ever rendered, this is 5)
+		uint64_t FrameCount = 0;
+		VkExtent2D Extent{};
+
+		bool IsReady = false;
 	};
 
 	class Swapchain
@@ -52,12 +55,12 @@ namespace Aurora::VK {
 
 		void Init();
 		void PrepareFrame();
-		const FrameData* AcquireNextFrameData();				
 		void SwapImages();
 		void FinalizeFrame();
 		void OnResize(uint32_t width, uint32_t height);
 		void Destroy();
 
+		inline const FrameData* GetCurrentFrameData() const { return &m_FramesInFlight[m_FramesInFlightIdx]; }
 		inline const SwapchainSpecification& GetSpecification() const { return m_Specification; }
 		inline SwapchainSpecification& GetSpecification() { return m_Specification; }
 		inline VkSwapchainKHR GetHandle() const { return m_Swapchain; }	
@@ -71,12 +74,12 @@ namespace Aurora::VK {
 		void RecordFallbackSwapchainRenderPass();
 
 	private:
+		void AcquireNextFrameData();
 		void Submit();
 		void Present();
 		
 		bool CreateSwapchain();
 		bool CreateImageViews();
-		bool CreatePipeline();
 		bool CreateRenderPass();
 		bool CreateFramebuffers();
 		bool AllocateCommandBuffers();
@@ -102,7 +105,7 @@ namespace Aurora::VK {
 
 		//Todo: should be moved into main renderer (totalFrames and frame index) and passed into PrepareNextFrame when a basic renderer is established
 		//Initialize swapchain with this and flow over to 0 the first time 'PrepareNextFrame' is called
-		uint64_t m_TotalFinishedFrames = UINT64_MAX;
+		uint64_t m_TotalFinishedFrames = 0;
 		
 		//per frame data
 		uint64_t m_FramesInFlightIdx = UINT64_MAX;

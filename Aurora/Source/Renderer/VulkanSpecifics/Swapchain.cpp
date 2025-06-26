@@ -1,10 +1,9 @@
 #include "Renderer/VulkanSpecifics/Swapchain.h"
 #include "Renderer/VulkanSpecifics/VulkanHelper.h"
 #include "Renderer/VulkanSpecifics/DataStructs/SwapchainSupportDetails.h"
+#include "Shaders/ShaderByteCodes.h"
 
-namespace Aurora::VK {
-
-	
+namespace Aurora::VK {	
 
 	Swapchain::Swapchain(const SwapchainSpecification& spec)
 		: m_Specification(spec)
@@ -81,6 +80,12 @@ namespace Aurora::VK {
 			vkDestroyFramebuffer(m_Specification.Device, framebuffer, nullptr);
 		m_Framebuffers.clear();
 
+		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, nullptr);
+		m_FallbackPipeline = VK_NULL_HANDLE;
+
+		vkDestroyPipelineLayout(m_Specification.Device, m_FallbackPipelineLayout, nullptr);
+		m_FallbackPipelineLayout = VK_NULL_HANDLE;
+
 		vkDestroyRenderPass(m_Specification.Device, m_RenderPass, nullptr);
 		m_RenderPass = VK_NULL_HANDLE;
 
@@ -100,21 +105,25 @@ namespace Aurora::VK {
 		m_FramesInFlightIdx = (m_FramesInFlightIdx + 1) % m_Specification.FramesInFlight;
 		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
 		AURORA_TRACE("Preparing total frame: {}", m_TotalFinishedFrames+1);
+
+		AcquireNextFrameData();
+
+
+		m_FramesInFlight[m_FramesInFlightIdx].IsReady = true;
 	}
 
 	void Swapchain::FinalizeFrame()
 	{
 		m_TotalFinishedFrames++;
-		AURORA_TRACE("Finished frame {}.", m_TotalFinishedFrames);
+		AURORA_TRACE("Finished {} frames", m_TotalFinishedFrames);
+
+
+		m_FramesInFlight[m_FramesInFlightIdx].IsReady = false;
 	}
 
-	const FrameData* Swapchain::AcquireNextFrameData()
+	void Swapchain::AcquireNextFrameData()
 	{
 		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
-
-		//EO if frameData was already acquired this frame.
-		if (frame.TotalFrameCount == m_TotalFinishedFrames)
-			return &frame;
 
 		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx], VK_TRUE, UINT64_MAX);
 		vkResetFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx]);
@@ -125,14 +134,12 @@ namespace Aurora::VK {
 
 		frame.CommandBuffer = m_CommandBuffers[m_FramesInFlightIdx];
 		frame.FrameIndex = m_FramesInFlightIdx;
-		frame.TotalFrameCount = m_TotalFinishedFrames;
-		
-		return &m_FramesInFlight[m_FramesInFlightIdx];
+		frame.FrameCount++;		
 	}
 
 	void Swapchain::SwapImages()
 	{
-		AURORA_TRACE("Swapping frame {}", m_FramesInFlightIdx);
+		AURORA_TRACE("Swapping FIF {}", m_FramesInFlightIdx);
 				
 		Submit();
 		Present();		
@@ -279,14 +286,6 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	bool Swapchain::CreatePipeline()
-	{
-
-
-
-		return true;
-	}
-
 	bool Swapchain::CreateRenderPass()
 	{
 		VkAttachmentDescription colorAttachment{};
@@ -424,8 +423,6 @@ namespace Aurora::VK {
 	bool Swapchain::InitializeFrames()
 	{
 		m_FramesInFlight.resize(m_Specification.FramesInFlight);
-
-
 		return true;
 	}	
 
@@ -440,7 +437,7 @@ namespace Aurora::VK {
 		rpInfo.framebuffer = m_Framebuffers[m_ImageIndex];
 		rpInfo.renderArea.extent = m_Extent;
 		rpInfo.renderArea.offset = { 0,0 };
-		VkClearValue clearColor = { {{m_Specification.ClearColor.B, m_Specification.ClearColor.G, m_Specification.ClearColor.R, 1.0f}} };
+		VkClearValue clearColor = { {{m_Specification.ClearColor.R, m_Specification.ClearColor.G, m_Specification.ClearColor.B, 1.0f}} };
 		rpInfo.clearValueCount = 1;
 		rpInfo.pClearValues = &clearColor;
 
@@ -469,7 +466,195 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateFallbackPipeline()
 	{
+		//Shader Modules					
+		VkShaderModuleCreateInfo vertInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		vertInfo.pNext = nullptr;
+		vertInfo.flags = 0;
+		vertInfo.codeSize = Shaders::SwapchainFallback_vert_size;
+		vertInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::SwapchainFallback_vert);
 
+		VkShaderModule vertModule = VK_NULL_HANDLE;
+		AURORA_VK_CHECK(vkCreateShaderModule(m_Specification.Device, &vertInfo, nullptr, &vertModule), VK_SUCCESS, "Failed to create swapchain fallback vertex shader module.");
+		if (vertModule == VK_NULL_HANDLE)
+			return false;
+
+		VkShaderModuleCreateInfo fragInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		fragInfo.pNext = nullptr;
+		fragInfo.flags = 0;
+		fragInfo.codeSize = Shaders::SwapchainFallback_frag_size;
+		fragInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::SwapchainFallback_frag);
+
+		VkShaderModule fragModule = VK_NULL_HANDLE;
+		AURORA_VK_CHECK(vkCreateShaderModule(m_Specification.Device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create swapchain fallback fragment shader module.");
+		if (vertModule == VK_NULL_HANDLE)
+			return false;
+		
+
+		//Shader stages
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };					
+		vertShaderStageInfo.pNext = nullptr;
+		vertShaderStageInfo.flags = 0;
+		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertShaderStageInfo.module = vertModule;
+		vertShaderStageInfo.pName = "main";
+		vertShaderStageInfo.pSpecializationInfo = nullptr;
+
+		VkPipelineShaderStageCreateInfo fragShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };			
+		fragShaderStageInfo.pNext = nullptr;
+		fragShaderStageInfo.flags = 0;
+		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragShaderStageInfo.module = fragModule;
+		fragShaderStageInfo.pName = "main";
+		fragShaderStageInfo.pSpecializationInfo = nullptr;
+
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+		
+		//Vertex input state
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		vertexInputInfo.pNext = nullptr;
+		vertexInputInfo.flags = 0;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
+
+		//Input assembly
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+		inputAssemblyInfo.pNext = nullptr;
+		inputAssemblyInfo.flags = 0;
+		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+		
+		//Viewport
+		// Not used (dynamic state)
+		//VkViewport viewport{};
+		//viewport.x = 0.0f;
+		//viewport.y = 0.0f;
+		//viewport.width = (float)m_Extent.width;
+		//viewport.height = (float)m_Extent.height;
+		//viewport.minDepth = 0.0f;
+		//viewport.maxDepth = 1.0f;
+
+		////Scissors
+		//VkRect2D scissor{};
+		//scissor.offset = { 0, 0 };
+		//scissor.extent = m_Extent;
+
+		//Danymic state
+		std::vector<VkDynamicState> dynamicStates =
+		{
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+		dynamicStateInfo.pNext = nullptr;
+		dynamicStateInfo.flags = 0;
+		dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+		dynamicStateInfo.pDynamicStates = dynamicStates.data();
+
+		VkPipelineViewportStateCreateInfo viewportInfo{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+		viewportInfo.pNext = nullptr;
+		viewportInfo.flags = 0;
+		viewportInfo.scissorCount = 1;
+		viewportInfo.viewportCount = 1;
+
+		//Rasterization state
+		VkPipelineRasterizationStateCreateInfo rasterizationInfo{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+		rasterizationInfo.pNext = nullptr;
+		rasterizationInfo.flags = 0;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizationInfo.lineWidth = 1.0f;
+		rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizationInfo.depthBiasEnable = VK_FALSE;
+		rasterizationInfo.depthBiasConstantFactor = 0.0f;
+		rasterizationInfo.depthBiasClamp = 0.0f;
+		rasterizationInfo.depthBiasSlopeFactor = 0.0f;
+
+		//Multisampling state
+		VkPipelineMultisampleStateCreateInfo multiSampInfo{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+		multiSampInfo.pNext = nullptr;
+		multiSampInfo.flags = 0;
+		multiSampInfo.sampleShadingEnable = VK_FALSE;
+		multiSampInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multiSampInfo.minSampleShading = 1.0f;
+		multiSampInfo.pSampleMask = nullptr;
+		multiSampInfo.alphaToCoverageEnable = VK_FALSE;
+		multiSampInfo.alphaToOneEnable = VK_FALSE;
+		
+		//DepthTesting (not used)
+		//VkPipelineDepthStencilStateCreateInfo depthStencilInfo{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+		//depthStencilInfo.pNext = nullptr;
+		//depthStencilInfo.flags = 0;
+		//...
+
+		//Color blending
+		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
+		colorBlendAttachment.blendEnable = VK_FALSE;
+		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		VkPipelineColorBlendStateCreateInfo colorBlendStateInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+		colorBlendStateInfo.pNext = nullptr;
+		colorBlendStateInfo.flags = 0;
+		colorBlendStateInfo.logicOpEnable = VK_FALSE;
+		colorBlendStateInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendStateInfo.attachmentCount = 1;
+		colorBlendStateInfo.pAttachments = &colorBlendAttachment;
+		colorBlendStateInfo.blendConstants[0] = 0.0f;
+		colorBlendStateInfo.blendConstants[1] = 0.0f;
+		colorBlendStateInfo.blendConstants[2] = 0.0f;
+		colorBlendStateInfo.blendConstants[3] = 0.0f;
+
+		//Pipeline layout
+		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+		layoutInfo.pNext = nullptr;
+		layoutInfo.flags = 0;
+		layoutInfo.setLayoutCount = 0;
+		layoutInfo.pSetLayouts = nullptr;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
+		
+		AURORA_VK_CHECK(vkCreatePipelineLayout(m_Specification.Device, &layoutInfo, nullptr, &m_FallbackPipelineLayout), VK_SUCCESS, "Failed to create swapchain fallback pipeline layout.");
+		if (m_FallbackPipelineLayout == VK_NULL_HANDLE)
+			return false;
+		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)m_FallbackPipelineLayout, "Swapchain_Fallback_PipelineLayout");
+
+		//Pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+		pipelineInfo.pNext = nullptr;
+		pipelineInfo.flags = 0;
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = shaderStages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationInfo;
+		pipelineInfo.pMultisampleState = &multiSampInfo;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlendStateInfo;
+		pipelineInfo.pDynamicState = &dynamicStateInfo;
+		pipelineInfo.layout = m_FallbackPipelineLayout;
+		pipelineInfo.renderPass = m_RenderPass;
+		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		AURORA_VK_CHECK(vkCreateGraphicsPipelines(m_Specification.Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_FallbackPipeline), VK_SUCCESS, "Failed to create swapchain fallback pipeline.");
+		if (m_FallbackPipeline == VK_NULL_HANDLE)
+			return false;
+		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_PIPELINE, (uint64_t)m_FallbackPipeline, "Swapchain_Fallback_Pipeline");
+
+		vkDestroyShaderModule(m_Specification.Device, vertModule, nullptr);
+		vkDestroyShaderModule(m_Specification.Device, fragModule, nullptr);
 
 		return true;
 	}

@@ -123,7 +123,7 @@ namespace Aurora::VK {
 		m_Swapchain->PrepareFrame();
 
 		//Todo: move into call "start recording"
-		const FrameData* frame = m_Swapchain->AcquireNextFrameData();
+		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		cmdInfo.pNext = nullptr;
@@ -141,7 +141,7 @@ namespace Aurora::VK {
 		//Todo: move into call "end recording"
 		//finalize command buffers
 		//pass relevant information to swapchain (submit)
-		const FrameData* frame = m_Swapchain->AcquireNextFrameData();
+		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
 
 		AURORA_VK_CHECK(vkEndCommandBuffer(frame->CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame->FrameIndex);
 	}
