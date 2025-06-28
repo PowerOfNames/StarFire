@@ -17,7 +17,13 @@ namespace StarFire {
 		void Destruct();
 
 		void Push(Scope<Event> e);
+		void GatherCoalescing();
 		bool Pop(Scope<Event>& e);
+
+		
+
+	private:
+		void HandleCoalescent(Scope<Event> e);
 
 	private:
 		Scope<EventQueueImpl> m_Impl;

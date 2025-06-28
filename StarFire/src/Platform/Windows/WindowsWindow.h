@@ -54,6 +54,9 @@ namespace StarFire {
 				float* ContentScaleX = nullptr;
 				float* ContentScaleY = nullptr;
 
+				float* CurrentCursorPosX = nullptr;
+				float* CurrentCursorPosY = nullptr;
+
 				EventCallbackFN EventCallback;
 			};
 			WindowData m_Data;

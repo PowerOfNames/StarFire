@@ -86,6 +86,8 @@ namespace Aurora::VK {
 			return;
 		}		
 
+		//This initializes FIF, such that the very first rendered frame still is index 0;
+		m_RendererState.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
 		AURORA_INFO("Successfully initialized vulkan rendering context");
 	}
 
@@ -116,11 +118,13 @@ namespace Aurora::VK {
 	}
 
 
-	void VulkanRenderContext::BeginFrame()
+	bool VulkanRenderContext::BeginFrame()
 	{
+		IncrementFramesInFlightIdx();
 		//Acquire next image available image from swapchain
 		//pass relevant information to renderers
-		m_Swapchain->PrepareFrame();
+		if (!m_Swapchain->PrepareFrame(m_RendererState.FramesInFlightIdx))
+			return false;
 
 		//Todo: move into call "start recording"
 		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
@@ -133,7 +137,10 @@ namespace Aurora::VK {
 		AURORA_VK_CHECK(vkBeginCommandBuffer(frame->CommandBuffer, &cmdInfo), VK_SUCCESS, "Failed to begin command buffer (frame index: {}).", frame->FrameIndex);
 
 		//TEMP:
-		m_Swapchain->RecordFallbackSwapchainRenderPass();		
+		m_Swapchain->RecordFallbackSwapchainRenderPass();
+
+
+		return true;
 	}
 
 	void VulkanRenderContext::EndFrame()
@@ -142,17 +149,13 @@ namespace Aurora::VK {
 		//finalize command buffers
 		//pass relevant information to swapchain (submit)
 		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
-
 		AURORA_VK_CHECK(vkEndCommandBuffer(frame->CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame->FrameIndex);
 	}
 
 	void VulkanRenderContext::SwapFrame()
 	{
-		m_Swapchain->SwapImages();
-
-		//Todo: maybe move out into separate call (finalize frame currently increases totalFinishedFrames counter, which should live here or
-		// in the main renderer manager
-		m_Swapchain->FinalizeFrame();
+		if (m_Swapchain->SwapImages())
+			m_RendererState.m_TotalFinishedFrames++;
 	}
 
 	void VulkanRenderContext::Resize(uint32_t width, uint32_t height)
@@ -425,7 +428,7 @@ namespace Aurora::VK {
 		swapchainSpecs.PresentQueue = m_QueueFamilies.Present;
 		swapchainSpecs.FramesInFlight = surfaceSpecs.FramesPerFlight;
 		swapchainSpecs.VSync = surfaceSpecs.VSync;
-		swapchainSpecs.InitialExtent = { surfaceSpecs.Width, surfaceSpecs.Height };
+		swapchainSpecs.InitialExtent = { surfaceSpecs.FramebufferWidth, surfaceSpecs.FramebufferHeight };
 		swapchainSpecs.ClearColor = { surfaceSpecs.ClearColor.R, surfaceSpecs.ClearColor.G, surfaceSpecs.ClearColor.B, surfaceSpecs.ClearColor.A };
 		m_Swapchain = CreateRef<Swapchain>(swapchainSpecs);
 
@@ -448,6 +451,12 @@ namespace Aurora::VK {
 		return true;
 	}
 	
+	void VulkanRenderContext::IncrementFramesInFlightIdx()
+	{
+		m_RendererState.FramesInFlightIdx = (m_RendererState.FramesInFlightIdx + 1) % m_Specification.SurfaceSpecs.FramesPerFlight;
+		m_RendererState.TotalAttemptedFrames++;
+	}
+
 
 	// ========== Privat helper ==========
 
@@ -624,6 +633,7 @@ namespace Aurora::VK {
 		createInfo.pfnUserCallback = Debug::VulkanDebugCallback;
 	}
 
+	
 
 
 }

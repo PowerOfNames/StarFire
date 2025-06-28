@@ -5,9 +5,9 @@
 
 namespace Aurora {
 
-	void BeginFrame()
+	bool BeginFrame()
 	{
-		s_RenderContext->BeginFrame();
+		return s_RenderContext->BeginFrame();
 	}
 
 	void EndFrame()

@@ -36,6 +36,8 @@ namespace StarFire{
 			m_Data.Height = (int*)&m_Specification.Height;
 			m_Data.FramebufferWidth = (uint32_t*)&m_Specification.FramebufferWidth;
 			m_Data.FramebufferHeight = (uint32_t*)&m_Specification.FramebufferHeight;
+			m_Data.CurrentCursorPosX = &m_Specification.CursorPositionX;
+			m_Data.CurrentCursorPosY = &m_Specification.CursorPositionY;
 
 			if (s_GLFWwindowCount == 0)
 			{
@@ -63,8 +65,8 @@ namespace StarFire{
 			SF_CORE_TRACE("Created window number {}", s_GLFWwindowCount);
 			
 
-
 			glfwSetWindowUserPointer(m_Window, &m_Data);
+			glfwSetCursorPos(m_Window, static_cast<double>(m_Specification.CursorPositionX), static_cast<double>(m_Specification.CursorPositionY));
 
 			//Window event callbacks
 			glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
@@ -127,16 +129,18 @@ namespace StarFire{
 			glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int keycode)
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-					
+
 					Scope<Event> e = CreateScope<KeyTypedEvent>(keycode);
 					data.EventCallback(std::move(e));
 				});
 
 			//Mouse event callbacks
-			//in screen coordinates, relative to top left corned of window content area
+			//in screen coordinates, relative to top left corner of window content area
 			glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xPos, double yPos)
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+					*data.CurrentCursorPosX = static_cast<float>(xPos);
+					*data.CurrentCursorPosY = static_cast<float>(yPos);
 
 					Scope<Event> e = CreateScope<MouseMoveEvent>(static_cast<float>(xPos), static_cast<float>(yPos));
 					data.EventCallback(std::move(e));
@@ -145,24 +149,25 @@ namespace StarFire{
 			glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods)
 				{
 					WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-					
+					double posX, posY;
+					glfwGetCursorPos(window, &posX, &posY);
 					switch (action)
 					{
 						case GLFW_PRESS:
 						{
-							Scope<Event> e = CreateScope<MousePressEvent>(button, 0);
+							Scope<Event> e = CreateScope<MousePressEvent>(button, static_cast<float>(posX), static_cast<float>(posY), 0);
 							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_RELEASE:
 						{
-							Scope<Event> e = CreateScope<MouseReleasedEvent>(button);
+							Scope<Event> e = CreateScope<MouseReleasedEvent>(button, static_cast<float>(posX), static_cast<float>(posY));
 							data.EventCallback(std::move(e));
 							break;
 						}
 						case GLFW_REPEAT:
 						{
-							Scope<Event> e = CreateScope<MousePressEvent>(button, 1);
+							Scope<Event> e = CreateScope<MousePressEvent>(button, static_cast<float>(posX), static_cast<float>(posY), 1);
 							data.EventCallback(std::move(e));
 							break;
 						}

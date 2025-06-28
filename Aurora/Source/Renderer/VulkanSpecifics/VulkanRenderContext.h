@@ -30,7 +30,7 @@ namespace Aurora::VK {
 		~VulkanRenderContext() = default;
 
 		virtual void Init() override;
-		virtual void BeginFrame() override;
+		virtual bool BeginFrame() override;
 		virtual void EndFrame() override;
 		virtual void SwapFrame() override;
 		virtual void Resize(uint32_t width, uint32_t height) override;
@@ -65,6 +65,8 @@ namespace Aurora::VK {
 		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel = false);
 
+		void IncrementFramesInFlightIdx();		
+
 	private:
 		RenderContextSpecification m_Specification;
 
@@ -81,6 +83,15 @@ namespace Aurora::VK {
 		PhysicalDeviceLimits m_PhDeviceLimits{};
 
 		Ref<Swapchain> m_Swapchain = nullptr;
+
+		struct RendererState
+		{
+			uint32_t FramesInFlightIdx = 0;
+			uint64_t TotalAttemptedFrames = 0;
+			uint64_t m_TotalFinishedFrames = 0;
+		};
+
+		RendererState m_RendererState{};
 	};
 
 }

@@ -22,6 +22,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return true; }
 		EVENT_CLASS_TYPE(MOUSE_MOVE)
 		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::INPUT)
 
@@ -47,6 +48,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return true; }
 		EVENT_CLASS_TYPE(MOUSE_SCROLLED)
 		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::INPUT)
 
@@ -58,22 +60,27 @@ namespace StarFire {
 	{
 	public:
 		inline int GetKeyCode() const { return m_Button; }
+		inline float GetClickPosX() const { return m_ClickPosX; }
+		inline float GetClickPosY() const { return m_ClickPosY; }
 
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_CATEGORY(EventCategory::MOUSE | EventCategory::MOUSE_BUTTON | EventCategory::INPUT)
 	protected:
-		MouseButtonEvent(int mouseCode)
-			: m_Button(mouseCode)
+		MouseButtonEvent(int mouseCode, float posX, float posY)
+			: m_Button(mouseCode), m_ClickPosX(posX), m_ClickPosY(posY)
 		{
 		}
 
 		int m_Button;
+		float m_ClickPosX;
+		float m_ClickPosY;
 	};
 
 	class MousePressEvent : public MouseButtonEvent
 	{
 	public:
-		MousePressEvent(int mouseCode, int repeatCount)
-			: MouseButtonEvent(mouseCode), m_RepeatCount(repeatCount)
+		MousePressEvent(int mouseCode, float posX, float posY, int repeatCount)
+			: MouseButtonEvent(mouseCode, posX, posY), m_RepeatCount(repeatCount)
 		{
 		}
 
@@ -86,6 +93,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(MOUSE_BUTTON_PRESSED)
 
 	private:
@@ -95,8 +103,8 @@ namespace StarFire {
 	class MouseReleasedEvent : public MouseButtonEvent
 	{
 	public:
-		MouseReleasedEvent(int keycode)
-			: MouseButtonEvent(keycode) {
+		MouseReleasedEvent(int keycode, float posX, float posY)
+			: MouseButtonEvent(keycode, posX, posY) {
 		}
 
 		std::string ToString() const override
@@ -106,6 +114,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(MOUSE_BUTTON_RELEASED)
 	};
 

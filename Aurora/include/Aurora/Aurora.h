@@ -20,7 +20,7 @@ namespace Aurora {
 
 	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs);
 
-	void BeginFrame();
+	bool BeginFrame();
 	void EndFrame();
 	void SwapFrame();
 	void Resize(uint32_t width, uint32_t height);

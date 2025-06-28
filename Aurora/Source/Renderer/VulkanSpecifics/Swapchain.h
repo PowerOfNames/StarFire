@@ -54,9 +54,8 @@ namespace Aurora::VK {
 		~Swapchain() = default;
 
 		void Init();
-		void PrepareFrame();
-		void SwapImages();
-		void FinalizeFrame();
+		bool PrepareFrame(uint32_t framesInFlightIdx);		
+		bool SwapImages();
 		void OnResize(uint32_t width, uint32_t height);
 		void Destroy();
 
@@ -74,11 +73,12 @@ namespace Aurora::VK {
 		void RecordFallbackSwapchainRenderPass();
 
 	private:
+		void CleanupSwapchain();
 		void AcquireNextFrameData();
 		void Submit();
-		void Present();
-		
-		bool CreateSwapchain();
+		bool Present();
+
+		bool CreateSwapchain(uint32_t width, uint32_t height);
 		bool CreateImageViews();
 		bool CreateRenderPass();
 		bool CreateFramebuffers();
@@ -94,6 +94,8 @@ namespace Aurora::VK {
 		VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
 		VkRenderPass m_RenderPass = VK_NULL_HANDLE;
 
+		bool m_NeedsResize = false;
+
 		VkFormat m_ImageFormat = VK_FORMAT_UNDEFINED;
 		VkExtent2D m_Extent{};
 				
@@ -102,13 +104,9 @@ namespace Aurora::VK {
 		std::vector<VkImage> m_Images;
 		std::vector<VkImageView> m_ImageViews;
 		std::vector<VkFramebuffer> m_Framebuffers;
-
-		//Todo: should be moved into main renderer (totalFrames and frame index) and passed into PrepareNextFrame when a basic renderer is established
-		//Initialize swapchain with this and flow over to 0 the first time 'PrepareNextFrame' is called
-		uint64_t m_TotalFinishedFrames = 0;
-		
+				
 		//per frame data
-		uint64_t m_FramesInFlightIdx = UINT64_MAX;
+		uint8_t m_FramesInFlightIdx = UINT8_MAX;
 		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
 		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
 		std::vector<VkFence> m_InFlightFences;

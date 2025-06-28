@@ -10,6 +10,8 @@ namespace StarFire {
 	public:
 		inline int GetKeyCode() const { return m_KeyCode; }
 
+
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_CATEGORY(EventCategory::KEYBOARD | EventCategory::INPUT)
 	protected:
 		KeyEvent(int keyCode)
@@ -37,6 +39,8 @@ namespace StarFire {
 			return ss.str();
 		}
 
+
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(KEY_PRESSED)
 
 	private:
@@ -57,6 +61,8 @@ namespace StarFire {
 			return ss.str();
 		}
 
+
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(KEY_RELEASED)
 	};
 
@@ -74,6 +80,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(KEY_TYPED)
 	};
 

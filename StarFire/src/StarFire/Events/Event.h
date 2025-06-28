@@ -60,6 +60,8 @@ namespace StarFire {
 		virtual EventType GetEventType() const = 0;
 		virtual const char* GetName() const = 0;
 		virtual EventCategory GetCategoryFlags() const = 0;
+		//Defines whether or not the event type history is of value (key input -> yes, so coalescent is false, window resize/mouse move -> not, so coalescent is true)
+		virtual bool IsCoalescent() const = 0;
 		virtual std::string ToString() const { return GetName(); }
 
 		inline bool IsInCategory(EventCategory category) { return FieldHasFlag(GetCategoryFlags(), category); }

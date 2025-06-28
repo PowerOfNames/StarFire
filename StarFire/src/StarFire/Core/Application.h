@@ -42,6 +42,7 @@ namespace StarFire {
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
+		bool OnFramebufferResize(FramebufferResizeEvent& e);
 
 	private:
 		ApplicationSpecification m_Specification;

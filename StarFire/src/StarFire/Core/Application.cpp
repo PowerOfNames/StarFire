@@ -67,6 +67,8 @@ namespace StarFire {
 		renderSpecs.SurfaceSpecs.VSync = false;
 		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
 		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
+		renderSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
+		renderSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
 		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
 		Aurora::InitializeRenderContext(renderSpecs);
 		
@@ -133,7 +135,9 @@ namespace StarFire {
 			{
 				HandleUserInput();
 
-				Aurora::BeginFrame();
+				if(!Aurora::BeginFrame())
+					continue;
+
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnUpdate(Timestep(m_DeltaTimeInS));
@@ -155,16 +159,19 @@ namespace StarFire {
 				SF_CORE_INFO("Application minimized");
 			}
 		}
+		SF_CORE_WARN("Leaving main loop!");
 	}
 
 	void Application::HandleUserInput()
 	{
 		Scope<Event> e;
+		m_EventQueue->GatherCoalescing();
 		while (m_EventQueue->Pop(e))
 		{
 			EventDispatcher dispatcher(*(e.get()));
 			dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
 			dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
+			dispatcher.Dispatch<FramebufferResizeEvent>(SF_BIND_EVENT_FN(Application::OnFramebufferResize));
 
 			for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 			{
@@ -198,9 +205,21 @@ namespace StarFire {
 		}
 		m_Minimized = false;
 		SF_CORE_DEBUG("Window resize to to [{}|{}]", newWidth, newHeight);
-		Aurora::Resize(newWidth, newHeight);
 
 		return false;
 	}
 
+	bool Application::OnFramebufferResize(FramebufferResizeEvent& e)
+	{
+		uint32_t newWidth = e.GetWidth();
+		uint32_t newHeight = e.GetHeight();
+		if (newWidth == 0 || newHeight == 0)
+		{
+			return false;
+		}
+		SF_CORE_DEBUG("Framebuffer resize to to [{}|{}]", newWidth, newHeight);
+		Aurora::Resize(newWidth, newHeight);
+
+		return false;
+	}
 }

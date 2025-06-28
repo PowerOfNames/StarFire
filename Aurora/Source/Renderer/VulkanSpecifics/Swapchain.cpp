@@ -12,7 +12,7 @@ namespace Aurora::VK {
 
 	void Swapchain::Init()
 	{
-		if (!CreateSwapchain())
+		if (!CreateSwapchain(m_Specification.InitialExtent.Width, m_Specification.InitialExtent.Height))
 		{
 			AURORA_TRACE("Failed to create swapchain.");
 			return;
@@ -58,6 +58,25 @@ namespace Aurora::VK {
 		}
 	}
 
+	void Swapchain::CleanupSwapchain()
+	{
+		AURORA_TRACE("Cleaning up swapchain.");
+		vkDeviceWaitIdle(m_Specification.Device);
+
+		for (auto framebuffer : m_Framebuffers)
+			vkDestroyFramebuffer(m_Specification.Device, framebuffer, nullptr);
+		m_Framebuffers.clear();
+
+		for (auto imageView : m_ImageViews)
+			vkDestroyImageView(m_Specification.Device, imageView, nullptr);
+		m_ImageViews.clear();
+
+		vkDestroySwapchainKHR(m_Specification.Device, m_Swapchain, nullptr);
+		m_Swapchain = VK_NULL_HANDLE;
+		m_Images.clear();
+		AURORA_TRACE("Cleaning swapchin finished.");
+	}
+
 	void Swapchain::Destroy()
 	{
 		vkDeviceWaitIdle(m_Specification.Device);
@@ -76,9 +95,7 @@ namespace Aurora::VK {
 		
 		vkFreeCommandBuffers(m_Specification.Device, m_Specification.GraphicsCmdPool, static_cast<uint32_t>(m_CommandBuffers.size()), m_CommandBuffers.data());
 
-		for (auto framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(m_Specification.Device, framebuffer, nullptr);
-		m_Framebuffers.clear();
+		CleanupSwapchain();
 
 		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, nullptr);
 		m_FallbackPipeline = VK_NULL_HANDLE;
@@ -89,36 +106,22 @@ namespace Aurora::VK {
 		vkDestroyRenderPass(m_Specification.Device, m_RenderPass, nullptr);
 		m_RenderPass = VK_NULL_HANDLE;
 
-		for (auto imageView : m_ImageViews)
-			vkDestroyImageView(m_Specification.Device, imageView, nullptr);		
-		m_ImageViews.clear();
-
-		vkDestroySwapchainKHR(m_Specification.Device, m_Swapchain, nullptr);
-		m_Swapchain = VK_NULL_HANDLE;
-		m_Images.clear();
 
 		AURORA_INFO("Destroyed swapchain.");
 	}
 	
-	void Swapchain::PrepareFrame()
+	bool Swapchain::PrepareFrame(uint32_t framesInFlightIdx)
 	{
-		m_FramesInFlightIdx = (m_FramesInFlightIdx + 1) % m_Specification.FramesInFlight;
+		m_FramesInFlightIdx = framesInFlightIdx;
 		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
-		AURORA_TRACE("Preparing total frame: {}", m_TotalFinishedFrames+1);
-
+			
 		AcquireNextFrameData();
-
+		if (m_NeedsResize)
+			return false;
 
 		m_FramesInFlight[m_FramesInFlightIdx].IsReady = true;
-	}
 
-	void Swapchain::FinalizeFrame()
-	{
-		m_TotalFinishedFrames++;
-		AURORA_TRACE("Finished {} frames", m_TotalFinishedFrames);
-
-
-		m_FramesInFlight[m_FramesInFlightIdx].IsReady = false;
+		return true;
 	}
 
 	void Swapchain::AcquireNextFrameData()
@@ -126,23 +129,32 @@ namespace Aurora::VK {
 		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
 
 		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx], VK_TRUE, UINT64_MAX);
+
+		VkResult result = vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_FramesInFlightIdx], VK_NULL_HANDLE, &m_ImageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			AURORA_ERROR("Swapchain not fitting. Failed image acquisition. Needs immediate resize.");
+			m_NeedsResize = true;
+			return;
+		}
+		else
+		{
+			AURORA_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Swapchain suboptimal. Require recreate.");
+		}
+
 		vkResetFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx]);
-
-		vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_FramesInFlightIdx], VK_NULL_HANDLE, &m_ImageIndex);
-
 		vkResetCommandBuffer(m_CommandBuffers[m_FramesInFlightIdx], 0);
 
 		frame.CommandBuffer = m_CommandBuffers[m_FramesInFlightIdx];
 		frame.FrameIndex = m_FramesInFlightIdx;
-		frame.FrameCount++;		
+		frame.FrameCount++;
 	}
 
-	void Swapchain::SwapImages()
-	{
-		AURORA_TRACE("Swapping FIF {}", m_FramesInFlightIdx);
-				
+	bool Swapchain::SwapImages()
+	{				
 		Submit();
-		Present();		
+		return Present();
 	}
 
 	void Swapchain::Submit()
@@ -164,7 +176,7 @@ namespace Aurora::VK {
 		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, m_InFlightFences[m_FramesInFlightIdx]), VK_SUCCESS, "Failed to submit draw render buffer!");
 	}
 
-	void Swapchain::Present()
+	bool Swapchain::Present()
 	{
 		VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 		presentInfo.pNext = nullptr;
@@ -180,30 +192,58 @@ namespace Aurora::VK {
 		result = vkQueuePresentKHR(m_Specification.PresentQueue, &presentInfo);
 
 		//check if the framebuffer resized
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR/* || m_FramebufferResized*/)
+		if (result == VK_SUBOPTIMAL_KHR)
 		{
-			//m_FramebufferResized = false;
-			//Recreate(Application::Get()->GetWindow().GetWidth(), Application::Get()->GetWindow().GetHeight());
-			AURORA_INFO("Swapchain not up-to-date.");
+			m_NeedsResize = true;
+			AURORA_WARN("Swapchain not optimal.");
+		}
+		else if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			m_NeedsResize = true;
+			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
+			return false;
 		}
 		else
 		{
 			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");
 		}
+		return true;
 	}
 
 	void Swapchain::OnResize(uint32_t width, uint32_t height)
 	{
-		AURORA_INFO("Resizing swapchain to [{}|{}]", width, height);
+		AURORA_TRACE("Resizing swapchain to [{}|{}]", width, height);
+		CleanupSwapchain();
+
+		if (!CreateSwapchain(width, height))
+		{
+			AURORA_TRACE("Failed to create(resize) swapchain.");
+			return;
+		}
+
+		if (!CreateImageViews())
+		{
+			AURORA_TRACE("Failed to create(resize) swapchain image view.");
+			return;
+		}
+
+		if (!CreateFramebuffers())
+		{
+			AURORA_TRACE("Failed to create(resize) swapchain framebuffers");
+			return;
+		}
+		AURORA_INFO("Resized swapchain to [{}|{}]", width, height);
+
+		m_NeedsResize = false;
 	}
 
-	bool Swapchain::CreateSwapchain()
+	bool Swapchain::CreateSwapchain(uint32_t width, uint32_t height)
 	{
 		SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
 
 		VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
 		VkPresentModeKHR presentMode = Helper::ChooseSwapPresentMode(details.PresentModes, VK_PRESENT_MODE_MAILBOX_KHR);
-		VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, m_Specification.InitialExtent.Width, m_Specification.InitialExtent.Height);
+		VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, width, height);
 
 		uint32_t imageCount = details.Capabilities.minImageCount;
 		if (details.Capabilities.maxImageCount > 0 && imageCount > details.Capabilities.maxImageCount)
@@ -429,8 +469,6 @@ namespace Aurora::VK {
 	//========== Fallback ==========
 	void Swapchain::RecordFallbackSwapchainRenderPass()
 	{
-		AURORA_INFO("Rendering fallback swapchain pass");
-
 		VkRenderPassBeginInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		rpInfo.pNext = nullptr;
 		rpInfo.renderPass = m_RenderPass;
@@ -658,5 +696,7 @@ namespace Aurora::VK {
 
 		return true;
 	}
+
+	
 
 }

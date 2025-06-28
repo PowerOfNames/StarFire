@@ -37,6 +37,8 @@ namespace Aurora {
 			bool VSync = false;
 			uint32_t Width = 0;
 			uint32_t Height = 0;
+			uint32_t FramebufferWidth = 0;
+			uint32_t FramebufferHeight = 0;
 
 			struct ClearColor
 			{
@@ -63,7 +65,7 @@ namespace Aurora {
 		virtual ~RenderContext() = default;
 
 		virtual void Init() = 0;
-		virtual void BeginFrame() = 0;		
+		virtual bool BeginFrame() = 0;		
 		virtual void EndFrame() = 0;
 		virtual void SwapFrame() = 0;
 		virtual void Resize(uint32_t width, uint32_t height) = 0;
