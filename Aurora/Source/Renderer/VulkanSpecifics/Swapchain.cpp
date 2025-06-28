@@ -459,7 +459,7 @@ namespace Aurora::VK {
 		scissor.extent = m_Extent;
 		vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-		//vkCmdDraw(cmd, 0, 0, 0, 0);
+		vkCmdDraw(cmd, 3, 1, 0, 0);
 
 		vkCmdEndRenderPass(cmd);
 	}
