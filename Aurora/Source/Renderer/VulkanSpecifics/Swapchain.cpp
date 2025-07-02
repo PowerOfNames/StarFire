@@ -114,7 +114,11 @@ namespace Aurora::VK {
 	{
 		m_FramesInFlightIdx = framesInFlightIdx;
 		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
-			
+		
+		// EO, because this only happens if Present captured suboptimal but no resize event was triggered yet
+		if (m_NeedsResize)
+			return false;
+
 		AcquireNextFrameData();
 		if (m_NeedsResize)
 			return false;
@@ -126,6 +130,8 @@ namespace Aurora::VK {
 
 	void Swapchain::AcquireNextFrameData()
 	{
+		AURORA_TRACE("Acquire next image {}", m_FramesInFlightIdx);
+
 		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
 
 		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx], VK_TRUE, UINT64_MAX);
@@ -149,6 +155,7 @@ namespace Aurora::VK {
 		frame.CommandBuffer = m_CommandBuffers[m_FramesInFlightIdx];
 		frame.FrameIndex = m_FramesInFlightIdx;
 		frame.FrameCount++;
+		AURORA_TRACE("Acquired image {}", m_FramesInFlightIdx);
 	}
 
 	bool Swapchain::SwapImages()
@@ -172,12 +179,15 @@ namespace Aurora::VK {
 
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &m_RenderFinishedSemaphores[m_FramesInFlightIdx]; //signal when drawing is finished and ready to be presented
+		AURORA_TRACE("Submitting frame {}", m_FramesInFlightIdx);
 
 		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, m_InFlightFences[m_FramesInFlightIdx]), VK_SUCCESS, "Failed to submit draw render buffer!");
 	}
 
 	bool Swapchain::Present()
 	{
+		AURORA_TRACE("Presenting frame {}", m_FramesInFlightIdx);
+
 		VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 		presentInfo.pNext = nullptr;
 
@@ -207,11 +217,18 @@ namespace Aurora::VK {
 		{
 			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");
 		}
+		AURORA_TRACE("Presented frame {}", m_FramesInFlightIdx);
 		return true;
 	}
 
 	void Swapchain::OnResize(uint32_t width, uint32_t height)
 	{
+		if (m_Extent.width == width && m_Extent.height == height)
+		{
+			m_NeedsResize = false;
+			return;
+		}
+
 		AURORA_TRACE("Resizing swapchain to [{}|{}]", width, height);
 		CleanupSwapchain();
 

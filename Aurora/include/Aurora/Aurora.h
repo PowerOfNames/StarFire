@@ -6,6 +6,8 @@
 #include <atomic>
 #include <string>
 
+#define ENABLE_TRACE 0
+
 namespace Aurora {
 
 	static std::unique_ptr<RenderContext> s_RenderContext = nullptr;

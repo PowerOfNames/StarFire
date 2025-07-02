@@ -121,6 +121,7 @@ namespace Aurora::VK {
 	bool VulkanRenderContext::BeginFrame()
 	{
 		IncrementFramesInFlightIdx();
+		AURORA_TRACE("Beginning frame {}", m_RendererState.FramesInFlightIdx);
 		//Acquire next image available image from swapchain
 		//pass relevant information to renderers
 		if (!m_Swapchain->PrepareFrame(m_RendererState.FramesInFlightIdx))
@@ -138,7 +139,6 @@ namespace Aurora::VK {
 
 		//TEMP:
 		m_Swapchain->RecordFallbackSwapchainRenderPass();
-
 
 		return true;
 	}

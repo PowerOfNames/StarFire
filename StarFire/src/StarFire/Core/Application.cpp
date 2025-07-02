@@ -131,9 +131,9 @@ namespace StarFire {
 		while (m_Running)
 		{
 			m_DeltaTimeInS = timer.Timestamp();
+			HandleUserInput();
 			if (!m_Minimized)
 			{
-				HandleUserInput();
 
 				if(!Aurora::BeginFrame())
 					continue;
