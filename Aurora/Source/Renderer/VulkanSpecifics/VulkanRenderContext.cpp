@@ -74,6 +74,12 @@ namespace Aurora::VK {
 			return;
 		}
 
+		if (!CreateVmAllocator())
+		{
+			AURORA_ERROR("Failed to create vmAllocator. VulkanContext could not be instantiated.");
+			return;
+		}
+
 		if (!CreateGraphicsCmdPool())
 		{
 			AURORA_TRACE("Failed to create graphics command pool. VulkanContext could not be initialized.");
@@ -102,8 +108,11 @@ namespace Aurora::VK {
 		vkDestroyCommandPool(m_Device, m_GraphicsCmdPool, nullptr);
 		m_GraphicsCmdPool = VK_NULL_HANDLE;
 
+		vmaDestroyAllocator(m_VmAllocator);
+		m_VmAllocator = VK_NULL_HANDLE;
+
 		vkDestroyDevice(m_Device, nullptr);
-		m_Device = nullptr;
+		m_Device = VK_NULL_HANDLE;
 
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 		m_Surface = VK_NULL_HANDLE;
@@ -402,6 +411,28 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	bool VulkanRenderContext::CreateVmAllocator()
+	{
+		VmaAllocatorCreateInfo alInfo{};
+		alInfo.instance = m_Instance;
+		alInfo.device = m_Device;
+		alInfo.physicalDevice = m_PhysicalDevice;
+		alInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+		alInfo.flags = 0;
+		alInfo.pAllocationCallbacks = nullptr;
+		alInfo.pDeviceMemoryCallbacks = nullptr;
+		alInfo.pHeapSizeLimit = nullptr;
+		alInfo.pTypeExternalMemoryHandleTypes = nullptr;
+		VmaVulkanFunctions vulkanFunctions{};
+		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+		vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+		alInfo.pVulkanFunctions = &vulkanFunctions;
+		vmaCreateAllocator(&alInfo, &m_VmAllocator);
+		if (m_VmAllocator == VK_NULL_HANDLE)
+			return false;
+		return true;
+	}
+
 	bool VulkanRenderContext::CreateGraphicsCmdPool()
 	{
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -449,7 +480,7 @@ namespace Aurora::VK {
 		
 		AURORA_TRACE("Created and initialized swapchain.");
 		return true;
-	}
+	}	
 	
 	void VulkanRenderContext::IncrementFramesInFlightIdx()
 	{
@@ -633,6 +664,7 @@ namespace Aurora::VK {
 		createInfo.pfnUserCallback = Debug::VulkanDebugCallback;
 	}
 
+	
 	
 
 

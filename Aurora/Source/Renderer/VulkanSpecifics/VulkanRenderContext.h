@@ -49,8 +49,10 @@ namespace Aurora::VK {
 		bool CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 		bool PickPhysicalDevice(const DeviceRequirements& deviceRequirements);
 		bool CreateLogicalDevice(const DeviceRequirements& deviceRequirements);
+		bool CreateVmAllocator();
 		bool CreateGraphicsCmdPool();
 		bool CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
+
 
 		//keep scoring up-to-date later (#76)
 		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
@@ -77,6 +79,8 @@ namespace Aurora::VK {
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice m_Device = VK_NULL_HANDLE;
 		VkCommandPool m_GraphicsCmdPool = VK_NULL_HANDLE;
+
+		VmaAllocator m_VmAllocator = VK_NULL_HANDLE;
 
 		QueueFamilies m_QueueFamilies{};
 
