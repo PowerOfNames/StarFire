@@ -16,7 +16,10 @@ project "Aurora"
 		"Resources/**.h",
 		
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl"
+		"vendor/glm/glm/**.inl",
+		
+		"vendor/SPIRV-Reflect/spirv_reflect.cpp",
+		"vendor/SPIRV-Reflect/spirv_reflect.h"
 	}
 	
 	defines
@@ -33,7 +36,8 @@ project "Aurora"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.VMA}"
+		"%{IncludeDir.VMA}",
+		"%{IncludeDir.Spirv_Reflect}"
 	}
 	
 	links
@@ -45,6 +49,10 @@ project "Aurora"
 	
 	filter "system:windows"
 		systemversion "latest"
+		
+		linkoptions {
+			"/FORCE:MULTIPLE"
+		}
 		
 	filter "action:vs*"
 		buildoptions
@@ -60,6 +68,7 @@ project "Aurora"
 		
 		links
 		{
+			"%{Library.shaderc_debug}"
 		}
 		
 	filter "configurations:Release"
@@ -69,6 +78,7 @@ project "Aurora"
 		
 		links
 		{
+			"%{Library.shaderc_release}"
 		}
 		
 		

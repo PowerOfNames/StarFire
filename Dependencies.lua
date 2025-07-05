@@ -10,6 +10,7 @@ IncludeDir["concurrentqueue"]		= "%{wks.location}/StarFire/vendor/moodycamel"
 
 IncludeDir["VulkanSDK"]				= "%{Vulkan_SDK}/include"
 IncludeDir["VMA"]					= "%{wks.location}/Aurora/Vendor/VulkanMemoryAllocator/include"
+IncludeDir["Spirv_Reflect"]			= "%{wks.location}/Aurora/Vendor/SPIRV-Reflect/include"
 
 LibraryDir = {}
 LibraryDir["VulkanSDK"]				= "%{Vulkan_SDK}/Lib"
@@ -18,6 +19,9 @@ LibraryDir["VulkanSDK_DebugDLL"]	= "%{Vulkan_SDK}/Bin"
 
 Library = {}
 Library["Vulkan"]					= "%{LibraryDir.VulkanSDK}/vulkan-1.lib"
+Library["shaderc_debug"]			= "%{LibraryDir.VulkanSDK_Debug}/shaderc_sharedd.lib"
+
+Library["shaderc_release"]			= "%{LibraryDir.VulkanSDK}/shaderc_shared.lib"
 
 
 

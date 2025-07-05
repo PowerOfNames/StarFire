@@ -31,6 +31,10 @@ filter {"StarFire/vendor/**.cpp"}
 	warnings "Off"
 filter {}
 
+filter {"files/vendor/**.cpp"}
+	flags {"NoPCH"}
+filter{}
+
 group "Core"
 	include "StarFire"
 	include "Aurora"

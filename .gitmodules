@@ -8,3 +8,6 @@
 [submodule "StarFire/vendor/spdlog"]
 	path = StarFire/vendor/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "Aurora/Vendor/SPIRV-Reflect"]
+	path = Aurora/Vendor/SPIRV-Reflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
