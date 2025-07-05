@@ -1,14 +1,14 @@
 #pragma once
-#include "StarFire/Core/Logging.h"
-#include "StarFire/Memory/RefRegistry.h"
+
+#include "Core/RefRegistry.h"
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 
-namespace StarFire {
+namespace Aurora {
 
-	
 	template<typename T>
 	class RefCounted : public std::enable_shared_from_this<T>
 	{
@@ -18,7 +18,7 @@ namespace StarFire {
 			s_RefCount.fetch_add(-1);
 			std::lock_guard<std::mutex> lock(m_Mutex);
 			if (static_cast<uint64_t>(s_RefCount.load()) == 0)
-				RefRegistry::Get()->Unregister(T.GetTypeName());
+				RefRegistry::Unregister(T.GetTypeName());
 		}
 
 		template<typename Derived>
@@ -33,14 +33,14 @@ namespace StarFire {
 		}
 
 		virtual const std::string GetTypeName() const = 0;
-		
+
 	protected:
 		RefCounted()
 		{
 			s_RefCount.fetch_add(1);
 			std::lock_guard<std::mutex> lock(m_Mutex);
 			if (static_cast<uint64_t>(s_RefCount.load() == 1))
-				RefRegistry::Get()->Register(T.GetTypeName(), &s_RefCount);
+				RefRegistry::Register(T.GetTypeName(), &s_RefCount);
 		}
 		RefCounted<T>(const RefCounted<T>&) = default;
 		RefCounted<T>& operator=(const RefCounted<T>&) = default;

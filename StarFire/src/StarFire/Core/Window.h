@@ -25,6 +25,7 @@ namespace StarFire {
 		uint32_t PositionX;
 		uint32_t PositionY;
 
+
 		bool Fullscreen;
 		bool VSync;
 
@@ -33,7 +34,12 @@ namespace StarFire {
 		{}
 
 
-		CursorState MouseCursorState = CursorState::NORMAL;
+		uint32_t FramebufferWidth = 0;
+		uint32_t FramebufferHeight = 0;	
+
+		float CursorPositionX = 0.0f;
+		float CursorPositionY = 0.0f;
+		CursorState MouseCursorState = CursorState::NORMAL;		
 	};
 
 	class Window
@@ -50,6 +56,8 @@ namespace StarFire {
 
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
+		virtual uint32_t GetFramebufferWidth() const = 0;
+		virtual uint32_t GetFramebufferHeight() const = 0;
 
 		virtual const WindowSpecification& GetSpecification() const = 0;
 

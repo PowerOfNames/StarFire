@@ -10,9 +10,10 @@ project "Aurora"
 	
 	files
 	{
-		"include/**.h",
-		"src/**.h",
-		"src/**.cpp",
+		"Source/**.h",
+		"Source/**.cpp",
+		"Include/**.h",
+		"Resources/**.h",
 		
 		"vendor/glm/glm/**.hpp",
 		"vendor/glm/glm/**.inl"
@@ -26,8 +27,9 @@ project "Aurora"
 	
 	includedirs
 	{
-		"%{wks.location}/Aurora/include",		
-		"%{wks.location}/Aurora/src",		
+		"Source",
+		"Include",
+		"Resources",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}"
@@ -51,7 +53,7 @@ project "Aurora"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "AURORA_DEBUG"
+		defines "AURORA_DEBUG_MODE"
 		runtime "Debug"
 		symbols "on"
 		
@@ -60,7 +62,7 @@ project "Aurora"
 		}
 		
 	filter "configurations:Release"
-		defines "AURORA_RELEASE"
+		defines "AURORA_RELEASE_MODE"
 		runtime "Release"
 		optimize "on"
 		

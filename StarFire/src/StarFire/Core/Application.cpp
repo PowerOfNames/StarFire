@@ -4,6 +4,10 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
+
+#include <Aurora/Aurora.h>
+#include <Aurora/Logging/LogLevel.h>
+
 #include <thread>
 
 namespace StarFire {
@@ -18,9 +22,9 @@ namespace StarFire {
 
 		s_Instance = this;
 
-
 		m_EventQueue = CreateScope<EventQueue>(100);
 		RefRegistry::Init();
+
 
 		WindowSpecification windowSpecs{};
 		m_MainWindow = Window::Create(windowSpecs);
@@ -28,18 +32,57 @@ namespace StarFire {
 		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
 		m_MainWindow->Init();
 
-		RefRegistry::Get()->PrintRegister();
 
-		Aurora::Log::SetCallback(SF_BIND_EVENT_FN(Application::RenderLogCallback));
-		m_Aurora = CreateScope<Aurora::Renderer>();
-		m_Aurora->Init();
+		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg, const char* file, const char* func, int line)
+			{
+				switch (level)
+				{
+					case Aurora::LogLevel::LOG_LEVEL_TRACE: SF_R_CORE_TRACE(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_INFO: SF_R_CORE_INFO(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_DEBUG: SF_R_CORE_DEBUG(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_WARN: SF_R_CORE_WARN(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_ERROR: SF_R_CORE_ERROR(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: SF_R_CORE_CRITICAL(file, func, line, msg); break;
+					default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
+				}
+			});
+		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
+			{
+				RefRegistry::Get()->Register(typeName, counter);
+			});
+		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
+			{
+				RefRegistry::Get()->Unregister(typeName);
+			});
+		
+		Aurora::RenderContextSpecification renderSpecs{};
+		renderSpecs.AppName = m_Specification.Name.c_str();
+		renderSpecs.AppVersion = { 1, 0, 0 };
+		renderSpecs.API = Aurora::APIType::API_TYPE_VULKAN;
+		renderSpecs.AuroraVersion = { 1, 0, 0 };
+		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
+		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
+		renderSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
+		renderSpecs.SurfaceSpecs.FramesPerFlight = 2;
+		renderSpecs.SurfaceSpecs.VSync = false;
+		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
+		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
+		renderSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
+		renderSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
+		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
+		Aurora::InitializeRenderContext(renderSpecs);
+		
+		
+
+
+		RefRegistry::Get()->PrintRegister();
 
 
 		SF_CORE_TRACE("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
-		m_Aurora->Shutdown();
+		Aurora::Shutdown();
 		m_MainWindow->Close();
 
 		RefRegistry::Get()->PrintRegister();
@@ -88,37 +131,47 @@ namespace StarFire {
 		while (m_Running)
 		{
 			m_DeltaTimeInS = timer.Timestamp();
+			HandleUserInput();
 			if (!m_Minimized)
 			{
-				HandleUserInput();
+
+				if(!Aurora::BeginFrame())
+					continue;
 
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnUpdate(Timestep(m_DeltaTimeInS));
 				}
+				Aurora::EndFrame();
 
+				//Todo: add Aurora::BeginUiFrame
 				for (Layer* layer : m_LayerStack)
 				{
 					layer->OnGuiRender();
 				}
+				//Todo: add Aurora::EndUiFrame
 
-				m_MainWindow->OnUpdate();
+				//m_MainWindow->OnUpdate();
+				Aurora::SwapFrame();
 			}
 			else
 			{
 				SF_CORE_INFO("Application minimized");
 			}
 		}
+		SF_CORE_WARN("Leaving main loop!");
 	}
 
 	void Application::HandleUserInput()
 	{
 		Scope<Event> e;
+		m_EventQueue->GatherCoalescing();
 		while (m_EventQueue->Pop(e))
 		{
 			EventDispatcher dispatcher(*(e.get()));
 			dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
 			dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
+			dispatcher.Dispatch<FramebufferResizeEvent>(SF_BIND_EVENT_FN(Application::OnFramebufferResize));
 
 			for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 			{
@@ -143,29 +196,30 @@ namespace StarFire {
 
 	bool Application::OnWindowResize(WindowResizeEvent& e)
 	{
-		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+		uint32_t newWidth = e.GetWidth();
+		uint32_t newHeight = e.GetHeight();
+		if (newWidth == 0 || newHeight == 0)
 		{
 			m_Minimized = true;
 			return false;
 		}
 		m_Minimized = false;
-		SF_CORE_DEBUG("Window resize to to [{}|{}]", e.GetWidth(), e.GetHeight());
+		SF_CORE_DEBUG("Window resize to to [{}|{}]", newWidth, newHeight);
 
 		return false;
 	}
 
-	void Application::RenderLogCallback(Aurora::LogLevel level, const std::string& msg)
+	bool Application::OnFramebufferResize(FramebufferResizeEvent& e)
 	{
-		switch (level)
+		uint32_t newWidth = e.GetWidth();
+		uint32_t newHeight = e.GetHeight();
+		if (newWidth == 0 || newHeight == 0)
 		{
-			case Aurora::LogLevel::ALL_TRACE: SF_R_CORE_TRACE(msg); break;
-			case Aurora::LogLevel::ALL_INFO: SF_R_CORE_INFO(msg); break;
-			case Aurora::LogLevel::ALL_DEBUG: SF_R_CORE_DEBUG(msg); break;
-			case Aurora::LogLevel::ALL_WARN: SF_R_CORE_WARN(msg); break;
-			case Aurora::LogLevel::ALL_ERROR: SF_R_CORE_ERROR(msg); break;
-			case Aurora::LogLevel::ALL_CRITICAL: SF_R_CORE_CRITICAL(msg); break;
-			default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
+			return false;
 		}
-	}
+		SF_CORE_DEBUG("Framebuffer resize to to [{}|{}]", newWidth, newHeight);
+		Aurora::Resize(newWidth, newHeight);
 
+		return false;
+	}
 }

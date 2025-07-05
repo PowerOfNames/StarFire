@@ -23,6 +23,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return true; }
 		EVENT_CLASS_TYPE(WINDOW_RESIZE)
 		EVENT_CLASS_CATEGORY(EventCategory::APPLICATION)
 
@@ -48,6 +49,7 @@ namespace StarFire {
 			return ss.str();
 		}
 
+		inline bool IsCoalescent() const override { return true; }
 		EVENT_CLASS_TYPE(FRAMEBUFFER_RESIZE)
 		EVENT_CLASS_CATEGORY(EventCategory::APPLICATION)
 
@@ -61,6 +63,8 @@ namespace StarFire {
 	public:
 		WindowCloseEvent() {}
 
+
+		inline bool IsCoalescent() const override { return false; }
 		EVENT_CLASS_TYPE(WINDOW_CLOSE)
 		EVENT_CLASS_CATEGORY(EventCategory::APPLICATION)
 	};
