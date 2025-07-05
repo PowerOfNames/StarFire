@@ -32,7 +32,8 @@ project "Aurora"
 		"Resources",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
-		"%{IncludeDir.VulkanSDK}"
+		"%{IncludeDir.VulkanSDK}",
+		"%{IncludeDir.VMA}"
 	}
 	
 	links

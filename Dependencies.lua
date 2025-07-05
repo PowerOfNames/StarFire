@@ -9,6 +9,7 @@ IncludeDir["spdlog"]				= "%{wks.location}/StarFire/vendor/spdlog/include"
 IncludeDir["concurrentqueue"]		= "%{wks.location}/StarFire/vendor/moodycamel"
 
 IncludeDir["VulkanSDK"]				= "%{Vulkan_SDK}/include"
+IncludeDir["VMA"]					= "%{wks.location}/Aurora/Vendor/VulkanMemoryAllocator/include"
 
 LibraryDir = {}
 LibraryDir["VulkanSDK"]				= "%{Vulkan_SDK}/Lib"
