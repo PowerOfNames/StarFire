@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace StarFire {
@@ -27,8 +28,8 @@ namespace StarFire {
 			return s_Instance.get(); 
 		}
 
-		void Register(const std::string& typeName, std::atomic<uint64_t>* counter);
-		void Unregister(const std::string& typeName);
+		void Register(std::string_view typeName, std::atomic<uint64_t>* counter);
+		void Unregister(std::string_view typeName);
 
 		void PrintRegister();
 
@@ -46,7 +47,34 @@ namespace StarFire {
 		friend class StarFire::Application;
 
 		inline static Scope<RefRegistry> s_Instance = nullptr;
-		std::unordered_map<std::string, std::atomic<uint64_t>*> m_Registry;
+
+		struct TransparentHash {
+			using is_transparent = void; // marks this as transparent
+			size_t operator()(std::string_view sv) const noexcept {
+				return std::hash<std::string_view>{}(sv);
+			}
+			size_t operator()(const std::string& s) const noexcept {
+				return std::hash<std::string_view>{}(s);
+			}
+		};
+
+		struct TransparentEqual {
+			using is_transparent = void; // marks this as transparent
+			bool operator()(std::string_view lhs, std::string_view rhs) const noexcept {
+				return lhs == rhs;
+			}
+			bool operator()(const std::string& lhs, const std::string& rhs) const noexcept {
+				return lhs == rhs;
+			}
+			bool operator()(std::string_view lhs, const std::string& rhs) const noexcept {
+				return lhs == rhs;
+			}
+			bool operator()(const std::string& lhs, std::string_view rhs) const noexcept {
+				return lhs == rhs;
+			}
+		};
+
+		std::unordered_map<std::string, std::atomic<uint64_t>*, TransparentHash, TransparentEqual> m_Registry;
 		std::mutex m_RegistryMutex;
 	};
 }

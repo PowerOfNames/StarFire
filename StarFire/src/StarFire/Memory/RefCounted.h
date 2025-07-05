@@ -8,17 +8,14 @@
 
 namespace StarFire {
 
-	
 	template<typename T>
 	class RefCounted : public std::enable_shared_from_this<T>
 	{
 	public:
 		~RefCounted()
 		{
-			s_RefCount.fetch_add(-1);
-			std::lock_guard<std::mutex> lock(m_Mutex);
-			if (static_cast<uint64_t>(s_RefCount.load()) == 0)
-				RefRegistry::Get()->Unregister(T.GetTypeName());
+			if (s_RefCount.fetch_sub(1, std::memory_order_acq_rel) == 1)
+				RefRegistry::Unregister(T::StaticTypeName());
 		}
 
 		template<typename Derived>
@@ -31,16 +28,12 @@ namespace StarFire {
 		{
 			return this->shared_from_this();
 		}
-
-		virtual const std::string GetTypeName() const = 0;
 		
 	protected:
 		RefCounted()
 		{
-			s_RefCount.fetch_add(1);
-			std::lock_guard<std::mutex> lock(m_Mutex);
-			if (static_cast<uint64_t>(s_RefCount.load() == 1))
-				RefRegistry::Get()->Register(T.GetTypeName(), &s_RefCount);
+			if (s_RefCount.fetch_add(1, std::memory_order_acq_rel) == 0)
+				RefRegistry::Register(T::StaticTypeName(), &s_RefCount);
 		}
 		RefCounted<T>(const RefCounted<T>&) = default;
 		RefCounted<T>& operator=(const RefCounted<T>&) = default;
