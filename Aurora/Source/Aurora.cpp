@@ -3,7 +3,22 @@
 #include "Core/Core.h"
 #include "Core/RefRegistry.h"
 
+#include "Renderer/RenderContext.h"
+
+namespace {
+	std::unique_ptr<Aurora::VK::RenderContext> s_RenderContext = nullptr;
+	Aurora::ApplicationSettings AppSettings{};
+}
+
 namespace Aurora {
+
+	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs)
+	{
+		s_RenderContext = CreateScope<VK::RenderContext>(contextSpecs);
+		AURORA_ASSERT(s_RenderContext != nullptr, "Failed to create RenderContext.");
+		s_RenderContext->Init();
+		return true;
+	}
 
 	bool BeginFrame()
 	{
@@ -33,6 +48,12 @@ namespace Aurora {
 		return true;
 	}
 
+	ShaderAssetHandle LoadShader(std::string_view name)
+	{
+		//return AssetLoader::LoadShader(name);
+		return {};
+	}
+
 	void SetLoggingCallback(LogCallback callback)
 	{
 		Log::SetCallback(callback);
@@ -48,12 +69,11 @@ namespace Aurora {
 		RefRegistry::SetUnregisterCallback(callback);
 	}
 
-	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs)
+	ApplicationSettings& ChangeSettings()
 	{
-		s_RenderContext = RenderContext::Create(contextSpecs);
-		AURORA_ASSERT(s_RenderContext != nullptr, "Failed to create RenderContext.");			
-		s_RenderContext->Init();
-		return true;
+		return AppSettings; 
 	}
+
+	
 }
 

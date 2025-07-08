@@ -1,7 +1,7 @@
 #pragma once
-#include "Renderer/VulkanSpecifics/VulkanCore.h"
-#include "Renderer/VulkanSpecifics/DataStructs/QueueFamilies.h"
-#include "Renderer/VulkanSpecifics/DataStructs/SwapchainSupportDetails.h"
+#include "Renderer/VulkanCore.h"
+#include "Renderer/DataStructs/QueueFamilies.h"
+#include "Renderer/DataStructs/SwapchainSupportDetails.h"
 
 namespace Aurora::VK::Helper {
 

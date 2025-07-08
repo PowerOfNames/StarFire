@@ -1,6 +1,7 @@
-#include "Renderer/VulkanSpecifics/Swapchain.h"
-#include "Renderer/VulkanSpecifics/VulkanHelper.h"
-#include "Renderer/VulkanSpecifics/DataStructs/SwapchainSupportDetails.h"
+#include "Core/Core.h"
+#include "Renderer/Swapchain.h"
+#include "Renderer/VulkanHelper.h"
+#include "Renderer/DataStructs/SwapchainSupportDetails.h"
 #include "Shaders/ShaderByteCodes.h"
 
 namespace Aurora::VK {	

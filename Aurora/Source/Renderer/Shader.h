@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/RefCounted.h"
-#include "Renderer/VulkanSpecifics/VulkanCore.h"
+#include "Renderer/VulkanCore.h"
 
 namespace Aurora::VK {
 

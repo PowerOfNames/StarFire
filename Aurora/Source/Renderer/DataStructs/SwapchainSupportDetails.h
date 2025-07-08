@@ -1,5 +1,5 @@
 #pragma once
-#include "Renderer/VulkanSpecifics/VulkanCore.h"
+#include "Renderer/VulkanCore.h"
 
 #include <vector>
 

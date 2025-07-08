@@ -50,10 +50,6 @@ project "Aurora"
 	filter "system:windows"
 		systemversion "latest"
 		
-		linkoptions {
-			"/FORCE:MULTIPLE"
-		}
-		
 	filter "action:vs*"
 		buildoptions
 		{

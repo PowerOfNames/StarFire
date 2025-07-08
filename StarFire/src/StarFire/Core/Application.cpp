@@ -58,7 +58,6 @@ namespace StarFire {
 		Aurora::RenderContextSpecification renderSpecs{};
 		renderSpecs.AppName = m_Specification.Name.c_str();
 		renderSpecs.AppVersion = { 1, 0, 0 };
-		renderSpecs.API = Aurora::APIType::API_TYPE_VULKAN;
 		renderSpecs.AuroraVersion = { 1, 0, 0 };
 		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
 		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
@@ -72,7 +71,11 @@ namespace StarFire {
 		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
 		Aurora::InitializeRenderContext(renderSpecs);
 		
-		
+		// ========== Register Resources ==========
+		Aurora::ChangeSettings().RootPath = std::filesystem::current_path().string();
+		Aurora::ChangeSettings().AssetPath = std::filesystem::current_path().concat("\\Assets").string();
+
+		Aurora::LoadShader("TestShader");
 
 
 		RefRegistry::Get()->PrintRegister();

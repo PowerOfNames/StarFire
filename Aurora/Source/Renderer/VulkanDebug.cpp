@@ -1,4 +1,4 @@
-#include "Renderer/VulkanSpecifics/VulkanDebug.h"
+#include "Renderer/VulkanDebug.h"
 
 namespace Aurora::VK::Debug {
 

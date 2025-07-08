@@ -1,18 +1,14 @@
 #pragma once
-#include "Aurora/Renderer/RenderContext.h"
-
-#include "Renderer/VulkanSpecifics/DataStructs/PhysicalDeviceLimits.h"
-#include "Renderer/VulkanSpecifics/Swapchain.h"
-#include "Renderer/VulkanSpecifics/VulkanCore.h"
+#include "Renderer/VulkanCore.h"
+#include "Aurora/Renderer/RenderContextSpecification.h"
+#include "Renderer/DataStructs/PhysicalDeviceLimits.h"
+#include "Renderer/Swapchain.h"
 
 #include <vector>
 
 namespace Aurora::VK {
 
-	struct DeviceRequirements
-	{
-		
-	};
+	struct DeviceRequirements {};
 
 	struct QueueFamilies
 	{
@@ -23,20 +19,20 @@ namespace Aurora::VK {
 		VkQueue Transfer = VK_NULL_HANDLE;
 	};
 		
-	class VulkanRenderContext : public RenderContext
+	class RenderContext
 	{
 	public:
-		VulkanRenderContext(const RenderContextSpecification& specs);
-		~VulkanRenderContext() = default;
+		RenderContext(const RenderContextSpecification& specs);
+		~RenderContext() = default;
 
-		virtual void Init() override;
-		virtual bool BeginFrame() override;
-		virtual void EndFrame() override;
-		virtual void SwapFrame() override;
-		virtual void Resize(uint32_t width, uint32_t height) override;
-		virtual void Destroy() override;
+		void Init();
+		bool BeginFrame();
+		void EndFrame();
+		void SwapFrame();
+		void Resize(uint32_t width, uint32_t height);
+		void Destroy();
 
-		inline virtual const RenderContextSpecification& GetSpecification() const override { return m_Specification; }
+		inline const RenderContextSpecification& GetSpecification() const { return m_Specification; }
 
 	private:
 		bool CreateInstance(

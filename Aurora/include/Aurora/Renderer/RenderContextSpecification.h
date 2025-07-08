@@ -1,12 +1,8 @@
 #pragma once
-#include "Aurora/Renderer/APIType.h"
 #include "Aurora/Renderer/WSIPlatform.h"
 
-#include <memory>
-#include <string>
-
-namespace Aurora {
-
+namespace Aurora
+{
 	struct RenderContextSpecification
 	{
 		std::string AppName = "Sandbox";
@@ -15,7 +11,7 @@ namespace Aurora {
 		struct ApplicationVersionNumber
 		{
 			uint32_t Major = 1;
-			uint32_t Minor = 0;			
+			uint32_t Minor = 0;
 			uint32_t Patch = 0;
 		} AppVersion;
 
@@ -26,8 +22,6 @@ namespace Aurora {
 			uint32_t Minor = 0;
 			uint32_t Patch = 0;
 		} AuroraVersion;
-		
-		APIType API = APIType::API_TYPE_NONE;
 
 		struct SurfaceSpecification
 		{
@@ -54,26 +48,7 @@ namespace Aurora {
 		{
 			bool EnableDebugUtils = false;
 			bool EnableInfoDebugLevel = false;
-			
-		} InstanceSpecs;		
+
+		} InstanceSpecs;
 	};
-
-
-	class RenderContext 
-	{
-	public:
-		virtual ~RenderContext() = default;
-
-		virtual void Init() = 0;
-		virtual bool BeginFrame() = 0;		
-		virtual void EndFrame() = 0;
-		virtual void SwapFrame() = 0;
-		virtual void Resize(uint32_t width, uint32_t height) = 0;
-		virtual void Destroy() = 0;
-
-		virtual const RenderContextSpecification& GetSpecification() const = 0;
-
-		static std::unique_ptr<RenderContext> Create(const RenderContextSpecification& contextSpecs);
-	};
-
 }
