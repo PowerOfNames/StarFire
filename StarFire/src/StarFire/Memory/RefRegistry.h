@@ -2,12 +2,11 @@
 #include "StarFire/Core/Assert.h"
 #include "StarFire/Core/Core.h"
 
+#include "StarFire/Core/StringKeyMap.h"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <string>
-#include <string_view>
-#include <unordered_map>
 
 namespace StarFire {
 
@@ -47,34 +46,8 @@ namespace StarFire {
 		friend class StarFire::Application;
 
 		inline static Scope<RefRegistry> s_Instance = nullptr;
-
-		struct TransparentHash {
-			using is_transparent = void; // marks this as transparent
-			size_t operator()(std::string_view sv) const noexcept {
-				return std::hash<std::string_view>{}(sv);
-			}
-			size_t operator()(const std::string& s) const noexcept {
-				return std::hash<std::string_view>{}(s);
-			}
-		};
-
-		struct TransparentEqual {
-			using is_transparent = void; // marks this as transparent
-			bool operator()(std::string_view lhs, std::string_view rhs) const noexcept {
-				return lhs == rhs;
-			}
-			bool operator()(const std::string& lhs, const std::string& rhs) const noexcept {
-				return lhs == rhs;
-			}
-			bool operator()(std::string_view lhs, const std::string& rhs) const noexcept {
-				return lhs == rhs;
-			}
-			bool operator()(const std::string& lhs, std::string_view rhs) const noexcept {
-				return lhs == rhs;
-			}
-		};
-
-		std::unordered_map<std::string, std::atomic<uint64_t>*, TransparentHash, TransparentEqual> m_Registry;
+		
+		Containers::StringKeyMap<std::atomic<uint64_t>*> m_Registry;
 		std::mutex m_RegistryMutex;
 	};
 }

@@ -1,10 +1,11 @@
 #pragma once
 #include "Aurora/Logging/LogLevel.h"
 
-#include "Renderer/Handles.h"
+#include "Aurora/Renderer/AssetHandles.h"
 
-#include "Aurora/ApplicationSettings.h"
 #include "Aurora/Renderer/RenderContextSpecification.h"
+
+#include "Aurora/AppSettings.h"
 
 #include <atomic>
 #include <string>
@@ -24,7 +25,6 @@ namespace Aurora {
 	void SetRefRegistryUnregisterCallback(RegistryUnregisterCallback callback);
 
 	// ========== Render Context ==========
-	ApplicationSettings& ChangeSettings();
 	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs);
 
 	bool BeginFrame();
@@ -33,8 +33,7 @@ namespace Aurora {
 	void Resize(uint32_t width, uint32_t height);
 
 	bool Shutdown();
-
-	// ========== Resources ==========
-	ShaderAssetHandle LoadShader(std::string_view name);
 	
+	// ========== Settings ==========
+	inline AppSettings& ChangeAppSettings() { return AppSettings::Instance(); }
 }

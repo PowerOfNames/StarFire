@@ -14,4 +14,5 @@ namespace fmt {
 			return fmt::format_to(ctx.out(), "{}s", my.InSec());
 		}
 	};
+
 }

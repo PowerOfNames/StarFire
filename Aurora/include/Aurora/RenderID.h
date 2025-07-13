@@ -13,9 +13,13 @@ namespace Aurora {
 		~RenderID() = default;
 
 		constexpr operator uint64_t() const { return m_Id; }
-		constexpr const bool operator==(const RenderID& other)
+		constexpr bool operator==(const RenderID& other) const
 		{
 			return other.m_Id == m_Id;
+		}
+		constexpr bool operator!=(const RenderID& other) const
+		{
+			return !(*this == other);
 		}
 
 	private:

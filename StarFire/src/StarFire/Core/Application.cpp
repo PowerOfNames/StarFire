@@ -4,8 +4,8 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
-
 #include <Aurora/Aurora.h>
+#include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
 
 #include <thread>
@@ -72,11 +72,13 @@ namespace StarFire {
 		Aurora::InitializeRenderContext(renderSpecs);
 		
 		// ========== Register Resources ==========
-		Aurora::ChangeSettings().RootPath = std::filesystem::current_path().string();
-		Aurora::ChangeSettings().AssetPath = std::filesystem::current_path().concat("\\Assets").string();
+		auto& appSettings = Aurora::ChangeAppSettings();
+		appSettings.SetRootPath(std::filesystem::current_path());
 
-		Aurora::LoadShader("TestShader");
+		Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
 
+		bool is = std::filesystem::path("blob.ext") == "blob.ext";
+		auto ext = std::filesystem::path("blob.frag.spv").extension();
 
 		RefRegistry::Get()->PrintRegister();
 
