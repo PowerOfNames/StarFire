@@ -4,8 +4,8 @@
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
-
 #include <Aurora/Aurora.h>
+#include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
 
 #include <thread>
@@ -56,9 +56,8 @@ namespace StarFire {
 			});
 		
 		Aurora::RenderContextSpecification renderSpecs{};
-		renderSpecs.AppName = m_Specification.Name.c_str();
+		renderSpecs.AppName = m_Specification.Name;
 		renderSpecs.AppVersion = { 1, 0, 0 };
-		renderSpecs.API = Aurora::APIType::API_TYPE_VULKAN;
 		renderSpecs.AuroraVersion = { 1, 0, 0 };
 		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
 		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
@@ -72,8 +71,14 @@ namespace StarFire {
 		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
 		Aurora::InitializeRenderContext(renderSpecs);
 		
-		
+		// ========== Register Resources ==========
+		auto& appSettings = Aurora::ChangeAppSettings();
+		appSettings.SetRootPath(std::filesystem::current_path());
 
+		Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
+
+		bool is = std::filesystem::path("blob.ext") == "blob.ext";
+		auto ext = std::filesystem::path("blob.frag.spv").extension();
 
 		RefRegistry::Get()->PrintRegister();
 

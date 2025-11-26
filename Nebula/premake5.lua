@@ -22,12 +22,12 @@ project "Nebula"
 	{
 		"%{wks.location}/StarFire/src",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
 	}
 	
 	links
 	{
-		"StarFire"
+		"StarFire",
 	}
 	
 	
@@ -42,7 +42,10 @@ project "Nebula"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "STARFIRE_DEBUG_MODE"
+		defines
+		{
+			"STARFIRE_DEBUG_MODE",
+		}
 		runtime "Debug"
 		symbols "on"
 		
@@ -51,7 +54,10 @@ project "Nebula"
 		}
 		
 	filter "configurations:Release"
-		defines "STARFIRE_RELEASE_MODE"
+		defines
+		{
+			"STARFIRE_RELEASE_MODE",
+		}
 		runtime "Release"
 		optimize "on"
 		

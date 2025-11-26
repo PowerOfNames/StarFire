@@ -25,17 +25,23 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "StarFire/vendor/GLFW"
+	include "StarFire/vendor/xxHash"
 group ""
 
 filter {"StarFire/vendor/**.cpp"}
 	warnings "Off"
 filter {}
 
+filter {"files/vendor/**.cpp"}
+	flags {"NoPCH"}
+filter{}
+
 group "Core"
 	include "StarFire"
 	include "Aurora"
 	include "Sandbox"
 	include "Nebula"
+	include "Substrate"
 group ""
 
 

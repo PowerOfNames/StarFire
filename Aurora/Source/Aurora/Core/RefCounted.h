@@ -1,19 +1,20 @@
 #pragma once
-#include "StarFire/Core/Logging.h"
-#include "StarFire/Memory/RefRegistry.h"
+
+#include "Aurora/Core/RefRegistry.h"
 
 #include <atomic>
 #include <memory>
 #include <type_traits>
+#include <concepts>
 
-namespace StarFire {
+namespace Aurora {
 
 	template<typename T>
 	class RefCounted : public std::enable_shared_from_this<T>
 	{
 	public:
 		~RefCounted()
-		{
+		{			
 			if (s_RefCount.fetch_sub(1, std::memory_order_acq_rel) == 1)
 				RefRegistry::Unregister(T::StaticTypeName());
 		}
@@ -28,10 +29,10 @@ namespace StarFire {
 		{
 			return this->shared_from_this();
 		}
-		
+
 	protected:
 		RefCounted()
-		{
+		{			
 			if (s_RefCount.fetch_add(1, std::memory_order_acq_rel) == 0)
 				RefRegistry::Register(T::StaticTypeName(), &s_RefCount);
 		}
@@ -40,7 +41,5 @@ namespace StarFire {
 
 	private:
 		inline static std::atomic<uint64_t> s_RefCount = 0;
-
-		std::mutex m_Mutex;
 	};
 }

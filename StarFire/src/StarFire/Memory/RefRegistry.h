@@ -2,11 +2,11 @@
 #include "StarFire/Core/Assert.h"
 #include "StarFire/Core/Core.h"
 
+#include "StarFire/Core/StringKeyMap.h"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <string>
-#include <unordered_map>
 
 namespace StarFire {
 
@@ -27,8 +27,8 @@ namespace StarFire {
 			return s_Instance.get(); 
 		}
 
-		void Register(const std::string& typeName, std::atomic<uint64_t>* counter);
-		void Unregister(const std::string& typeName);
+		void Register(std::string_view typeName, std::atomic<uint64_t>* counter);
+		void Unregister(std::string_view typeName);
 
 		void PrintRegister();
 
@@ -46,7 +46,8 @@ namespace StarFire {
 		friend class StarFire::Application;
 
 		inline static Scope<RefRegistry> s_Instance = nullptr;
-		std::unordered_map<std::string, std::atomic<uint64_t>*> m_Registry;
+		
+		Containers::StringKeyMap<std::atomic<uint64_t>*> m_Registry;
 		std::mutex m_RegistryMutex;
 	};
 }

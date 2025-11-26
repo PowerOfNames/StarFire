@@ -1,48 +1,34 @@
-project "StarFire"
+project "Substrate"
 	kind "StaticLib"
 	language "C++"
 	cppdialect "C++23"
 	staticruntime "off"
+	rtti "off"
 
 	targetdir("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
-
-	pchheader "sfpch.h"
-	pchsource "src/sfpch.cpp"
 	
 	files
 	{
-		"src/**.h",
-		"src/**.cpp",
-		
-		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl"
+		"Source/**.h",
+		"Source/**.cpp",
+		"Include/**.h",
 	}
 	
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
-		"GLFW_INCLUDE_NONE",
-		"AURORA_GLFW"
 	}
 	
 	includedirs
 	{
-		"src",		
-		"%{IncludeDir.glm}",
-		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.Substrate}",
-		"%{IncludeDir.GLFW}",
+		"Source",
+		"Include",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.concurrentqueue}"
 	}
 	
 	links
-	{
-		"Substrate",
-		"Aurora",
-		"GLFW",
-		"xxHash",
+	{	
 	}
 	
 	
@@ -57,11 +43,6 @@ project "StarFire"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines 
-		{
-			"STARFIRE_DEBUG_MODE",
-			"SUBSTRATE_DEBUG_MODE",
-		}
 		runtime "Debug"
 		symbols "on"
 		
@@ -70,11 +51,6 @@ project "StarFire"
 		}
 		
 	filter "configurations:Release"
-		defines
-		{
-			"STARFIRE_RELEASE_MODE",
-			"SUBSTRATE_RELEASE_MODE",
-		}
 		runtime "Release"
 		optimize "on"
 		

@@ -16,7 +16,10 @@ project "Aurora"
 		"Resources/**.h",
 		
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl"
+		"vendor/glm/glm/**.inl",
+		
+		"vendor/SPIRV-Reflect/spirv_reflect.cpp",
+		"vendor/SPIRV-Reflect/spirv_reflect.h"
 	}
 	
 	defines
@@ -31,14 +34,19 @@ project "Aurora"
 		"Include",
 		"Resources",
 		"%{IncludeDir.glm}",
+		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.xxHash}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.VMA}"
+		"%{IncludeDir.VMA}",
+		"%{IncludeDir.Spirv_Reflect}"
 	}
 	
 	links
 	{
+		"Substrate",
 		"GLFW",
+		"xxHash",
 		"%{Library.Vulkan}"
 	}
 	
@@ -54,21 +62,31 @@ project "Aurora"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "AURORA_DEBUG_MODE"
+		defines
+		{
+			"AURORA_DEBUG_MODE",
+			"SUBSTRATE_DEBUG_MODE",
+		}
 		runtime "Debug"
 		symbols "on"
 		
 		links
 		{
+			"%{Library.shaderc_debug}"
 		}
 		
 	filter "configurations:Release"
-		defines "AURORA_RELEASE_MODE"
+		defines
+		{
+			"AURORA_RELEASE_MODE",
+			"SUBSTRATE_RELEASE_MODE",
+		}
 		runtime "Release"
 		optimize "on"
 		
 		links
 		{
+			"%{Library.shaderc_release}"
 		}
 		
 		
