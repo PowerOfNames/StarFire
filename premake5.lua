@@ -25,6 +25,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "StarFire/vendor/GLFW"
+	include "StarFire/vendor/xxHash"
 group ""
 
 filter {"StarFire/vendor/**.cpp"}
@@ -40,6 +41,7 @@ group "Core"
 	include "Aurora"
 	include "Sandbox"
 	include "Nebula"
+	include "Substrate"
 group ""
 
 

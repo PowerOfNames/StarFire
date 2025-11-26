@@ -2,11 +2,14 @@
 Vulkan_SDK = os.getenv("Vulkan_SDK")
 
 IncludeDir = {}
+IncludeDir["Aurora"]				= "%{wks.location}/Aurora/Include"
+IncludeDir["Substrate"]				= "%{wks.location}/Substrate/Include"
+
 IncludeDir["glm"]					= "%{wks.location}/StarFire/vendor/glm"
 IncludeDir["GLFW"]					= "%{wks.location}/StarFire/vendor/GLFW/include"
-IncludeDir["Aurora"]				= "%{wks.location}/Aurora/Include"
 IncludeDir["spdlog"]				= "%{wks.location}/StarFire/vendor/spdlog/include"
 IncludeDir["concurrentqueue"]		= "%{wks.location}/StarFire/vendor/moodycamel"
+IncludeDir["xxHash"]				= "%{wks.location}/StarFire/vendor/xxHash"
 
 IncludeDir["VulkanSDK"]				= "%{Vulkan_SDK}/include"
 IncludeDir["VMA"]					= "%{wks.location}/Aurora/Vendor/VulkanMemoryAllocator/include"

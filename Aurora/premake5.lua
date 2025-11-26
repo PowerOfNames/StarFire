@@ -34,6 +34,8 @@ project "Aurora"
 		"Include",
 		"Resources",
 		"%{IncludeDir.glm}",
+		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.xxHash}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
 		"%{IncludeDir.VMA}",
@@ -42,7 +44,9 @@ project "Aurora"
 	
 	links
 	{
+		"Substrate",
 		"GLFW",
+		"xxHash",
 		"%{Library.Vulkan}"
 	}
 	
@@ -58,7 +62,11 @@ project "Aurora"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "AURORA_DEBUG_MODE"
+		defines
+		{
+			"AURORA_DEBUG_MODE",
+			"SUBSTRATE_DEBUG_MODE",
+		}
 		runtime "Debug"
 		symbols "on"
 		
@@ -68,7 +76,11 @@ project "Aurora"
 		}
 		
 	filter "configurations:Release"
-		defines "AURORA_RELEASE_MODE"
+		defines
+		{
+			"AURORA_RELEASE_MODE",
+			"SUBSTRATE_RELEASE_MODE",
+		}
 		runtime "Release"
 		optimize "on"
 		
