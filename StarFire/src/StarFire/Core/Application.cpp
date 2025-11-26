@@ -56,7 +56,7 @@ namespace StarFire {
 			});
 		
 		Aurora::RenderContextSpecification renderSpecs{};
-		renderSpecs.AppName = m_Specification.Name.c_str();
+		renderSpecs.AppName = m_Specification.Name;
 		renderSpecs.AppVersion = { 1, 0, 0 };
 		renderSpecs.AuroraVersion = { 1, 0, 0 };
 		renderSpecs.InstanceSpecs.EnableDebugUtils = true;

@@ -5,8 +5,8 @@ layout (location = 0) in vec3 a_Position;
 layout (location = 1) in vec3 a_Color;
 layout (location = 2) in vec2 a_TexCoord;
 
-layout (location = 0) out vec3 o_Color;
-layout (location = 1) out vec2 o_TexCoord;
+layout (location = 0) out vec3 v_Color;
+layout (location = 1) out vec2 v_TexCoord;
 
 layout (std140, set = 0, binding = 0) uniform CameraData
 {
@@ -27,6 +27,7 @@ void main()
 	gl_Position = u_Camera.ViewProjection * pc_Model.ModelMatrix * vec4(a_Position, 1.0);
 }
 
+// ==========================================================================================
 
 #type fragment
 #version 450

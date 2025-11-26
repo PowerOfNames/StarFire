@@ -1,8 +1,8 @@
 #pragma once
 #include "Aurora/Core/Core.h"
 #include "Aurora/Core/RefCounted.h"
-#include "Aurora/Renderer/VulkanCore.h"
 #include "Aurora/Renderer/AssetHandles.h"
+#include "Aurora/Renderer/VulkanCore.h"
 
 
 #include <filesystem>
@@ -11,10 +11,7 @@
 #include <unordered_map>
 
 namespace Aurora::VK {
-
-	struct DescriptorSetLayout
-	{
-	};
+	
 
 	class Shader : public RefCounted<Shader>
 	{
@@ -30,12 +27,12 @@ namespace Aurora::VK {
 
 		static Ref<Shader> Create(std::string_view name, const std::filesystem::path& shaderPath);
 
+	
 	private:
-		std::unordered_map<VkShaderStageFlagBits, std::string> PreProcess(const std::string& source);
-		std::unordered_map<VkShaderStageFlagBits, std::vector<uint32_t>> Compile(const std::unordered_map<VkShaderStageFlagBits, std::string>& sources, bool forceRecompile = false);
-		DescriptorSetLayout Reflect(const std::unordered_map<VkShaderStageFlagBits, std::vector<uint32_t>>& binaries);
+		RenderID m_ShaderHandle;
 
-	private:
+		//std::unordered_map<VkShaderStageFlagBits, ShaderModule> m_Modules;
+
 		std::string m_DebugName = "Shader";
 		bool m_IsValid = false;
 	};
