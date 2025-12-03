@@ -11,3 +11,6 @@
 [submodule "Aurora/Vendor/SPIRV-Reflect"]
 	path = Aurora/Vendor/SPIRV-Reflect
 	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+[submodule "SubstrateTests/Dependencies/Catch2"]
+	path = SubstrateTests/Dependencies/Catch2
+	url = https://github.com/PowerOfNames/Catch2.git
