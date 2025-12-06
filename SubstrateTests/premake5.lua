@@ -1,5 +1,10 @@
 project "SubstrateTests"
-	kind "StaticLib"
+
+filter {"configurations:Debug or Release"}
+	kind "None"
+filter {"configurations:Tests"}
+	kind "ConsoleApp"
+
 	language "C++"
 	cppdialect "C++23"
 	staticruntime "off"
@@ -29,6 +34,7 @@ project "SubstrateTests"
 	links
 	{	
 		"Substrate",
+		"Catch2",
 	}
 	
 	
@@ -58,4 +64,7 @@ project "SubstrateTests"
 		{
 		}
 		
-		
+				
+group "Dependencies"
+	include "Dependencies/Catch2"	
+group ""
