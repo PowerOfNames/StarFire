@@ -18,6 +18,7 @@ project "Substrate"
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
+		"SUBSTRATE_ENABLE_DETAILS"
 	}
 	
 	includedirs

@@ -6,7 +6,7 @@ if not exist bin\Tests-windows-x86_64\SubstrateTests\SubstrateTests.exe (
 	echo Please build and compile SubstarteTests first.
 	PAUSE	
 ) else (
-	call "bin\Tests-windows-x86_64\SubstrateTests\SubstrateTests.exe" --wait-for-keypress "exit"
+	call "bin\Tests-windows-x86_64\SubstrateTests\SubstrateTests.exe" -b --success --wait-for-keypress "exit"
 )
 popd
 

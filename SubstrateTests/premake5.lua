@@ -15,6 +15,7 @@ filter {"configurations:Tests"}
 	
 	files
 	{
+		"main.cpp",
 		"tests/**.h",
 		"tests/**.cpp",
 	}
@@ -27,8 +28,8 @@ filter {"configurations:Tests"}
 	includedirs
 	{
 		"tests/",
-		"%{IncludeDir.Catch2}",
-		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.Catch2}"
 	}
 	
 	links
