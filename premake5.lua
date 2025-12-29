@@ -1,6 +1,11 @@
 include "./premake/customization/solution_items.lua"
 include "Dependencies.lua"
 
+newoption {
+    trigger = "with-tests",
+    description = "Include SubstrateTests project"
+}
+
 workspace "StarFire"
 	architecture "x86_64"
 	startproject "Sandbox"
@@ -8,7 +13,8 @@ workspace "StarFire"
 	configurations 
 	{
 		"Debug",
-		"Release"
+		"Release",
+		"Tests"
 	}
 
 	solution_items
@@ -25,7 +31,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "StarFire/vendor/GLFW"
-	include "StarFire/vendor/xxHash"
+	include "StarFire/vendor/xxHash"	
 group ""
 
 filter {"StarFire/vendor/**.cpp"}
@@ -42,6 +48,9 @@ group "Core"
 	include "Sandbox"
 	include "Nebula"
 	include "Substrate"
+if _OPTIONS["with-tests"] then
+    include "SubstrateTests"
+end
 group ""
 
 

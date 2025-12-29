@@ -1,5 +1,10 @@
-project "Substrate"
-	kind "StaticLib"
+project "SubstrateTests"
+
+filter {"configurations:Debug or Release"}
+	kind "None"
+filter {"configurations:Tests"}
+	kind "ConsoleApp"
+
 	language "C++"
 	cppdialect "C++23"
 	staticruntime "off"
@@ -10,26 +15,27 @@ project "Substrate"
 	
 	files
 	{
-		"Source/**.h",
-		"Source/**.cpp",
-		"Include/**.h",
+		"main.cpp",
+		"tests/**.h",
+		"tests/**.cpp",
 	}
 	
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
-		"SUBSTRATE_ENABLE_DETAILS"
 	}
 	
 	includedirs
 	{
-		"Source",
-		"Include",
-		"%{IncludeDir.spdlog}",
+		"tests/",
+		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.Catch2}"
 	}
 	
 	links
 	{	
+		"Substrate",
+		"Catch2",
 	}
 	
 	
@@ -59,5 +65,7 @@ project "Substrate"
 		{
 		}
 		
-
-		
+				
+group "Dependencies"
+	include "Dependencies/Catch2"	
+group ""
