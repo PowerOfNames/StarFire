@@ -24,6 +24,7 @@ StarFire currently only supports Windows.
 |[concurrentqueue](https://github.com/cameron314/concurrentqueue/tree/24b78782bd6ca5a5853ef46917708806112dc142)|1.0.4|Original|master|'24b7878'|14.05.2025|StarFire|
 |[VulkanSDK](https://vulkan.lunarg.com/sdk/home#windows)|1.3.296(latest 1.3)|Original|---|---|24.05.2025|Aurora|
 |[xxHash](https://github.com/Cyan4973/xxHash)|v0.8.3|Original|---|---|17.07.2025|Aurora/StarFire|
+|[catch2](https://github.com/catchorg/Catch2)|v3.11.0|Forked|[v3.11.0_Forked](https://github.com/PowerOfNames/Catch2/tree/v3.11.0_forked)|'31d46ee'|07.12.2025|SubstrateTests|
 
 Disclaimer: The branches in GLFW were a test. There is no difference between the premake5 files in this project and the old engine [Povox](https://github.com/PowerOfNames/Povox).
 
