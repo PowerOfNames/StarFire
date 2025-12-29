@@ -15,9 +15,10 @@ class DerivedTestClass : public TestClass
 	DECLARE_TYPE(DerivedTestClass, TestClass::GetStaticTypeInfo())
 };
 
-TEST_CASE("TypeInfo testing - GetStaticTypeInfo", "[TypeInfo_GetStaticTypeInfo]")
+TEST_CASE("TypeInfo testing - GetTypeInfo", "[TypeInfo_GetTypeInfo]")
 {
-	const Substrate::TypeInfo* typeInfo = TestClass::GetStaticTypeInfo();
+	TestClass testInstance;
+	const Substrate::TypeInfo* typeInfo = testInstance.GetTypeInfo();
 	REQUIRE(typeInfo != nullptr);
 	REQUIRE(typeInfo->Name == std::string("TestClass"));
 	REQUIRE(typeInfo->BaseType == nullptr);

@@ -5,6 +5,7 @@
 
 #define DECLARE_TYPE(type, ...) \
 	public: \
+    virtual const Substrate::TypeInfo* GetTypeInfo() const override { return &s_##type##TypeInfo; } \
     static const Substrate::TypeInfo* GetStaticTypeInfo() { return &s_##type##TypeInfo; } \
 	private: \
 	inline static const Substrate::TypeInfo s_##type##TypeInfo = { #type, ##__VA_ARGS__, Substrate::HashTypeNameFNV1a(#type) };
@@ -45,6 +46,7 @@ namespace Substrate {
 		{
 			static_assert(IsDerivedWithTypeInfo<TDerived>, "Classes derived from Substrate::Base must implement GetStaticTypeInfo via DECLARE_TYPE macro");
 		}
+		virtual const TypeInfo* GetTypeInfo() const = 0;
 
 	protected:
 		virtual ~Base() = default;

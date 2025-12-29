@@ -38,7 +38,6 @@ TEST_CASE("RefCounted testing (single threaded) - Copy Construction", "[RefCount
 {
 	TestClass::s_DestructorCalled = 0;
 
-
 	Ref<TestClass> instanceOne = CreateRef<TestClass>();
 	Ref<TestClass> instanceTwo = instanceOne;
 	REQUIRE(instanceOne->GetRefCount() == 2);
