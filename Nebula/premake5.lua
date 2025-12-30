@@ -23,6 +23,7 @@ project "Nebula"
 		"%{wks.location}/StarFire/src",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.Substrate}",
 	}
 	
 	links

@@ -1,17 +1,16 @@
 #pragma once
-#include "StarFire/Core/BitField.h"
-
-
+#define SST_USER_NAMESPACE StarFire
+#include "Substrate/BitField.h"
+#undef SST_USER_NAMESPACE
 #include <string>
 #include <functional>
-
 
 namespace StarFire {
 
 	enum class EventType
 	{
 		NONE = 0,
-		WINDOW_CLOSE, 
+		WINDOW_CLOSE,
 		WINDOW_MINIMIZE,
 		WINDOW_RESIZE,
 		WINDOW_FOCUS,
@@ -34,16 +33,17 @@ namespace StarFire {
 		MOUSE_SCROLLED
 	};
 
-	enum class EventCategory : BitField8
+	enum class EventCategory : Substrate::BitField8
 	{
-		NONE			= 0,
-		APPLICATION		= BIT(0),
-		INPUT			= BIT(1),
-		KEYBOARD		= BIT(2),
-		MOUSE			= BIT(3),
-		MOUSE_BUTTON	= BIT(4)
+		NONE = 0,
+		APPLICATION = BIT(0),
+		INPUT = BIT(1),
+		KEYBOARD = BIT(2),
+		MOUSE = BIT(3),
+		MOUSE_BUTTON = BIT(4)
 	};
-	SF_ENABLE_BIT_OPS(EventCategory);
+	SST_ENABLE_BIT_OPS(EventCategory);
+	
 
 #define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::##type; }\
 								virtual EventType GetEventType() const override { return GetStaticType(); }\
@@ -64,7 +64,7 @@ namespace StarFire {
 		virtual bool IsCoalescent() const = 0;
 		virtual std::string ToString() const { return GetName(); }
 
-		inline bool IsInCategory(EventCategory category) { return FieldHasFlag(GetCategoryFlags(), category); }
+		inline bool IsInCategory(EventCategory category) { return Substrate::FieldHasFlag(GetCategoryFlags(), category); }
 
 	public:
 		bool Handled = false;

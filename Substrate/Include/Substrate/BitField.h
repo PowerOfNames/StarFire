@@ -39,85 +39,103 @@
 
 #include<type_traits>
 
-namespace StarFire {
-		using BitField8 = uint8_t;
-		using BitField16 = uint16_t;
-		using BitField32 = uint32_t;
-		using BitField64 = uint64_t;
+#if defined(SST_USER_NAMESPACE)
+#define USER_NAMESPACE_BEGIN namespace SST_USER_NAMESPACE {
+#define USER_NAMESPACE_END }
+#else
+#define USER_NAMESPACE_BEGIN
+#define USER_NAMESPACE_END
+#endif
 
+USER_NAMESPACE_BEGIN
+namespace Substrate {
+
+	using BitField8 = uint8_t;
+	using BitField16 = uint16_t;
+	using BitField32 = uint32_t;
+	using BitField64 = uint64_t;
+
+	/// Utility macro to define bit values
 #define BIT(x) (1 << x)
-
-#define SF_ENABLE_BIT_OPS(Name) template<> struct enable_bitmask_operators<Name>{ static constexpr bool enable = true; }
-
+	/// Macro to enable bitwise operators for a specific enum class. This also imports the operators into the current namespace.		
+#define SST_ENABLE_BIT_OPS(Name)\
+	namespace Substrate { template<> struct enable_bitmask_operators<Name> { static constexpr bool enable = true; }; }\
+	using Substrate::operator|;\
+	using Substrate::operator&;\
+	using Substrate::operator^;\
+	using Substrate::operator~;\
+	using Substrate::operator|=;\
+	using Substrate::operator&=;\
+	using Substrate::operator^=;
 
 	//From https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html with adjustments (constexpr)
 
 	template<typename T>
 	struct enable_bitmask_operators {
-		static constexpr bool enable = false;
+	static constexpr bool enable = false;
 	};
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E>::type
-		operator|(E lhs, E rhs) {
-		typedef typename std::underlying_type<E>::type underlying;
-		return static_cast<E>(
-			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	operator|(E lhs, E rhs) {
+	typedef typename std::underlying_type<E>::type underlying;
+	return static_cast<E>(
+		static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E>::type
-		operator&(E lhs, E rhs) {
-		typedef typename std::underlying_type<E>::type underlying;
-		return static_cast<E>(
-			static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+	operator&(E lhs, E rhs) {
+	typedef typename std::underlying_type<E>::type underlying;
+	return static_cast<E>(
+		static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E>::type
-		operator^(E lhs, E rhs) {
-		typedef typename std::underlying_type<E>::type underlying;
-		return static_cast<E>(
-			static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
+	operator^(E lhs, E rhs) {
+	typedef typename std::underlying_type<E>::type underlying;
+	return static_cast<E>(
+		static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E>::type
-		operator~(E lhs) {
-		typedef typename std::underlying_type<E>::type underlying;
-		return static_cast<E>(
-			~static_cast<underlying>(lhs));
+	operator~(E lhs) {
+	typedef typename std::underlying_type<E>::type underlying;
+	return static_cast<E>(
+		~static_cast<underlying>(lhs));
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E&>::type
-		operator|=(E& lhs, E rhs) {
-		lhs = lhs | rhs;
-		return lhs;
+	operator|=(E& lhs, E rhs) {
+	lhs = lhs | rhs;
+	return lhs;
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E&>::type
-		operator&=(E& lhs, E rhs) {
-		lhs = lhs & rhs;
-		return lhs;
+	operator&=(E& lhs, E rhs) {
+	lhs = lhs & rhs;
+	return lhs;
 	}
 
 	template<typename E>
 	constexpr std::enable_if<enable_bitmask_operators<E>::enable, E&>::type
-		operator^=(E& lhs, E rhs) {
-		lhs = lhs ^ rhs;
-		return lhs;
+	operator^=(E& lhs, E rhs) {
+	lhs = lhs ^ rhs;
+	return lhs;
 	}
 
 	//Added:
 	template<typename E>
 	constexpr bool FieldHasFlag(E field, E flag)
 	{
-		static_assert(enable_bitmask_operators<E>::enable, "hasFlag requires a bitfield-operator enabled bitfield");
-		using underlying = std::underlying_type_t<E>;
-		return (static_cast<underlying>(field) & static_cast<underlying>(flag)) == static_cast<underlying>(flag);
+	static_assert(enable_bitmask_operators<E>::enable, "hasFlag requires a bitfield-operator enabled bitfield");
+	using underlying = std::underlying_type_t<E>;
+	return (static_cast<underlying>(field) & static_cast<underlying>(flag)) == static_cast<underlying>(flag);
 	}
 
-	
 }
+USER_NAMESPACE_END

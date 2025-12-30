@@ -18,7 +18,8 @@ project "Sandbox"
 		"%{wks.location}/StarFire/src",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.Substrate}",		
 	}
 	
 	links
