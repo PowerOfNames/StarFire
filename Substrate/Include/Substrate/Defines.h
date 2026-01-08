@@ -5,3 +5,9 @@
 #else
 #define SUBSTRATE_DETAILS_ENABLED false
 #endif
+
+
+#define WIN32_LEAN_AND_MEAN
+#ifdef HANDLE
+#undef HANDLE
+#endif

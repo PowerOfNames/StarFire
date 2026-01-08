@@ -42,16 +42,28 @@ filter {"files/vendor/**.cpp"}
 	flags {"NoPCH"}
 filter{}
 
+if _OPTIONS["with-tests"] then
+group "Core"
+group ""
+group "Shared"
+	include "Substrate"
+group ""
+group "Tests"
+    include "SubstrateTests"
+group ""
+else
 group "Core"
 	include "StarFire"
 	include "Aurora"
 	include "Sandbox"
 	include "Nebula"
-	include "Substrate"
-if _OPTIONS["with-tests"] then
-    include "SubstrateTests"
-end
 group ""
+group "Shared"
+	include "Substrate"
+group ""
+group "Tests"
+group ""
+end
 
 
 
