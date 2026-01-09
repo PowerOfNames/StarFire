@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 
 /*
 	A handle is a compact representation of a resource that encodes both an index and a generation.
@@ -16,6 +17,21 @@
 
 namespace Substrate {
 
+	namespace HandleHelpers {
+
+		template<typename THandleType>
+		constexpr THandleType GenerateIndexMask(uint8_t bitCount)
+		{
+			return (bitCount >= sizeof(THandleType) * 8) ? THandleType(~0) : THandleType((1 << bitCount) - 1);
+		}
+
+		template<typename THandleType>
+		constexpr THandleType GenerateGenerationMask(uint8_t bitCount)
+		{
+			return GenerateIndexMask<THandleType>(bitCount) << (sizeof(THandleType) * 8 - bitCount);
+		}
+	}
+
 	template<typename THandleType>
 	concept HandleTypeCheck = requires ()
 	{
@@ -25,6 +41,14 @@ namespace Substrate {
 		std::is_same_v<THandleType, bool> == false &&
 		std::is_same_v<THandleType, char> == false;
 	};
+	
+	struct HandleBitsOverflowError : public std::runtime_error
+	{
+		HandleBitsOverflowError(const char* message)
+			: std::runtime_error(message)
+		{
+		}
+	};
 
 	template<typename TDerivedHandle, typename THandleType, THandleType GenerationMask>
 		requires HandleTypeCheck<THandleType>
@@ -32,12 +56,14 @@ namespace Substrate {
 	{
 	public:
 		constexpr BaseHandle() : m_Handle(0) {};
-		constexpr BaseHandle(THandleType handle) : m_Handle(handle) {};
-
-		static constexpr TDerivedHandle Create(THandleType index)
+		constexpr BaseHandle(THandleType index) : m_Handle(index) 
 		{
-			return TDerivedHandle(index, 0);
-		}
+			THandleType mask = static_cast<THandleType>(~GenerationMask);
+#define STRINGIFY(x) #x
+			if (index > mask)
+				throw HandleBitsOverflowError("Index" STRINGIFY(index) "exceeds maximum value defined by IndexBits" STRINGIFY(mask));
+#undef STRINGIFY
+		};
 
 		/// <summary>
 		/// Increment the ID bit -> 0x0001D1A6 ID:0001 Idx:D1A6 mask -> 0xFFFF 0000 -> 0x0002D1A6
@@ -46,7 +72,7 @@ namespace Substrate {
 		{
 			if (!IsValid())
 				return TDerivedHandle::FromRawType(m_Handle);
-			return TDerivedHandle::FromRawType(m_Handle + (~GenerationMask + 1)); // ~generationMask +1 should get us the least significant bit of the generation mask 
+			return TDerivedHandle::FromRawType(m_Handle + static_cast<THandleType>(~GenerationMask + 1)); // ~generationMask +1 should get us the least significant bit of the generation mask 
 		}
 
 
@@ -56,7 +82,7 @@ namespace Substrate {
 			return (m_Handle & GenerationMask) != GenerationMask;
 		}
 
-		/// <returns>This is only true if the generations are equal AND the inde! </returns>
+		/// <returns>This is only true if the generations are equal AND the index! </returns>
 		constexpr bool EqualsGeneration(const BaseHandle& otherHandle)
 		{
 			return Generation() == otherHandle.Generation();
@@ -87,9 +113,14 @@ namespace Substrate {
 			return GenerationMask;
 		}
 
+		constexpr THandleType GetIndexMask() const
+		{
+			return static_cast<THandleType>(~GenerationMask);
+		}
+
 		constexpr uint64_t GetMaxIndexValue()
 		{
-			return static_cast<uint64_t>(~GenerationMask);
+			return static_cast<uint64_t>(static_cast<THandleType>(~GenerationMask));
 		}
 
 		constexpr uint64_t GetMaxGenerationValue()
@@ -109,27 +140,16 @@ namespace Substrate {
 
 		static constexpr TDerivedHandle FromRawType(THandleType handle)
 		{
-			return TDerivedHandle(handle);
+			return TDerivedHandle::FromRawType(handle);
 		}
+
+	protected:
+		struct InternalConstructTag {};
+		constexpr BaseHandle(THandleType handle, InternalConstructTag) : m_Handle(handle) {}
 
 	private:
 		THandleType m_Handle;
-	};
-
-	namespace HandleHelpers {
-
-		template<typename THandleType>
-		constexpr THandleType GenerateGenerationMask(uint8_t bitCount)
-		{
-			THandleType mask = 0;
-			constexpr size_t handleBitCount = sizeof(THandleType) * 8;
-			for (uint8_t i = 1; i <= bitCount; i++)
-			{
-				mask |= (1 << (handleBitCount - i));
-			}
-			return mask;
-		}
-	}
+	};	
 
 	/// <summary>
 	/// This struct is a helper to generate a handle type based on user defined generation and index bit counts. The sum of both bit counts must not exceed the bit size of THandleType.
@@ -142,7 +162,7 @@ namespace Substrate {
 	struct GenerateHandle
 	{
 		static_assert(GenerationBits + IndexBits <= sizeof(THandleType) * 8, "The sum of GenerationBits and IndexBits must not exceed the bit size of THandleType.");
-		
+	
 	private:
 		struct Derived;
 
@@ -151,20 +171,23 @@ namespace Substrate {
 			typename GenerateHandle<GenerationBits, IndexBits, THandleType>::Derived, 
 			THandleType, 
 			HandleHelpers::GenerateGenerationMask<THandleType>(GenerationBits)>;
-
 	private:
 		struct Derived : Type
 		{
-			constexpr Derived(THandleType generation, THandleType index)
-				: Type(static_cast<THandleType>(generation << IndexBits) | index)
+			static constexpr Derived FromRawType(THandleType handle)
 			{
+				return Derived(handle);
 			}
 
+		private:
 			constexpr Derived(THandleType handle)
-				: Type(handle)
+				: Type(handle, typename Type::InternalConstructTag{})
 			{
 			}
 		};
 	};
-	
+
+	template<uint8_t TGbits, uint8_t TIBits, typename THandleType = uint32_t>
+		requires HandleTypeCheck<THandleType>
+	using DefineHandle = typename GenerateHandle<TGbits, TIBits, THandleType>::Type;
 }

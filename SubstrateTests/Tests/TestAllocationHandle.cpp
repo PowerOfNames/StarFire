@@ -3,14 +3,13 @@
 #define SUBSTRATE_ENABLE_DETAILS
 #include "Substrate/AllocationHandle.h"
 
-using TestHandle16_4_12 = Substrate::GenerateHandle<4, 12, uint16_t>::Type;
-
+using TestHandle16_4_12 = Substrate::DefineHandle<4, 12, uint16_t>;
 
 TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHandle][Generation]")
 {
 	SECTION("Create generation mask")
 	{
-		TestHandle16_4_12 handle = TestHandle16_4_12(0);
+		TestHandle16_4_12 handle(0);
 		REQUIRE(handle.GetGenerationMask() == 0xF000);
 	}
 
@@ -70,7 +69,7 @@ TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHan
 
 	SECTION("Zero mask")
 	{
-		using TestHandle16_0_16 = Substrate::GenerateHandle<0, 16, uint16_t>::Type;
+		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
 		TestHandle16_0_16 handle = TestHandle16_0_16(0);
 		REQUIRE(handle.IsValid() == false);
 		REQUIRE(handle.GetGenerationMask() == 0x0000);
@@ -78,7 +77,7 @@ TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHan
 
 	SECTION("Max value mask")
 	{
-		using TestHandle16_16_0 = Substrate::GenerateHandle<16, 0, uint16_t>::Type;
+		using TestHandle16_16_0 = Substrate::DefineHandle<16, 0, uint16_t>;
 		TestHandle16_16_0 handle = TestHandle16_16_0(0);
 		REQUIRE(handle.IsValid() == true);
 		REQUIRE(handle.GetGenerationMask() == 0xFFFF);
@@ -105,5 +104,63 @@ TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHan
 		REQUIRE(otherHandle.Generation() == 1);
 		handle = std::move(otherHandle);
 		REQUIRE(handle.Generation() == 1);
+	}
+}
+
+TEST_CASE("AllocationHandle Index handling", "[AllocationHandle][Index]")
+{
+	SECTION("Index mask")
+	{
+		constexpr uint16_t indexMask = Substrate::HandleHelpers::GenerateIndexMask<uint16_t>(12);
+		REQUIRE(indexMask == 0xFFF);
+	}
+
+	SECTION("Creation")
+	{
+		TestHandle16_4_12 handle = TestHandle16_4_12(5);
+		REQUIRE(handle.Index() == 5);
+	}
+
+	SECTION("Generation increase")
+	{
+		TestHandle16_4_12 handle = TestHandle16_4_12(5);
+		handle = handle.IncrementGeneration();
+		REQUIRE(handle.Index() == 5);
+	}
+
+	SECTION("Max index")
+	{
+		TestHandle16_4_12 handle = TestHandle16_4_12(0);
+		REQUIRE(handle.GetMaxIndexValue() == 0xFFF);
+	}
+
+	SECTION("Zero mask")
+	{
+		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
+		TestHandle16_0_16 handle = TestHandle16_0_16(0);
+		REQUIRE(handle.IsValid() == false);
+		REQUIRE(handle.GetGenerationMask() == 0x0000);
+	}
+
+	SECTION("Max value mask")
+	{
+		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
+		TestHandle16_0_16 handle = TestHandle16_0_16(0);
+		REQUIRE(handle.IsValid() == false);
+		REQUIRE(handle.GetIndexMask() == 0xFFFF);
+	}
+
+	SECTION("Overflow protection")
+	{
+		REQUIRE_THROWS_AS(TestHandle16_4_12(0xFFF+1), Substrate::HandleBitsOverflowError);
+	}
+
+	SECTION("Move construction and assignement")
+	{
+		TestHandle16_4_12 handle = TestHandle16_4_12(5);
+		TestHandle16_4_12 otherHandle = std::move(handle);
+		REQUIRE(otherHandle.Index() == 5);
+		handle = std::move(otherHandle);
+		REQUIRE(handle.Index() == 5);
 	}
 }
