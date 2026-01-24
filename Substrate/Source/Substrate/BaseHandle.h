@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Substrate/Exceptions.h"
+
 #include <cstdint>
-#include <stdexcept>
+
 
 /*
 	A handle is a compact representation of a resource that encodes both an index and a generation.
@@ -41,14 +43,7 @@ namespace Substrate {
 		std::is_same_v<THandleType, bool> == false &&
 		std::is_same_v<THandleType, char> == false;
 	};
-	
-	struct HandleBitsOverflowError : public std::runtime_error
-	{
-		HandleBitsOverflowError(const char* message)
-			: std::runtime_error(message)
-		{
-		}
-	};
+		
 
 	template<typename TDerivedHandle, typename THandleType, THandleType GenerationMask>
 		requires HandleTypeCheck<THandleType>
@@ -59,10 +54,9 @@ namespace Substrate {
 		constexpr BaseHandle(THandleType index) : m_Handle(index) 
 		{
 			THandleType mask = static_cast<THandleType>(~GenerationMask);
-#define STRINGIFY(x) #x
 			if (index > mask)
-				throw HandleBitsOverflowError("Index" STRINGIFY(index) "exceeds maximum value defined by IndexBits" STRINGIFY(mask));
-#undef STRINGIFY
+				throw HandleBitsOverflowException("Index" SST_STRINGIFY(index) "exceeds maximum value defined by IndexBits" SST_STRINGIFY(mask));
+
 		};
 
 		/// <summary>
@@ -76,10 +70,22 @@ namespace Substrate {
 		}
 
 
-		/// <returns>Only true if the generation is not equal to the generation mask.</returns>
+		/// <returns>Only true if the generation is not equal to the generation mask. Except when there are no generation bits, which is always a valid generation. Returns false if index == indexMask</returns>
 		constexpr bool IsValid()
 		{
-			return (m_Handle & GenerationMask) != GenerationMask;
+			//If the handle's index bits are all set to 1, the handle is invalid.
+			if ((m_Handle & GetIndexMask()) & INVALID_HANDLE)
+				return false;
+
+			//If the generation mask is 0, the handle is always valid.
+			if(GenerationMask == 0)
+				return true;
+
+			//We return false if the generation mask is all bits set, because that means there is no valid index possible.
+			if (GenerationMask == static_cast<THandleType>((~static_cast<THandleType>(0))))
+				return false;
+
+			return  (m_Handle & GenerationMask) != GenerationMask;
 		}
 
 		/// <returns>This is only true if the generations are equal AND the index! </returns>
@@ -143,6 +149,10 @@ namespace Substrate {
 			return TDerivedHandle::FromRawType(handle);
 		}
 
+		/// <summary>
+		/// Handle that has all index bits set to 1, generation set to max as well;
+		/// </summary>
+		static constexpr THandleType INVALID_HANDLE = static_cast<THandleType>(~static_cast<THandleType>(0));
 	protected:
 		struct InternalConstructTag {};
 		constexpr BaseHandle(THandleType handle, InternalConstructTag) : m_Handle(handle) {}

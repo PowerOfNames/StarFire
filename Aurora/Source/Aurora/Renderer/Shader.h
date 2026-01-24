@@ -21,7 +21,7 @@ namespace Aurora::VK {
 	
 		inline bool IsValid() const { return m_IsValid; }
 
-		inline const ShaderAssetHandle CreateHandle() { return ShaderAssetHandle{UINT32_MAX, RenderID(), m_DebugName}; }
+		inline const ShaderAssetHandle CreateHandle() { return ShaderAssetHandle(RenderID()); }
 		static constexpr const char* StaticTypeName() { return "VulkanShader"; }
 	
 
@@ -29,8 +29,7 @@ namespace Aurora::VK {
 
 	
 	private:
-		RenderID m_ShaderHandle;
-
+		ShaderAssetHandle m_Handle;
 		//std::unordered_map<VkShaderStageFlagBits, ShaderModule> m_Modules;
 
 		std::string m_DebugName = "Shader";

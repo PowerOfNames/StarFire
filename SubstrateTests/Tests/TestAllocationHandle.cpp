@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #define SUBSTRATE_ENABLE_DETAILS
-#include "Substrate/AllocationHandle.h"
+#include "Substrate/BaseHandle.h"
 
 using TestHandle16_4_12 = Substrate::DefineHandle<4, 12, uint16_t>;
 
@@ -71,16 +71,16 @@ TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHan
 	{
 		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
 		TestHandle16_0_16 handle = TestHandle16_0_16(0);
-		REQUIRE(handle.IsValid() == false);
 		REQUIRE(handle.GetGenerationMask() == 0x0000);
+		REQUIRE(handle.IsValid() == true);
 	}
 
 	SECTION("Max value mask")
 	{
 		using TestHandle16_16_0 = Substrate::DefineHandle<16, 0, uint16_t>;
 		TestHandle16_16_0 handle = TestHandle16_16_0(0);
-		REQUIRE(handle.IsValid() == true);
 		REQUIRE(handle.GetGenerationMask() == 0xFFFF);
+		REQUIRE(handle.IsValid() == false);
 	}
 
 	SECTION("Overflow protection")
@@ -115,6 +115,11 @@ TEST_CASE("AllocationHandle Index handling", "[AllocationHandle][Index]")
 		REQUIRE(indexMask == 0xFFF);
 	}
 
+	SECTION("Invalid handle index bits check.")
+	{
+		REQUIRE(TestHandle16_4_12::INVALID_HANDLE == 0xFFFF);
+	}
+
 	SECTION("Creation")
 	{
 		TestHandle16_4_12 handle = TestHandle16_4_12(5);
@@ -134,25 +139,25 @@ TEST_CASE("AllocationHandle Index handling", "[AllocationHandle][Index]")
 		REQUIRE(handle.GetMaxIndexValue() == 0xFFF);
 	}
 
-	SECTION("Zero mask")
+	SECTION("Zero index mask")
 	{
-		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
-		TestHandle16_0_16 handle = TestHandle16_0_16(0);
+		using TestHandle16_16_0 = Substrate::DefineHandle<16, 0, uint16_t>;
+		TestHandle16_16_0 handle = TestHandle16_16_0(0);
+		REQUIRE(handle.GetIndexMask() == 0x0000);
 		REQUIRE(handle.IsValid() == false);
-		REQUIRE(handle.GetGenerationMask() == 0x0000);
 	}
 
-	SECTION("Max value mask")
+	SECTION("Max value index mask")
 	{
 		using TestHandle16_0_16 = Substrate::DefineHandle<0, 16, uint16_t>;
 		TestHandle16_0_16 handle = TestHandle16_0_16(0);
-		REQUIRE(handle.IsValid() == false);
 		REQUIRE(handle.GetIndexMask() == 0xFFFF);
+		REQUIRE(handle.IsValid() == true);
 	}
 
 	SECTION("Overflow protection")
 	{
-		REQUIRE_THROWS_AS(TestHandle16_4_12(0xFFF+1), Substrate::HandleBitsOverflowError);
+		REQUIRE_THROWS_AS(TestHandle16_4_12(0xFFF+1), Substrate::HandleBitsOverflowException);
 	}
 
 	SECTION("Move construction and assignement")

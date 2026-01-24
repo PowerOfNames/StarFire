@@ -29,6 +29,7 @@ filter {"configurations:Tests"}
 	{
 		"tests/",
 		"%{IncludeDir.Substrate}",
+		"%{SourceDir.Substrate}",
 		"%{IncludeDir.Catch2}"
 	}
 	
