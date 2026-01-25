@@ -6,14 +6,14 @@
 
 #include <cstdint>
 
-struct TestStruct	// 9 bytes -> aligned to 16 bytes
+struct TestStruct	// 9 bytes -> aligned to 12 bytes
 {
 	uint32_t a;		// 4 bytes
 	float b;		// 4 bytes
 	char c;			// 1 byte
 };
 
-constexpr size_t TestStructSize = 12; // AlignUp1_MaxBytes(9, alignof(std::max_align_t)) == 16
+constexpr size_t TestStructSize = 12;
 constexpr size_t AllocatorSize = 1024;
 constexpr size_t MaxAllocations = AllocatorSize / TestStructSize; // 1024 / 12 == 85 | 3.333
 
