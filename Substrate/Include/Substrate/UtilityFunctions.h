@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace Substrate {
+namespace Substrate::Utility {
 
 	constexpr bool IsPowerOfTwo(uint64_t in)
 	{
@@ -52,4 +52,38 @@ namespace Substrate {
 
 	//	return size + (alignment - remainder);
 	//}
+
+
+	/// <summary>
+	/// Returns the base-2 logarithm of the given value. (Rounded down)
+	/// </summary>
+	/// <param name="value"></param>
+	/// <returns></returns>
+	constexpr uint8_t Log2(uint64_t value)
+	{
+		if (value == 0)
+			throw std::invalid_argument("Log2 is undefined for value 0");
+		uint8_t log = 0;
+		while (value >>= 1)
+		{
+			++log;
+		}
+		return log;
+	}
+
+	/// <summary>
+	/// Returns the base-2 logarithm of the given value. Value is rounded up to next power of two (if it isnt alreay a power of two)
+	/// </summary>
+	/// <param name="value"></param>
+	/// <returns></returns>
+	constexpr uint8_t Log2Up(uint64_t value)
+	{
+		if (value == 0)
+			throw std::invalid_argument("Log2 is undefined for value 0");
+		
+		if(IsPowerOfTwo(value))
+			return Log2(value);
+
+		return Log2(value) +1;
+	}
 }

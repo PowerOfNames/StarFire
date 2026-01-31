@@ -4,6 +4,7 @@
 
 #include <cstdint>
 
+#include <sstream>
 
 /*
 	A handle is a compact representation of a resource that encodes both an index and a generation.
@@ -55,7 +56,11 @@ namespace Substrate {
 		{
 			THandleType mask = static_cast<THandleType>(~GenerationMask);
 			if (index > mask)
-				throw HandleBitsOverflowException("Index" SST_STRINGIFY(index) "exceeds maximum value defined by IndexBits" SST_STRINGIFY(mask));
+			{
+				std::ostringstream oss;
+				oss << "Index " << index << " exceeds maximum value defined by IndexBits " << mask;
+				throw HandleBitsOverflowException(oss.str().c_str());
+			}
 
 		};
 

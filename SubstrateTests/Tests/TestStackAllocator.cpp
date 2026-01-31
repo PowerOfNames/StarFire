@@ -16,6 +16,7 @@ constexpr size_t AllocatorSize = 1024;
 constexpr size_t MaxAllocations = AllocatorSize / TestStructSize; // 1024 / 12 == 85 | 3.333
 constexpr size_t BlockSizeWithPadding = 12 + 4;
 
+
 TEST_CASE("Stack Allocator", "[Allocator][Stack]")
 {
 	SECTION("Creation")
@@ -23,7 +24,9 @@ TEST_CASE("Stack Allocator", "[Allocator][Stack]")
 		Substrate::StackAllocator allocator(AllocatorSize);
 		REQUIRE(allocator.GetTotalMemory() == AllocatorSize);
 		REQUIRE(allocator.GetUsedMemory() == 0);
-		REQUIRE(allocator.GetAllocationCount() == 0);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 0);
+		REQUIRE(allocator.GetTotalAllocationCount() == 0);
+		REQUIRE(allocator.GetResetCount() == 0);
 	}
 
 	SECTION("Allocation")
@@ -31,7 +34,8 @@ TEST_CASE("Stack Allocator", "[Allocator][Stack]")
 		Substrate::StackAllocator allocator(1024);
 		TestStruct* ptr = allocator.Allocate<TestStruct>();
 		REQUIRE(allocator.GetUsedMemory() == BlockSizeWithPadding + sizeof(uint64_t)); // 3 bytes for the struct, 4 bytes padding to align to 8 bytes, 8 bytes for the header
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
 	}
 
 	SECTION("Allocator full")
@@ -46,13 +50,16 @@ TEST_CASE("Stack Allocator", "[Allocator][Stack]")
 		Substrate::StackAllocator allocator(1024);
 		TestStruct* ptr1 = allocator.Allocate<TestStruct>();
 		REQUIRE(allocator.GetUsedMemory() == BlockSizeWithPadding + sizeof(uint64_t));
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
 		TestStruct* ptr2 = allocator.Allocate<TestStruct>();
 		REQUIRE(allocator.GetUsedMemory() == (BlockSizeWithPadding + sizeof(uint64_t)) * 2);
-		REQUIRE(allocator.GetAllocationCount() == 2);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 2);
+		REQUIRE(allocator.GetTotalAllocationCount() == 2);
 		allocator.Pop();
 		REQUIRE(allocator.GetUsedMemory() == BlockSizeWithPadding + sizeof(uint64_t));
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 2);
 	}
 
 	SECTION("Allocator reset.")
@@ -60,9 +67,12 @@ TEST_CASE("Stack Allocator", "[Allocator][Stack]")
 		Substrate::StackAllocator allocator(1024);
 		TestStruct* ptr1 = allocator.Allocate<TestStruct>();
 		REQUIRE(allocator.GetUsedMemory() == BlockSizeWithPadding + sizeof(uint64_t));
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
 		allocator.Reset();
 		REQUIRE(allocator.GetUsedMemory() == 0);
-		REQUIRE(allocator.GetAllocationCount() == 0);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 0);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
+		REQUIRE(allocator.GetResetCount() == 1);
 	}
 }

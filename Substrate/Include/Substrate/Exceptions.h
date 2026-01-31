@@ -2,13 +2,19 @@
 
 #include <stdexcept>
 
-#define SST_STRINGIFY(x) #x
-
 namespace Substrate {
 
 	struct HandleBitsOverflowException : public std::runtime_error
 	{
 		HandleBitsOverflowException(const char* message)
+			: std::runtime_error(message)
+		{
+		}
+	};
+
+	struct AllocatorOutOfMemoryException : public std::runtime_error
+	{
+		AllocatorOutOfMemoryException(const char* message)
 			: std::runtime_error(message)
 		{
 		}

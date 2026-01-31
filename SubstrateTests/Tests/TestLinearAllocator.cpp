@@ -17,44 +17,51 @@ constexpr size_t TestStructSize = 12;
 constexpr size_t AllocatorSize = 1024;
 constexpr size_t MaxAllocations = AllocatorSize / TestStructSize; // 1024 / 12 == 85 | 3.333
 
+using Allocator = Substrate::LinearAllocator<TestStruct, AllocatorSize>;
+using Allocator16 = Substrate::LinearAllocator<TestStruct, 16>;
 
 TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 {
 	SECTION("Creation")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(AllocatorSize);
+		Allocator allocator;
 		REQUIRE(allocator.GetTotalMemory() == AllocatorSize);
 		REQUIRE(allocator.GetUsedMemory() == 0);
-		REQUIRE(allocator.GetAllocationCount() == 0);
+		REQUIRE(allocator.GetMaxAllocationCount() == MaxAllocations);
+		REQUIRE(allocator.GetTotalAllocationCount() == 0);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 0);
+		REQUIRE(allocator.GetResetCount() == 0);
 	}
 
 	SECTION("Allocation")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(1024);
+		Allocator allocator;
 		TestStruct* ptr = allocator.Allocate();
 		REQUIRE(allocator.GetUsedMemory() == 12);
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
 	}
 
 	SECTION("Array allocation+access check")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(1024);
+		Allocator allocator;
 		auto structs = allocator.AllocateArray(2);
 		REQUIRE(allocator.GetUsedMemory() == 2 * TestStructSize);
-		REQUIRE(allocator.GetAllocationCount() == 2);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 2);
+		REQUIRE(allocator.GetTotalAllocationCount() == 2);
 		REQUIRE_THROWS_AS(structs[3], Substrate::ArrayIndexOutOfBoundsException);
 	}
 
 	SECTION("Allocator full")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(16);
+		Allocator16 allocator;
 		TestStruct* ptr1 = allocator.Allocate();
 		REQUIRE(allocator.Allocate() == nullptr);
 	}
 
 	SECTION("Array allocation too large")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(16);
+		Allocator16 allocator;
 		auto structs = allocator.AllocateArray(2);
 		REQUIRE(structs.Data == nullptr);
 		REQUIRE(structs.Count == 0);
@@ -62,12 +69,15 @@ TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 
 	SECTION("Allocator reset.")
 	{
-		Substrate::LinearAllocator<TestStruct> allocator(1024);
+		Allocator allocator;
 		TestStruct* ptr1 = allocator.Allocate();
 		REQUIRE(allocator.GetUsedMemory() == TestStructSize);
-		REQUIRE(allocator.GetAllocationCount() == 1);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
 		allocator.Reset();
 		REQUIRE(allocator.GetUsedMemory() == 0);
-		REQUIRE(allocator.GetAllocationCount() == 0);
+		REQUIRE(allocator.GetCurrentAllocationCount() == 0);
+		REQUIRE(allocator.GetTotalAllocationCount() == 1);
+		REQUIRE(allocator.GetResetCount() == 1);
 	}
 }
