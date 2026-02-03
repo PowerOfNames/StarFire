@@ -1,7 +1,9 @@
 #pragma once
 #include "Aurora/RenderID.h"
+#include "Substrate/ResourceHandle.h"
 
 #include <string>
+#include <unordered_map>
 
 namespace Aurora {
 
@@ -11,26 +13,9 @@ namespace Aurora {
 		struct Texture {};
 	}
 
-	template <typename T>
-	struct AssetHandle
-	{
-		uint32_t Index;
-		RenderID ID;
-		std::string DebugName;
-
-		constexpr const bool operator==(const AssetHandle& other) const
-		{
-			return other.Index == Index && other.ID == ID;
-		}
-		constexpr const bool operator!=(const AssetHandle& other) const
-		{
-			return !(*this == other);
-		}
-	};
-
-	using MeshAssetHandle = AssetHandle<Tags::Mesh>;
-	using ShaderAssetHandle = AssetHandle<Tags::Shader>;
-	using TextureAssetHandle = AssetHandle<Tags::Texture>;
+	using MeshAssetHandle = Substrate::ResourceHandle<uint16_t, Tags::Mesh>;
+	using ShaderAssetHandle = Substrate::ResourceHandle<uint16_t, Tags::Shader>;
+	using TextureAssetHandle = Substrate::ResourceHandle<uint16_t, Tags::Texture>;
 
 	// ========== Tags ==========
 	template<typename HandleT>
@@ -54,7 +39,7 @@ namespace Aurora {
 	{
 		static MeshAssetHandle GetFallback()
 		{
-			return MeshAssetHandle{ UINT32_MAX, 0, "DefaultMesh" };
+			return MeshAssetHandle(UINT16_MAX);
 		}
 	};
 
@@ -63,7 +48,7 @@ namespace Aurora {
 	{
 		static ShaderAssetHandle GetFallback()
 		{
-			return ShaderAssetHandle{ UINT32_MAX, 0, "DefaultShader" };
+			return ShaderAssetHandle(UINT8_MAX);
 		}
 	};
 
@@ -72,20 +57,7 @@ namespace Aurora {
 	{
 		static TextureAssetHandle GetFallback()
 		{
-			return TextureAssetHandle{ UINT32_MAX, 0, "DefaultTexture" };
-		}
-	};
-
-}
-
-namespace std {
-
-	template<typename T>
-	struct hash<Aurora::AssetHandle<T>>
-	{
-		std::size_t operator()(const Aurora::AssetHandle<T>& handle) const
-		{
-			return hash<uint64_t>()((uint64_t)handle.ID);
+			return TextureAssetHandle(UINT16_MAX);
 		}
 	};
 }
