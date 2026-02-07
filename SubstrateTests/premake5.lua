@@ -16,8 +16,8 @@ filter {"configurations:Tests"}
 	files
 	{
 		"main.cpp",
-		"tests/**.h",
-		"tests/**.cpp",
+		"Tests/**.h",
+		"Tests/**.cpp",
 	}
 	
 	defines
@@ -27,7 +27,7 @@ filter {"configurations:Tests"}
 	
 	includedirs
 	{
-		"tests/",
+		"Tests/",
 		"%{IncludeDir.Substrate}",
 		"%{SourceDir.Substrate}",
 		"%{IncludeDir.Catch2}"

@@ -8,6 +8,8 @@
 #include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
 
+#include <tracy/Tracy.hpp>
+
 #include <thread>
 
 namespace StarFire {
@@ -18,6 +20,8 @@ namespace StarFire {
 	Application::Application(const ApplicationSpecification& specs)
 		: m_Specification(specs)
 	{
+		ZoneScopedN("Application::Application");
+
 		SF_CORE_TRACE("Application: Starting initialization...");
 
 		s_Instance = this;
@@ -75,7 +79,7 @@ namespace StarFire {
 		auto& appSettings = Aurora::ChangeAppSettings();
 		appSettings.SetRootPath(std::filesystem::current_path());
 
-		Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
+		//Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
 
 		bool is = std::filesystem::path("blob.ext") == "blob.ext";
 		auto ext = std::filesystem::path("blob.frag.spv").extension();
@@ -163,6 +167,7 @@ namespace StarFire {
 			{
 				SF_CORE_INFO("Application minimized");
 			}
+			FrameMark;
 		}
 		SF_CORE_WARN("Leaving main loop!");
 	}

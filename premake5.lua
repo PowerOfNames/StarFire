@@ -14,7 +14,8 @@ workspace "StarFire"
 	{
 		"Debug",
 		"Release",
-		"Tests"
+		"Tests",
+		"Profiling",
 	}
 
 	solution_items

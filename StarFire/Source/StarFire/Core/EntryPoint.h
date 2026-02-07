@@ -1,10 +1,12 @@
 #pragma once
-#ifdef SF_DEBUG
+#if defined(STARFIRE_DEBUG_MODE)
 #include <iostream>
 #endif
+#include "StarFire/Core/Application.h"
 #include "StarFire/Utility/Timer.h"
+#include "StarFire/Core/Logging.h"
 
-#ifdef SF_PLATFORM_WINDOWS
+#if defined(STARFIRE_PLATFORM_WINDOWS)
 extern StarFire::Application* StarFire::CreateApplication(int argc, char** argv);
 
 int main(int argc, char** argv)
@@ -32,7 +34,7 @@ int main(int argc, char** argv)
 	SF_CORE_TRACE("Closing application after {}s", timer.ElapsedTime());
 	StarFire::Log::Shutdown();
 
-#ifdef SF_DEBUG
+#if defined(STARFIRE_DEBUG_MODE)
 	std::cin.get();
 #endif
 }

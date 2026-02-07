@@ -14,3 +14,6 @@
 [submodule "SubstrateTests/Dependencies/Catch2"]
 	path = SubstrateTests/Dependencies/Catch2
 	url = https://github.com/PowerOfNames/Catch2.git
+[submodule "Dependencies/Tracy"]
+	path = Dependencies/Tracy
+	url = https://github.com/wolfpld/tracy.git

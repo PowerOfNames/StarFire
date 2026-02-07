@@ -15,7 +15,7 @@ namespace StarFire {
 		//TODO: introduce file sink and use that for release and dist builds
 #if defined(STARFIRE_DEBUG_MODE)
 		spdlog::level::level_enum level = spdlog::level::trace;
-#elif defined(STARFIRE_RELEASE_MODE)
+#elif defined(STARFIRE_RELEASE_MODE) || defined(STARFIRE_PROFILING_MODE)
 		spdlog::level::level_enum level = spdlog::level::err;
 #elif defined(STARFIRE_DIST_MODE)
 		spdlog::level::level_enum level = spdlog::level::off;

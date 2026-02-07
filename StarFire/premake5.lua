@@ -8,39 +8,39 @@ project "StarFire"
 	objdir("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
 	pchheader "sfpch.h"
-	pchsource "src/sfpch.cpp"
-	
+	pchsource "Source/sfpch.cpp"
+		
 	files
 	{
-		"src/**.h",
-		"src/**.cpp",
+		"Source/**.h",
+		"Source/**.cpp",
 		
 		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl"
+		"vendor/glm/glm/**.inl",
 	}
 	
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
 		"GLFW_INCLUDE_NONE",
-		"AURORA_GLFW"
+		"AURORA_GLFW",
 	}
 	
 	includedirs
 	{
-		"src",		
+		"Source",		
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.Aurora}",
 		"%{IncludeDir.Substrate}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.concurrentqueue}"
+		"%{IncludeDir.concurrentqueue}",
 	}
 	
 	links
 	{
-		"Substrate",
 		"Aurora",
+		"Substrate",
 		"GLFW",
 		"xxHash",
 	}
@@ -48,6 +48,10 @@ project "StarFire"
 	
 	filter "system:windows"
 		systemversion "latest"
+		defines
+		{
+			"STARFIRE_PLATFORM_WINDOWS",
+		}
 		
 	filter "action:vs*"
 		buildoptions
@@ -57,29 +61,49 @@ project "StarFire"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines 
+		runtime "Debug"
+		symbols "on"
+		editandcontinue "Off"
+		
+		defines
 		{
 			"STARFIRE_DEBUG_MODE",
 			"SUBSTRATE_DEBUG_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
 		}
-		runtime "Debug"
-		symbols "on"
 		
 		links
 		{			
 		}
 		
 	filter "configurations:Release"
+		runtime "Release"
+		optimize "on"
+		
 		defines
 		{
 			"STARFIRE_RELEASE_MODE",
 			"SUBSTRATE_RELEASE_MODE",
 		}
-		runtime "Release"
-		optimize "on"
 		
 		links
 		{
 		}
 		
+	filter "configurations:Profiling"
+		runtime "Release"
+		optimize "on"
 		
+		defines
+		{
+			"STARFIRE_PROFILING_MODE",
+			"SUBSTRATE_PROFILING_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+			
+			"TRACY_ENABLE",
+		}
+		
+		includedirs
+		{			
+			"%{IncludeDir.Tracy}",
+		}

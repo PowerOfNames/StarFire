@@ -9,8 +9,8 @@ project "Nebula"
 	
 	files
 	{
-		"src/**.h",
-		"src/**.cpp"
+		"Source/**.h",
+		"Source/**.cpp"
 	}
 	
 	defines
@@ -20,20 +20,27 @@ project "Nebula"
 	
 	includedirs
 	{
-		"%{wks.location}/StarFire/src",
+		"%{wks.location}/StarFire/Source",
+		"%{IncludeDir.Aurora}",
+		"%{IncludeDir.Substrate}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.Substrate}",
 	}
 	
 	links
 	{
 		"StarFire",
+		"Aurora",
+		"Substrate",
 	}
 	
 	
 	filter "system:windows"
 		systemversion "latest"
+		defines
+		{
+			"STARFIRE_PLATFORM_WINDOWS",
+		}
 		
 	filter "action:vs*"
 		buildoptions
@@ -46,7 +53,9 @@ project "Nebula"
 		defines
 		{
 			"STARFIRE_DEBUG_MODE",
-		}
+			"SUBSTRATE_DEBUG_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+		}		
 		runtime "Debug"
 		symbols "on"
 		
@@ -58,6 +67,7 @@ project "Nebula"
 		defines
 		{
 			"STARFIRE_RELEASE_MODE",
+			"SUBSTRATE_RELEASE_MODE",
 		}
 		runtime "Release"
 		optimize "on"
@@ -65,5 +75,31 @@ project "Nebula"
 		links
 		{
 		}
+		
+	filter "configurations:Profiling"
+		defines
+		{
+			"STARFIRE_PROFILING_MODE",
+			"SUBSTRATE_PROFILING_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+			
+			"TRACY_ENABLE",
+		}
+		runtime "Release"
+		optimize "on"
+		
+		includedirs
+		{			
+			"%{IncludeDir.Tracy}",
+		}
+		
+		files
+		{
+			path.join("%{IncludeDir.Tracy}", "TracyClient.cpp"),
+		}
+		
+	filter "files:**/TracyClient.cpp"	
+		flags {"NoPCH"}
+	filter {}
 		
 		

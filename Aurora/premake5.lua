@@ -66,6 +66,7 @@ project "Aurora"
 		{
 			"AURORA_DEBUG_MODE",
 			"SUBSTRATE_DEBUG_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
 		}
 		runtime "Debug"
 		symbols "on"
@@ -87,6 +88,24 @@ project "Aurora"
 		links
 		{
 			"%{Library.shaderc_release}"
+		}
+		
+	filter "configurations:Profiling"
+		runtime "Release"
+		optimize "on"
+		
+		defines
+		{
+			"AURORA_PROFILING_MODE",
+			"SUBSTRATE_PROFILING_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+			
+			"TRACY_ENABLE",		
+		}
+		
+		includedirs
+		{			
+			"%{IncludeDir.Tracy}",
 		}
 		
 		

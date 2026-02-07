@@ -9,28 +9,33 @@ project "Sandbox"
 	
 	files
 	{
-		"src/**.h",
-		"src/**.cpp"
+		"Source/**.h",
+		"Source/**.cpp"
 	}
 	
 	includedirs
 	{
-		"%{wks.location}/StarFire/src",
-		"%{IncludeDir.glm}",
+		"%{wks.location}/StarFire/Source",
 		"%{IncludeDir.Aurora}",
+		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.Substrate}",		
 	}
 	
 	links
 	{
 		"StarFire",
-		"Aurora"
+		"Aurora",
+		"Substrate"
 	}
 	
 	
 	filter "system:windows"
 		systemversion "latest"
+		defines
+		{
+			"STARFIRE_PLATFORM_WINDOWS",
+		}
 		
 	filter "action:vs*"
 		buildoptions
@@ -40,16 +45,25 @@ project "Sandbox"
 		characterset "Unicode"
 	
 	filter "configurations:Debug"
-		defines "STARFIRE_DEBUG_MODE"
+		defines 
+		{
+			"STARFIRE_DEBUG_MODE",
+			"SUBSTRATE_DEBUG_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+		}
 		runtime "Debug"
 		symbols "on"
 		
 		links
-		{			
+		{	
 		}
 		
 	filter "configurations:Release"
-		defines "STARFIRE_RELEASE_MODE"
+		defines 
+		{
+			"STARFIRE_RELEASE_MODE",
+			"SUBSTRATE_RELEASE_MODE",
+		}
 		runtime "Release"
 		optimize "on"
 		
@@ -57,4 +71,30 @@ project "Sandbox"
 		{
 		}
 		
+	filter "configurations:Profiling"
+		defines
+		{
+			"STARFIRE_PROFILING_MODE",
+			"SUBSTRATE_PROFILING_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+			
+			"TRACY_ENABLE",
+		}
+		runtime "Release"
+		optimize "on"
+		
+		includedirs
+		{			
+			"%{IncludeDir.Tracy}",
+		}
+		
+		files
+		{
+			path.join("%{IncludeDir.Tracy}", "TracyClient.cpp"),
+		}
+			
+		
+	filter "files:**/TracyClient.cpp"	
+		flags {"NoPCH"}
+	filter {}
 		
