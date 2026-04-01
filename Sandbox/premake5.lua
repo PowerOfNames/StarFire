@@ -95,6 +95,6 @@ project "Sandbox"
 			
 		
 	filter "files:**/TracyClient.cpp"	
-		flags {"NoPCH"}
+		enablepch "Off"
 	filter {}
 		

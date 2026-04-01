@@ -1,14 +1,16 @@
 #include "sfpch.h"
+#include "StarFire/Profiling/Profiling.h"
+
 #include "StarFire/Core/Application.h"
 #include "StarFire/Core/Timestep.h"
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
 
+
 #include <Aurora/Aurora.h>
 #include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
 
-#include <tracy/Tracy.hpp>
 
 #include <thread>
 
@@ -20,9 +22,10 @@ namespace StarFire {
 	Application::Application(const ApplicationSpecification& specs)
 		: m_Specification(specs)
 	{
-		ZoneScopedN("Application::Application");
-
+		PROFILE_FUNCTION;
+			
 		SF_CORE_TRACE("Application: Starting initialization...");
+
 
 		s_Instance = this;
 
@@ -91,6 +94,8 @@ namespace StarFire {
 	}
 	Application::~Application()
 	{
+		PROFILE_FUNCTION;
+
 		Aurora::Shutdown();
 		m_MainWindow->Close();
 
@@ -100,6 +105,8 @@ namespace StarFire {
 
 	void Application::PushOverlay(Layer* overlay)
 	{
+		PROFILE_FUNCTION;
+
 		SF_CORE_INFO("Pushing {}", overlay->GetDebugName());
 
 		m_LayerStack.PushOverlay(overlay);
@@ -107,6 +114,8 @@ namespace StarFire {
 
 	void Application::PushLayer(Layer* layer)
 	{
+		PROFILE_FUNCTION;
+
 		SF_CORE_INFO("Pushing {}", layer->GetDebugName());
 
 		m_LayerStack.PushLayer(layer);
@@ -114,18 +123,27 @@ namespace StarFire {
 
 	void Application::Close()
 	{
+		PROFILE_FUNCTION;
+
 		SF_CORE_INFO("Closing...");
 		m_Running = false;
 	}
 
 	void Application::Run()
-	{		
+	{
+		PROFILE_FUNCTION;
+		PROFILE_THREAD_NAME("Main Thread", 0);
+
+
 		SF_CORE_TRACE("Starting main loop...");
 
 		//temp
 		std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
 		while (m_Running)
 		{			
+			PROFILE_SCOPE("Event polling loop");
+
+
 			m_MainWindow->PollEvents();
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
@@ -136,9 +154,14 @@ namespace StarFire {
 
 	void Application::AppLoop()
 	{
+		PROFILE_FUNCTION;
+		PROFILE_THREAD_NAME("Render Thread", 1);
+
 		Utils::Timer timer;
 		while (m_Running)
 		{
+			PROFILE_SCOPE("Frame loop");
+
 			m_DeltaTimeInS = timer.Timestamp();
 			HandleUserInput();
 			if (!m_Minimized)
@@ -167,17 +190,21 @@ namespace StarFire {
 			{
 				SF_CORE_INFO("Application minimized");
 			}
-			FrameMark;
+			PROFILE_FRAME_MARK;
 		}
 		SF_CORE_WARN("Leaving main loop!");
 	}
 
 	void Application::HandleUserInput()
 	{
+		PROFILE_FUNCTION;
+
 		Scope<Event> e;
 		m_EventQueue->GatherCoalescing();
 		while (m_EventQueue->Pop(e))
 		{
+			PROFILE_SCOPE("Handle Event");
+
 			EventDispatcher dispatcher(*(e.get()));
 			dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
 			dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
@@ -194,11 +221,15 @@ namespace StarFire {
 	
 	void Application::OnEvent(Scope<Event> e)
 	{
+		PROFILE_FUNCTION;
+
 		m_EventQueue->Push(std::move(e));
 	}	
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
+		PROFILE_FUNCTION;
+
 		SF_CORE_DEBUG("Closing window...");
 		Close();
 		return true;
@@ -206,6 +237,8 @@ namespace StarFire {
 
 	bool Application::OnWindowResize(WindowResizeEvent& e)
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t newWidth = e.GetWidth();
 		uint32_t newHeight = e.GetHeight();
 		if (newWidth == 0 || newHeight == 0)
@@ -221,6 +254,8 @@ namespace StarFire {
 
 	bool Application::OnFramebufferResize(FramebufferResizeEvent& e)
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t newWidth = e.GetWidth();
 		uint32_t newHeight = e.GetHeight();
 		if (newWidth == 0 || newHeight == 0)

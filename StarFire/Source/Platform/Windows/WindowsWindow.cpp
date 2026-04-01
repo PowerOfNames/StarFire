@@ -19,10 +19,14 @@ namespace StarFire{
 		WindowsWindow::WindowsWindow(const WindowSpecification& specs)
 			: m_Specification(specs)
 		{
+			PROFILE_FUNCTION;
+
 		}
 
 		void WindowsWindow::Close()
 		{
+			PROFILE_FUNCTION;
+
 			glfwDestroyWindow(m_Window);
 			--s_GLFWwindowCount;
 			if(s_GLFWwindowCount <= 0)
@@ -31,6 +35,8 @@ namespace StarFire{
 
 		void WindowsWindow::Init()
 		{
+			PROFILE_FUNCTION;
+
 			m_Data.Title = &m_Specification.Title;
 			m_Data.Width = (int*) & m_Specification.Width;
 			m_Data.Height = (int*)&m_Specification.Height;
@@ -195,12 +201,16 @@ namespace StarFire{
 
 		void WindowsWindow::PollEvents()
 		{
+			PROFILE_FUNCTION;
+
 			glfwPollEvents();
 		}
 
 
 		void WindowsWindow::SetVSync(bool enabled)
 		{
+			PROFILE_FUNCTION;
+
 			if (enabled)
 				glfwSwapInterval(0);
 			else

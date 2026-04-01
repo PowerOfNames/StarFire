@@ -91,9 +91,6 @@ project "StarFire"
 		}
 		
 	filter "configurations:Profiling"
-		runtime "Release"
-		optimize "on"
-		
 		defines
 		{
 			"STARFIRE_PROFILING_MODE",
@@ -102,6 +99,9 @@ project "StarFire"
 			
 			"TRACY_ENABLE",
 		}
+		
+		runtime "Release"
+		optimize "on"
 		
 		includedirs
 		{			

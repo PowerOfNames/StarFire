@@ -8,6 +8,8 @@ namespace StarFire {
 
 	LayerStack::~LayerStack()
 	{
+		PROFILE_FUNCTION;
+
 		for (Layer* layer : m_Layers)
 		{
 			delete layer;
@@ -17,6 +19,8 @@ namespace StarFire {
 
 	void LayerStack::PushLayer(Layer* layer)
 	{
+		PROFILE_FUNCTION;
+
 		m_Layers.emplace(m_Layers.begin() + m_LayerInsertIndex, layer);
 		layer->OnAttach();
 		m_LayerInsertIndex++;
@@ -25,6 +29,8 @@ namespace StarFire {
 
 	void LayerStack::PopLayer(Layer* layer)
 	{
+		PROFILE_FUNCTION;
+
 		auto it = std::find(m_Layers.begin(), m_Layers.end(), layer);
 		if (it != m_Layers.end())
 		{
@@ -37,6 +43,8 @@ namespace StarFire {
 
 	void LayerStack::PushOverlay(Layer* overlay)
 	{
+		PROFILE_FUNCTION;
+
 		m_Layers.emplace_back(overlay);
 		overlay->OnAttach();
 	}
@@ -44,6 +52,8 @@ namespace StarFire {
 
 	void LayerStack::PopOverlay(Layer* overlay)
 	{
+		PROFILE_FUNCTION;
+
 		auto it = std::find(m_Layers.begin(), m_Layers.end(), overlay);
 		if (it != m_Layers.end())
 		{
