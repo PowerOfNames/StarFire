@@ -46,15 +46,27 @@ namespace Aurora {
 // ERROR	: (Red)		Used for broken code paths / results
 // CRITICAL	: (Marked)	Used for big NONOs -> should never be hit
 
+#if defined(AURORA_DEBUG_MODE)
 #if defined(ENABLE_TRACE)
 #define AURORA_TRACE(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_TRACE, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #else
-#define AURORA_TRACE(fmt, ...)		do{}while(0)
+#define AURORA_TRACE(fmt, ...)		do{} while(false)
 #endif
 #define AURORA_DEBUG(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_DEBUG, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #define AURORA_INFO(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_INFO, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #define AURORA_WARN(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_WARN, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #define AURORA_ERROR(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_ERROR, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #define AURORA_CRITICAL(fmt, ...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_CRITICAL, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
-							   
+#elif defined(AURORA_RELEASE_MODE) || defined(AURORA_PROFILING_MODE)
+#if defined(ENABLE_TRACE)
+#define AURORA_TRACE(fmt, ...)		do{} while(false)
+#else
+#define AURORA_TRACE(fmt, ...)		do{} while(false)
+#endif
+#define AURORA_DEBUG(fmt, ...)		do{} while(false)
+#define AURORA_INFO(fmt, ...)		do{} while(false)
+#define AURORA_WARN(fmt, ...)		do{} while(false)
+#define AURORA_ERROR(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_ERROR, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
+#define AURORA_CRITICAL(fmt, ...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_CRITICAL, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
+#endif
 

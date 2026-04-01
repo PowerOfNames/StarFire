@@ -1,4 +1,5 @@
 #include "Aurora/Core/Core.h"
+#include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Swapchain.h"
 #include "Aurora/Renderer/VulkanHelper.h"
 #include "Aurora/Renderer/DataStructs/SwapchainSupportDetails.h"
@@ -9,10 +10,14 @@ namespace Aurora::VK {
 	Swapchain::Swapchain(const SwapchainSpecification& spec)
 		: m_Specification(spec)
 	{
+		PROFILE_FUNCTION;
+
 	}
 
 	void Swapchain::Init()
 	{
+		PROFILE_FUNCTION;
+
 		if (!CreateSwapchain(m_Specification.InitialExtent.Width, m_Specification.InitialExtent.Height))
 		{
 			AURORA_TRACE("Failed to create swapchain.");
@@ -61,6 +66,8 @@ namespace Aurora::VK {
 
 	void Swapchain::CleanupSwapchain()
 	{
+		PROFILE_FUNCTION;
+
 		AURORA_TRACE("Cleaning up swapchain.");
 		vkDeviceWaitIdle(m_Specification.Device);
 
@@ -80,6 +87,8 @@ namespace Aurora::VK {
 
 	void Swapchain::Destroy()
 	{
+		PROFILE_FUNCTION;
+
 		vkDeviceWaitIdle(m_Specification.Device);
 
 		for(auto sema : m_ImageAvailableSemaphores)
@@ -113,6 +122,8 @@ namespace Aurora::VK {
 	
 	bool Swapchain::PrepareFrame(uint32_t framesInFlightIdx)
 	{
+		PROFILE_FUNCTION;
+
 		m_FramesInFlightIdx = framesInFlightIdx;
 		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
 		
@@ -131,6 +142,8 @@ namespace Aurora::VK {
 
 	void Swapchain::AcquireNextFrameData()
 	{
+		PROFILE_FUNCTION;
+
 		AURORA_TRACE("Acquire next image {}", m_FramesInFlightIdx);
 
 		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
@@ -160,13 +173,17 @@ namespace Aurora::VK {
 	}
 
 	bool Swapchain::SwapImages()
-	{				
+	{
+		PROFILE_FUNCTION;
+
 		Submit();
 		return Present();
 	}
 
 	void Swapchain::Submit()
 	{
+		PROFILE_FUNCTION;
+
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.pNext = nullptr;
@@ -187,6 +204,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::Present()
 	{
+		PROFILE_FUNCTION;
+
 		AURORA_TRACE("Presenting frame {}", m_FramesInFlightIdx);
 
 		VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -224,6 +243,8 @@ namespace Aurora::VK {
 
 	void Swapchain::OnResize(uint32_t width, uint32_t height)
 	{
+		PROFILE_FUNCTION;
+
 		if (m_Extent.width == width && m_Extent.height == height)
 		{
 			m_NeedsResize = false;
@@ -257,6 +278,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateSwapchain(uint32_t width, uint32_t height)
 	{
+		PROFILE_FUNCTION;
+
 		SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
 
 		VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
@@ -312,6 +335,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateImageViews()
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t swapImageCount;
 		vkGetSwapchainImagesKHR(m_Specification.Device, m_Swapchain, &swapImageCount, nullptr);
 		m_Images.resize(swapImageCount);
@@ -346,6 +371,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateRenderPass()
 	{
+		PROFILE_FUNCTION;
+
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.flags = 0;
 		colorAttachment.format = m_ImageFormat;
@@ -401,6 +428,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateFramebuffers()
 	{
+		PROFILE_FUNCTION;
+
 		m_Framebuffers.resize(m_ImageViews.size());
 		for (size_t i = 0; i < m_ImageViews.size(); i++)
 		{
@@ -428,6 +457,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::AllocateCommandBuffers()
 	{
+		PROFILE_FUNCTION;
+
 		m_CommandBuffers.resize(m_Specification.FramesInFlight);
 		VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		allocInfo.pNext = nullptr;
@@ -446,6 +477,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateSyncObjects()
 	{
+		PROFILE_FUNCTION;
+
 		VkSemaphoreCreateInfo semaInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 		semaInfo.pNext = nullptr;
 		semaInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
@@ -480,6 +513,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::InitializeFrames()
 	{
+		PROFILE_FUNCTION;
+
 		m_FramesInFlight.resize(m_Specification.FramesInFlight);
 		return true;
 	}	
@@ -487,6 +522,8 @@ namespace Aurora::VK {
 	//========== Fallback ==========
 	void Swapchain::RecordFallbackSwapchainRenderPass()
 	{
+		PROFILE_FUNCTION;
+
 		VkRenderPassBeginInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		rpInfo.pNext = nullptr;
 		rpInfo.renderPass = m_RenderPass;
@@ -522,6 +559,8 @@ namespace Aurora::VK {
 
 	bool Swapchain::CreateFallbackPipeline()
 	{
+		PROFILE_FUNCTION;
+
 		//Shader Modules					
 		VkShaderModuleCreateInfo vertInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 		vertInfo.pNext = nullptr;

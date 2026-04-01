@@ -15,6 +15,7 @@ IncludeDir["spdlog"]				= "%{wks.location}/StarFire/vendor/spdlog/include"
 IncludeDir["concurrentqueue"]		= "%{wks.location}/StarFire/vendor/moodycamel"
 IncludeDir["xxHash"]				= "%{wks.location}/StarFire/vendor/xxHash"
 IncludeDir["Catch2"]				= "%{wks.location}/SubstrateTests/Dependencies/Catch2/src"
+IncludeDir["Tracy"]					= "%{wks.location}/Dependencies/Tracy/public"
 
 IncludeDir["VulkanSDK"]				= "%{Vulkan_SDK}/include"
 IncludeDir["VMA"]					= "%{wks.location}/Aurora/Vendor/VulkanMemoryAllocator/include"

@@ -1,4 +1,5 @@
 #include "Aurora/Core/Core.h"
+#include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/RenderContext.h"
 
 #include "Aurora/Renderer/VulkanHelper.h"
@@ -45,6 +46,9 @@ namespace Aurora::VK {
 
 	void RenderContext::Init()
 	{
+		PROFILE_FUNCTION;
+
+
 		if (!CreateInstance(
 			m_Specification.AppName, 
 			m_Specification.InstanceSpecs,
@@ -101,6 +105,8 @@ namespace Aurora::VK {
 
 	void RenderContext::Destroy()
 	{
+		PROFILE_FUNCTION;
+
 		vkDeviceWaitIdle(m_Device);
 
 		m_Swapchain->Destroy();
@@ -130,6 +136,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::BeginFrame()
 	{
+		PROFILE_FUNCTION;
+
 		IncrementFramesInFlightIdx();
 		AURORA_TRACE("Beginning frame {}", m_RendererState.FramesInFlightIdx);
 		//Acquire next image available image from swapchain
@@ -155,6 +163,8 @@ namespace Aurora::VK {
 
 	void RenderContext::EndFrame()
 	{
+		PROFILE_FUNCTION;
+
 		//Todo: move into call "end recording"
 		//finalize command buffers
 		//pass relevant information to swapchain (submit)
@@ -164,12 +174,16 @@ namespace Aurora::VK {
 
 	void RenderContext::SwapFrame()
 	{
+		PROFILE_FUNCTION;
+
 		if (m_Swapchain->SwapImages())
 			m_RendererState.m_TotalFinishedFrames++;
 	}
 
 	void RenderContext::Resize(uint32_t width, uint32_t height)
 	{
+		PROFILE_FUNCTION;
+
 		m_Swapchain->OnResize(width, height);
 	}
 
@@ -180,7 +194,9 @@ namespace Aurora::VK {
 		RenderContextSpecification::ApplicationVersionNumber appVersion, 
 		RenderContextSpecification::AuroraVersionNumber auroraVersion,
 		WSIPlatformType wsi)
-	{		
+	{
+		PROFILE_FUNCTION;
+
 
 		// ===== Layers =====		
 		//TODO: make this dynamic!
@@ -258,6 +274,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CreateSurface(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs)
 	{
+		PROFILE_FUNCTION;
+
 		switch (surfaceSpecs.WSI)
 		{
 			case WSIPlatformType::SURFACE_PLATFORM_GLFW:
@@ -285,6 +303,8 @@ namespace Aurora::VK {
 	
 	bool RenderContext::PickPhysicalDevice(const DeviceRequirements& deviceRequirements)
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t deviceCount;
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
 		if (deviceCount == 0)
@@ -328,6 +348,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CreateLogicalDevice(const DeviceRequirements& deviceRequirements)
 	{
+		PROFILE_FUNCTION;
+
 		QueueFamilyIndices indices = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface);
 		size_t uniqueQueueFamilies = indices.UniqueFamilyIndices();
 		AURORA_INFO("Picked physical device queue families");
@@ -414,6 +436,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CreateVmAllocator()
 	{
+		PROFILE_FUNCTION;
+
 		VmaAllocatorCreateInfo alInfo{};
 		alInfo.instance = m_Instance;
 		alInfo.device = m_Device;
@@ -436,6 +460,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CreateGraphicsCmdPool()
 	{
+		PROFILE_FUNCTION;
+
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -451,6 +477,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs)
 	{
+		PROFILE_FUNCTION;
+
 		SwapchainSpecification swapchainSpecs{};
 		swapchainSpecs.Device = m_Device;
 		swapchainSpecs.PhysicalDevice = m_PhysicalDevice;
@@ -485,6 +513,8 @@ namespace Aurora::VK {
 	
 	void RenderContext::IncrementFramesInFlightIdx()
 	{
+		PROFILE_FUNCTION;
+
 		m_RendererState.FramesInFlightIdx = (m_RendererState.FramesInFlightIdx + 1) % m_Specification.SurfaceSpecs.FramesPerFlight;
 		m_RendererState.TotalAttemptedFrames++;
 	}
@@ -494,6 +524,8 @@ namespace Aurora::VK {
 
 	int RenderContext::EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const
 	{
+		PROFILE_FUNCTION;
+
 		int score = 0;
 		
 		QueueFamilyIndices indices = Helper::FindQueueFamilies(phDevice, m_Surface);
@@ -531,6 +563,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(phDevice, nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -567,6 +601,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CheckRequiredLayerSupport(const std::vector<const char*>& requiredLayers) const
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 		std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -596,6 +632,8 @@ namespace Aurora::VK {
 
 	std::vector<const char*> RenderContext::GetRequiredInstanceExtensions(WSIPlatformType wsi) const
 	{
+		PROFILE_FUNCTION;
+
 		std::vector<const char*> extensions;
 		if (wsi == WSIPlatformType::SURFACE_PLATFORM_GLFW)
 		{
@@ -609,6 +647,8 @@ namespace Aurora::VK {
 
 	bool RenderContext::CheckRequiredInstanceExtensionsSupport(const std::vector<const char*>& requiredExtensions) const
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t extensionCount;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -641,6 +681,8 @@ namespace Aurora::VK {
 	//Global messenger for AFTER instance creation
 	void RenderContext::SetupDebugMessenger(VkInstance instance, bool enableInfoDebugLevel /*= false*/)
 	{
+		PROFILE_FUNCTION;
+
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		PopulateDebugMessengerCreateInfo(createInfo, enableInfoDebugLevel);
 
@@ -649,6 +691,8 @@ namespace Aurora::VK {
 
 	void RenderContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel /*= false*/)
 	{
+		PROFILE_FUNCTION;
+
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.pNext = nullptr;
 		createInfo.flags = 0;

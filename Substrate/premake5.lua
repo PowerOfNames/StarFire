@@ -17,15 +17,13 @@ project "Substrate"
 	
 	defines
 	{
-		"_CRT_SECURE_NO_WARNINGS",
-		"SUBSTRATE_ENABLE_DETAILS"
+		"_CRT_SECURE_NO_WARNINGS"
 	}
 	
 	includedirs
 	{
 		"Source",
 		"Include",
-		"%{IncludeDir.spdlog}",
 	}
 	
 	links
@@ -47,6 +45,12 @@ project "Substrate"
 		runtime "Debug"
 		symbols "on"
 		
+		defines
+		{
+			"SUBSTRATE_DEBUG_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+		}
+		
 		links
 		{			
 		}
@@ -55,8 +59,30 @@ project "Substrate"
 		runtime "Release"
 		optimize "on"
 		
+		defines
+		{
+			"SUBSTRATE_RELEASE_MODE",
+		}		
+
 		links
 		{
+		}
+		
+	filter "configurations:Profiling"
+		runtime "Release"
+		optimize "on"
+		
+		defines
+		{
+			"SUBSTRATE_PROFILING_MODE",
+			"SUBSTRATE_ENABLE_DETAILS",
+			
+			"TRACY_ENABLE",
+		}
+		
+		includedirs
+		{			
+			"%{IncludeDir.Tracy}",
 		}
 		
 

@@ -1,4 +1,4 @@
-include "./premake/customization/solution_items.lua"
+include "./Premake/customization/solution_items.lua"
 include "Dependencies.lua"
 
 newoption {
@@ -9,22 +9,19 @@ newoption {
 workspace "StarFire"
 	architecture "x86_64"
 	startproject "Sandbox"
-
+	multiprocessorcompile "On"
+	
 	configurations 
 	{
 		"Debug",
 		"Release",
-		"Tests"
+		"Tests",
+		"Profiling",
 	}
 
 	solution_items
 	{
 		".editorconfig"
-	}
-
-	flags
-	{
-		"MultiProcessorCompile"
 	}
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
@@ -39,13 +36,11 @@ filter {"StarFire/vendor/**.cpp"}
 filter {}
 
 filter {"files/vendor/**.cpp"}
-	flags {"NoPCH"}
+	enablepch "Off"
 filter{}
 
 if _OPTIONS["with-tests"] then
 group "Core"
-group ""
-group "Shared"
 	include "Substrate"
 group ""
 group "Tests"
@@ -57,8 +52,6 @@ group "Core"
 	include "Aurora"
 	include "Sandbox"
 	include "Nebula"
-group ""
-group "Shared"
 	include "Substrate"
 group ""
 group "Tests"

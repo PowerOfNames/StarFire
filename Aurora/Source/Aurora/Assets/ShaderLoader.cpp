@@ -1,13 +1,15 @@
 #include "Aurora/Assets/AssetCache.h"
 #include "Aurora/Assets/ShaderLoader.h"
+#include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Shader.h"
-#include "Aurora/Utility/FileExtensions.h"
 
 
 namespace Aurora::Assets {
 
 	const ShaderAssetHandle ShaderLoader::LoadImpl(std::string_view name, const std::filesystem::path& assetPath)
 	{
+		PROFILE_FUNCTION;
+
 		static AssetCache<ShaderAssetHandle, VK::Shader> s_Cache;
 
 		return s_Cache.Load(name, [&]()

@@ -1,5 +1,5 @@
 #include "Aurora/Renderer/VulkanHelper.h"
-
+#include "Aurora/Profiling/Profiling.h"
 
 #include <vector>
 #include <algorithm>
@@ -9,6 +9,8 @@ namespace Aurora::VK::Helper {
 
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice phDevice, VkSurfaceKHR surface)
 	{
+		PROFILE_FUNCTION;
+
 		uint32_t queueFamilyCount;
 		vkGetPhysicalDeviceQueueFamilyProperties(phDevice, &queueFamilyCount, nullptr);
 		std::vector<VkQueueFamilyProperties> queueFamilyProps(queueFamilyCount);
@@ -76,6 +78,8 @@ namespace Aurora::VK::Helper {
 	//========== Swapchain ==========
 	const SwapchainSupportDetails GetSwapSupportDetails(VkPhysicalDevice phDevice, VkSurfaceKHR surface)
 	{
+		PROFILE_FUNCTION;
+
 		SwapchainSupportDetails details{};
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phDevice, surface, &details.Capabilities);
@@ -101,6 +105,8 @@ namespace Aurora::VK::Helper {
 
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat, VkColorSpaceKHR preferredColorSpace)
 	{
+		PROFILE_FUNCTION;
+
 		for (const auto& availableFormat : availableFormats)
 		{
 			if (availableFormat.format == preferredFormat && availableFormat.colorSpace == preferredColorSpace)
@@ -111,6 +117,8 @@ namespace Aurora::VK::Helper {
 
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availableModes, VkPresentModeKHR preferred)
 	{
+		PROFILE_FUNCTION;
+
 		for (const auto& availableMode : availableModes)
 		{
 			if (availableMode == preferred)
@@ -122,6 +130,8 @@ namespace Aurora::VK::Helper {
 
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t framebufferWidth, uint32_t framebufferHeight)
 	{
+		PROFILE_FUNCTION;
+
 		if (capabilities.currentExtent.width != UINT32_MAX)
 			return capabilities.currentExtent;
 
