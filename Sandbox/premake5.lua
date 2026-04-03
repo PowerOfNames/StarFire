@@ -24,9 +24,9 @@ project "Sandbox"
 	
 	links
 	{
-		"StarFire",
+		"StarFire",	
 		"Aurora",
-		"Substrate"
+		"Substrate",		
 	}
 	
 	

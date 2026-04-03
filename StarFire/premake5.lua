@@ -15,8 +15,8 @@ project "StarFire"
 		"Source/**.h",
 		"Source/**.cpp",
 		
-		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl",
+		--"%{IncludeDir.glm}/glm/**.hpp",
+		--"%{IncludeDir.glm}/glm/**.inl",
 	}
 	
 	defines
@@ -28,13 +28,15 @@ project "StarFire"
 	
 	includedirs
 	{
-		"Source",		
-		"%{IncludeDir.glm}",
+		"Source",
 		"%{IncludeDir.Aurora}",
 		"%{IncludeDir.Substrate}",
+		
+		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.concurrentqueue}",
+		
+		"Dependencies/moodycamel",
 	}
 	
 	links
@@ -42,7 +44,6 @@ project "StarFire"
 		"Aurora",
 		"Substrate",
 		"GLFW",
-		"xxHash",
 	}
 	
 	

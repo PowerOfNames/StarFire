@@ -8,7 +8,6 @@
 
 
 #include <Aurora/Aurora.h>
-#include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
 
 
@@ -82,7 +81,6 @@ namespace StarFire {
 		auto& appSettings = Aurora::ChangeAppSettings();
 		appSettings.SetRootPath(std::filesystem::current_path());
 
-		//Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
 
 		bool is = std::filesystem::path("blob.ext") == "blob.ext";
 		auto ext = std::filesystem::path("blob.frag.spv").extension();
@@ -183,7 +181,6 @@ namespace StarFire {
 				}
 				//Todo: add Aurora::EndUiFrame
 
-				//m_MainWindow->OnUpdate();
 				Aurora::SwapFrame();
 			}
 			else

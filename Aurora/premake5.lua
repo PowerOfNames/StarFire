@@ -15,17 +15,16 @@ project "Aurora"
 		"Include/**.h",
 		"Resources/**.h",
 		
-		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl",
-		
-		"vendor/SPIRV-Reflect/spirv_reflect.cpp",
-		"vendor/SPIRV-Reflect/spirv_reflect.h"
+		"Dependencies/SPIRV-Reflect/spirv_reflect.cpp",
+		"Dependencies/SPIRV-Reflect/spirv_reflect.h",
+		"Dependencies/xxHash/xxHash.c",
+		"Dependencies/xxHash/xxHash.h",
 	}
 	
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
-		"GLFW_INCLUDE_NONE"
+		"GLFW_INCLUDE_NONE",
 	}
 	
 	includedirs
@@ -33,21 +32,23 @@ project "Aurora"
 		"Source",
 		"Include",
 		"Resources",
+		
+		"%{IncludeDir.Substrate}",		
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.Substrate}",
-		"%{IncludeDir.xxHash}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
-		"%{IncludeDir.VMA}",
-		"%{IncludeDir.Spirv_Reflect}"
+		
+		"Dependencies/VulkanMemoryAllocator/include",
+		"Dependencies/Spirv_Reflect",
+		"Dependencies/xxHash",
+		
 	}
 	
 	links
 	{
 		"Substrate",
 		"GLFW",
-		"xxHash",
-		"%{Library.Vulkan}"
+		"%{Library.Vulkan}",
 	}
 	
 	

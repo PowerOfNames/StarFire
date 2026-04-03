@@ -1,19 +1,21 @@
-[submodule "StarFire/vendor/glm"]
-	path = StarFire/vendor/glm
-	url = https://github.com/g-truc/glm.git
-[submodule "StarFire/vendor/GLFW"]
-	path = StarFire/vendor/GLFW
-	url = https://github.com/PowerOfNames/glfw.git
-	branch = StarFire
-[submodule "StarFire/vendor/spdlog"]
-	path = StarFire/vendor/spdlog
-	url = https://github.com/gabime/spdlog.git
-[submodule "Aurora/Vendor/SPIRV-Reflect"]
-	path = Aurora/Vendor/SPIRV-Reflect
-	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
 [submodule "SubstrateTests/Dependencies/Catch2"]
 	path = SubstrateTests/Dependencies/Catch2
 	url = https://github.com/PowerOfNames/Catch2.git
 [submodule "Dependencies/Tracy"]
 	path = Dependencies/Tracy
 	url = https://github.com/wolfpld/tracy.git
+[submodule "Dependencies/glm"]
+	path = Dependencies/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Dependencies/glfw"]
+	path = Dependencies/glfw
+	url = https://github.com/PowerOfNames/glfw.git
+	branch = StarFire
+[submodule "Dependencies/spdlog"]
+	path = Dependencies/spdlog
+	url = https://github.com/gabime/spdlog.git
+	branch = v1.x
+[submodule "Aurora/Dependencies/SPIRV-Reflect"]
+	path = Aurora/Dependencies/SPIRV-Reflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+	branch = vulkan-sdk-1.4.341

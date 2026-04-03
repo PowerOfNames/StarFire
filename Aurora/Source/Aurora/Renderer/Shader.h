@@ -1,19 +1,17 @@
 #pragma once
 #include "Aurora/Core/Core.h"
-#include "Aurora/Core/RefCounted.h"
+#include "Substrate/RefCounted.h"
 #include "Aurora/Renderer/AssetHandles.h"
-#include "Aurora/Renderer/VulkanCore.h"
 
 
 #include <filesystem>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 namespace Aurora::VK {
 	
 
-	class Shader : public RefCounted<Shader>
+	class Shader : public Substrate::RefCounted
 	{
 	public:
 		Shader(std::string_view name, const std::filesystem::path& path);
