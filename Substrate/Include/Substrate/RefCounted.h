@@ -42,7 +42,9 @@ namespace Substrate {
 		RefCounted() = default;
 		virtual ~RefCounted() = default;
 
+
 	private:
 		std::atomic<uint32_t> m_RefCount{ 1 };
 	};	
+
 }

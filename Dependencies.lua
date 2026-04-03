@@ -12,6 +12,7 @@ SourceDir["Substrate"]				= "%{wks.location}/Substrate/Source"
 IncludeDir["glm"]					= "%{wks.location}/Dependencies/glm"
 IncludeDir["GLFW"]					= "%{wks.location}/Dependencies/GLFW/include"
 IncludeDir["spdlog"]				= "%{wks.location}/Dependencies/spdlog/include"
+IncludeDir["ImGui"]					= "%{wks.location}/Dependencies/ImGui"
 
 IncludeDir["Catch2"]				= "%{wks.location}/SubstrateTests/Dependencies/Catch2/src"
 IncludeDir["Tracy"]					= "%{wks.location}/Dependencies/Tracy/public"

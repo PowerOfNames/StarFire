@@ -14,10 +14,11 @@ project "StarFire"
 	{
 		"Source/**.h",
 		"Source/**.cpp",
-		
-		--"%{IncludeDir.glm}/glm/**.hpp",
-		--"%{IncludeDir.glm}/glm/**.inl",
 	}
+	
+filter "files:**/ImGuiBuild.cpp"
+	enablepch "Off"
+filter{}
 	
 	defines
 	{
@@ -32,6 +33,7 @@ project "StarFire"
 		"%{IncludeDir.Aurora}",
 		"%{IncludeDir.Substrate}",
 		
+		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
@@ -44,6 +46,7 @@ project "StarFire"
 		"Aurora",
 		"Substrate",
 		"GLFW",
+		"ImGui",
 	}
 	
 	

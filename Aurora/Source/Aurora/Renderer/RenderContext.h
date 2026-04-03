@@ -4,6 +4,8 @@
 #include "Aurora/Renderer/DataStructs/PhysicalDeviceLimits.h"
 #include "Aurora/Renderer/Swapchain.h"
 
+#include "Substrate/RefCounted.h"
+
 #include <vector>
 
 namespace Aurora::VK {
@@ -15,11 +17,12 @@ namespace Aurora::VK {
 		VkQueue Graphics = VK_NULL_HANDLE;
 		VkQueue Present = VK_NULL_HANDLE;
 		VkQueue Compute = VK_NULL_HANDLE;
+
 		//Move this out when time into transfer operation handler
 		VkQueue Transfer = VK_NULL_HANDLE;
 	};
 		
-	class RenderContext
+	class RenderContext : public Substrate::RefCounted
 	{
 	public:
 		RenderContext(const RenderContextSpecification& specs);
@@ -33,6 +36,8 @@ namespace Aurora::VK {
 		void Destroy();
 
 		inline const RenderContextSpecification& GetSpecification() const { return m_Specification; }
+
+		static Ref<RenderContext> Create(const RenderContextSpecification& specs);
 
 	private:
 		bool CreateInstance(
@@ -84,14 +89,13 @@ namespace Aurora::VK {
 
 		Ref<Swapchain> m_Swapchain = nullptr;
 
-		struct RendererState
+		struct RendererStatistics
 		{
 			uint32_t FramesInFlightIdx = 0;
 			uint64_t TotalAttemptedFrames = 0;
 			uint64_t m_TotalFinishedFrames = 0;
 		};
-
-		RendererState m_RendererState{};
+		RendererStatistics m_RendererStatistics{};
 	};
 
 }

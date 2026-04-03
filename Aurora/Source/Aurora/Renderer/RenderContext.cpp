@@ -37,10 +37,14 @@ namespace Aurora::VK {
 		}
 	}
 
-
 	RenderContext::RenderContext(const RenderContextSpecification& specs)
 		: m_Specification(specs)
 	{
+	}
+
+	Ref<RenderContext> RenderContext::Create(const RenderContextSpecification& specs)
+	{
+		return CreateRef<RenderContext>(specs);
 	}
 
 
@@ -98,7 +102,7 @@ namespace Aurora::VK {
 		}		
 
 		//This initializes FIF, such that the very first rendered frame still is index 0;
-		m_RendererState.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
+		m_RendererStatistics.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
 		AURORA_INFO("Successfully initialized vulkan rendering context");
 	}
 
@@ -139,10 +143,10 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		IncrementFramesInFlightIdx();
-		AURORA_TRACE("Beginning frame {}", m_RendererState.FramesInFlightIdx);
+		AURORA_TRACE("Beginning frame {}", m_RendererStatistics.FramesInFlightIdx);
 		//Acquire next image available image from swapchain
 		//pass relevant information to renderers
-		if (!m_Swapchain->PrepareFrame(m_RendererState.FramesInFlightIdx))
+		if (!m_Swapchain->PrepareFrame(m_RendererStatistics.FramesInFlightIdx))
 			return false;
 
 		//Todo: move into call "start recording"
@@ -177,7 +181,7 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		if (m_Swapchain->SwapImages())
-			m_RendererState.m_TotalFinishedFrames++;
+			m_RendererStatistics.m_TotalFinishedFrames++;
 	}
 
 	void RenderContext::Resize(uint32_t width, uint32_t height)
@@ -490,7 +494,7 @@ namespace Aurora::VK {
 		swapchainSpecs.VSync = surfaceSpecs.VSync;
 		swapchainSpecs.InitialExtent = { surfaceSpecs.FramebufferWidth, surfaceSpecs.FramebufferHeight };
 		swapchainSpecs.ClearColor = { surfaceSpecs.ClearColor.R, surfaceSpecs.ClearColor.G, surfaceSpecs.ClearColor.B, surfaceSpecs.ClearColor.A };
-		m_Swapchain = CreateRef<Swapchain>(swapchainSpecs);
+		m_Swapchain = Swapchain::Create(swapchainSpecs);
 
 		if (m_Swapchain == nullptr)
 		{
@@ -515,8 +519,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		m_RendererState.FramesInFlightIdx = (m_RendererState.FramesInFlightIdx + 1) % m_Specification.SurfaceSpecs.FramesPerFlight;
-		m_RendererState.TotalAttemptedFrames++;
+		m_RendererStatistics.FramesInFlightIdx = (m_RendererStatistics.FramesInFlightIdx + 1) % m_Specification.SurfaceSpecs.FramesPerFlight;
+		m_RendererStatistics.TotalAttemptedFrames++;
 	}
 
 

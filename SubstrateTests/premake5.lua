@@ -1,6 +1,6 @@
 project "SubstrateTests"
 
-filter {"configurations:Debug or Release"}
+filter {"configurations:Debug or Release or Profiling"}
 	kind "None"
 filter {"configurations:Tests"}
 	kind "ConsoleApp"

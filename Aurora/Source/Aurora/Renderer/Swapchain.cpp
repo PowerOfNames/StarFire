@@ -14,6 +14,11 @@ namespace Aurora::VK {
 
 	}
 
+	Ref<Swapchain> Swapchain::Create(const SwapchainSpecification& spec)
+	{
+		return CreateRef<Swapchain>(spec);
+	}
+
 	void Swapchain::Init()
 	{
 		PROFILE_FUNCTION;

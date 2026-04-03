@@ -15,7 +15,11 @@ namespace StarFire {
 
 		virtual void OnAttach() {};
 		virtual void OnDetach() {};
+
+		virtual void PreUpdate(Timestep deltaTime) {};
 		virtual void OnUpdate(Timestep deltaTime) {};
+		virtual void PostUpdate(Timestep deltaTime) {};
+		
 		virtual void OnGuiRender() {};
 
 		virtual void OnEvent(Event& event) {};

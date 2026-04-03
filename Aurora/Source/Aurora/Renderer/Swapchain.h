@@ -47,7 +47,7 @@ namespace Aurora::VK {
 		bool IsReady = false;
 	};
 
-	class Swapchain
+	class Swapchain : public Substrate::RefCounted
 	{
 	public:
 		Swapchain(const SwapchainSpecification& spec);
@@ -63,6 +63,8 @@ namespace Aurora::VK {
 		inline const SwapchainSpecification& GetSpecification() const { return m_Specification; }
 		inline SwapchainSpecification& GetSpecification() { return m_Specification; }
 		inline VkSwapchainKHR GetHandle() const { return m_Swapchain; }	
+
+		static Ref<Swapchain> Create(const SwapchainSpecification& spec);
 
 		// Fallback 
 

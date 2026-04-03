@@ -4,6 +4,7 @@
 
 #include <concepts>
 
+
 namespace Substrate {
 
 	template<typename TRefCounted>
@@ -20,9 +21,17 @@ namespace Substrate {
 		}
 
 		/// <summary>
+		/// Conversion constructor for nullptr (To allow RefPtr<T> ptr = nullptr)
+		/// </summary>
+		RefPtr(std::nullptr_t)
+			: m_Ptr(nullptr)
+		{
+			static_assert(std::is_base_of_v<RefCounted, TRefCounted>, "RefPtr can only be used with classes derived from RefCounted");
+		}
+
+		/// <summary>
 		/// Standard type constructor
 		/// </summary>
-		/// <param name="ptr"></param>
 		explicit RefPtr(TRefCounted* ptr)
 			: m_Ptr(ptr)
 		{
@@ -31,7 +40,6 @@ namespace Substrate {
 		/// <summary>
 		/// Copy constructor -> Increases ref count
 		/// </summary>
-		/// <param name="other"></param>
 		RefPtr(const RefPtr& other)
 			: m_Ptr(other.Get())
 		{
@@ -42,7 +50,6 @@ namespace Substrate {
 		/// <summary>
 		/// Copy constructor -> Increases ref count
 		/// </summary>
-		/// <param name="other"></param>
 		template <typename TOtherRefCounted> 
 			requires std::is_base_of_v<TRefCounted, TOtherRefCounted>
 			RefPtr(const RefPtr<TOtherRefCounted>& other)
@@ -55,7 +62,6 @@ namespace Substrate {
 		/// <summary>
 		/// Move constructor -> Transfers ownership, sets other to nullptr
 		/// </summary>
-		/// <param name="other"></param>
 		RefPtr(RefPtr&& other) noexcept
 			: m_Ptr(other.m_Ptr)
 		{
@@ -74,8 +80,6 @@ namespace Substrate {
 		/// <summary>
 		/// Copy assignment -> If not self assignment, decrease current ref count, replace pointer, then increase new ref count
 		/// </summary>
-		/// <param name="other"></param>
-		/// <returns></returns>
 		RefPtr& operator=(const RefPtr& other)
 		{
 			if (this != &other)
@@ -86,6 +90,18 @@ namespace Substrate {
 					m_Ptr->DecRef();
 				m_Ptr = other.Get();
 			}
+			return *this;
+		}
+
+		/// <summary>
+		/// Copy assignment with nullptr -> Decrease current ref count, replace pointer with nullptr
+		/// </summary>
+		RefPtr& operator=(std::nullptr_t)
+		{
+				if (m_Ptr)
+					m_Ptr->DecRef();
+				m_Ptr = nullptr;
+
 			return *this;
 		}
 
@@ -166,11 +182,18 @@ namespace Substrate {
 		/// <summary>
 		/// Boolean equality operator.
 		/// </summary>
-		/// <param name="other"></param>
 		/// <returns>Returns true if pointers are the same</returns>
 		bool operator==(const RefPtr<TRefCounted>& other) const
 		{
 			return m_Ptr == other.Get();
+		}
+
+		/// <summary>
+		/// Convenience equality operator for nullptr comparisons. Returns true if the RefPtr is currently holding a nullptr.
+		/// </summary>
+		bool operator==(std::nullptr_t) const
+		{
+			return m_Ptr == nullptr;
 		}
 
 		/// <summary>
@@ -181,6 +204,22 @@ namespace Substrate {
 		bool operator!=(const RefPtr<TRefCounted>& other) const
 		{
 			return m_Ptr != other.Get();
+		}
+
+		/// <summary>
+		/// Convenience inequality operator for nullptr comparisons. Returns true if the RefPtr is currently holding a non-nullptr.
+		/// </summary>
+		bool operator!=(std::nullptr_t) const
+		{
+			return m_Ptr != nullptr;
+		}
+
+		/// <summary>
+		/// Convenience boolean operator. Returns true if the RefPtr is currently holding a non-nullptr, false otherwise.
+		/// </summary>
+		explicit operator bool() const
+		{
+			return m_Ptr != nullptr;
 		}
 
 		/// <summary>

@@ -21,6 +21,10 @@ project "Aurora"
 		"Dependencies/xxHash/xxHash.h",
 	}
 	
+filter "files:**/ImGuiBuild.cpp"
+	enablepch "Off"
+filter{}
+	
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
@@ -34,6 +38,7 @@ project "Aurora"
 		"Resources",
 		
 		"%{IncludeDir.Substrate}",		
+		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
@@ -48,6 +53,7 @@ project "Aurora"
 	{
 		"Substrate",
 		"GLFW",
+		"ImGui",
 		"%{Library.Vulkan}",
 	}
 	

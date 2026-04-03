@@ -24,7 +24,7 @@ constexpr Ref<TRefCounted> CreateRef(Args&& ... args)
 }
 
 
-TEST_CASE("RefCounted testing (single threaded) - Creation, Destruction", "[RefCountedCstrDstr_st]")
+TEST_CASE("RefCounted testing (single threaded) - Creation, Destruction", "[RefCounted][CstrDstr_st]")
 {	
 	TestClass::s_DestructorCalled = 0;
 	{
@@ -34,7 +34,7 @@ TEST_CASE("RefCounted testing (single threaded) - Creation, Destruction", "[RefC
 	REQUIRE(TestClass::s_DestructorCalled == 1);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Copy Construction", "[RefCountedCpyCstr_st]")
+TEST_CASE("RefCounted testing (single threaded) - Copy Construction", "[RefCounted][CpyCstr_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -44,19 +44,19 @@ TEST_CASE("RefCounted testing (single threaded) - Copy Construction", "[RefCount
 	REQUIRE(instanceTwo->GetRefCount() == 2);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Move Construction", "[RefCountedMvCstr_st]")
+TEST_CASE("RefCounted testing (single threaded) - Move Construction", "[RefCounted][MvCstr_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
 	Ref<TestClass> instanceOne = CreateRef<TestClass>();
 	REQUIRE(instanceOne->GetRefCount() == 1);
 	Ref<TestClass> instanceTwo = std::move(instanceOne);
-	REQUIRE(instanceOne.Get() == nullptr);
+	REQUIRE(instanceOne == nullptr);
 	REQUIRE(instanceTwo->GetRefCount() == 1);
 	REQUIRE(TestClass::s_DestructorCalled == 0);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Self Copy/Move", "[RefCountedSlfCpyMv_st]")
+TEST_CASE("RefCounted testing (single threaded) - Self Copy/Move", "[RefCounted][SlfCpyMv_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -75,7 +75,7 @@ TEST_CASE("RefCounted testing (single threaded) - Self Copy/Move", "[RefCountedS
 	REQUIRE(TestClass::s_DestructorCalled == 0);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Copy Assignment", "[RefCountedCpyAsgn_st]")
+TEST_CASE("RefCounted testing (single threaded) - Copy Assignment", "[RefCounted][CpyAsgn_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -94,7 +94,7 @@ TEST_CASE("RefCounted testing (single threaded) - Copy Assignment", "[RefCounted
 	//TODO: Destruction check
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Move Assignment", "[RefCountedMvAsgn_st]")
+TEST_CASE("RefCounted testing (single threaded) - Move Assignment", "[RefCounted][MvAsgn_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -109,7 +109,7 @@ TEST_CASE("RefCounted testing (single threaded) - Move Assignment", "[RefCounted
 	REQUIRE(TestClass::s_DestructorCalled == 1);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Release", "[RefCountedRelease_st]")
+TEST_CASE("RefCounted testing (single threaded) - Release", "[RefCounted][Release_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -122,7 +122,7 @@ TEST_CASE("RefCounted testing (single threaded) - Release", "[RefCountedRelease_
 	REQUIRE(TestClass::s_DestructorCalled == 1);
 }
 
-TEST_CASE("RefCounted testing (single threaded) - Operators", "[RefCountedOps_st]")
+TEST_CASE("RefCounted testing (single threaded) - Operators", "[RefCounted][Ops_st]")
 {
 	TestClass::s_DestructorCalled = 0;
 
@@ -134,4 +134,57 @@ TEST_CASE("RefCounted testing (single threaded) - Operators", "[RefCountedOps_st
 	
 	//Inequality
 	REQUIRE((instanceOne != instanceTwo) == true);
+}
+
+TEST_CASE("RefCounted testing (single threaded) - nullptr", "[RefCounted][NullPtr_st]")
+{
+	TestClass::s_DestructorCalled = 0;
+
+	Ref<TestClass> instanceOne = nullptr;
+	Ref<TestClass> instanceTwo = CreateRef<TestClass>();
+
+	//Equality
+	REQUIRE((instanceOne.Get() == nullptr) == true);
+
+	// Operator
+	REQUIRE((instanceOne == nullptr) == true);
+
+	Ref<TestClass> instanceThree = instanceTwo;
+	REQUIRE(instanceThree->GetRefCount() == 2);
+	
+	//Assignment
+	instanceTwo = nullptr;
+	REQUIRE(instanceThree->GetRefCount() == 1);
+	REQUIRE(TestClass::s_DestructorCalled == 0);
+	REQUIRE((instanceTwo.Get() == nullptr) == true);
+	REQUIRE((instanceTwo == nullptr) == true);
+
+	instanceThree = nullptr;
+	REQUIRE(TestClass::s_DestructorCalled == 1);
+}
+
+TEST_CASE("RefCounted testing (single threaded) - if-check", "[RefCounted][if_st]")
+{
+	TestClass::s_DestructorCalled = 0;
+
+	Ref<TestClass> instanceOne = CreateRef<TestClass>();
+
+	//true check
+	REQUIRE(static_cast<bool>(instanceOne) == true);
+
+	//Might be redundant
+	if (instanceOne)
+		REQUIRE(true);
+	else
+		REQUIRE(false);
+
+	instanceOne = nullptr;
+	//false check
+	REQUIRE(static_cast<bool>(instanceOne) == false);
+
+	//Might be redundant
+	if (!instanceOne)
+		REQUIRE(true);
+	else
+		REQUIRE(false);
 }

@@ -19,3 +19,7 @@
 	path = Aurora/Dependencies/SPIRV-Reflect
 	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
 	branch = vulkan-sdk-1.4.341
+[submodule "Dependencies/ImGui"]
+	path = Dependencies/ImGui
+	url = https://github.com/PowerOfNames/imgui
+	branch = docking

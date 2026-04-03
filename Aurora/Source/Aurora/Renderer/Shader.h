@@ -23,8 +23,7 @@ namespace Aurora::VK {
 		static constexpr const char* StaticTypeName() { return "VulkanShader"; }
 	
 
-		static Ref<Shader> Create(std::string_view name, const std::filesystem::path& shaderPath);
-
+		static Ref<Shader> Create(std::string_view name, const std::filesystem::path& shaderPath);	
 	
 	private:
 		ShaderAssetHandle m_Handle;

@@ -28,7 +28,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "Dependencies/GLFW"
-	--include "Aurora/Dependencies/xxHash"	
+	include "Dependencies/ImGui"
 group ""
 
 filter {"files/Dependencies/**.cpp"}

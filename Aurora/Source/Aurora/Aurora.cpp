@@ -5,44 +5,56 @@
 
 #include "Aurora/Renderer/RenderContext.h"
 
-namespace {
-	std::unique_ptr<Aurora::VK::RenderContext> s_RenderContext = nullptr;
-}
 
 namespace Aurora {
+	namespace {
+		Ref<VK::RenderContext> g_RenderContext = nullptr;
+	}
+
+	Ref<VK::RenderContext> GetRenderContext()
+	{
+		AURORA_ASSERT(g_RenderContext != nullptr, "RenderContext not initialized.");
+		return g_RenderContext;
+	}
 
 	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs)
 	{
-		s_RenderContext = CreateScope<VK::RenderContext>(contextSpecs);
-		AURORA_ASSERT(s_RenderContext != nullptr, "Failed to create RenderContext.");
-		s_RenderContext->Init();
+		if (g_RenderContext)
+		{
+			AURORA_WARN("RenderContext already initialized.");
+			return false;
+		}
+
+		g_RenderContext = CreateRef<VK::RenderContext>(contextSpecs);
+		AURORA_ASSERT(g_RenderContext != nullptr, "Failed to create RenderContext.");
+		g_RenderContext->Init();
 		return true;
 	}
 
 	bool BeginFrame()
 	{
-		return s_RenderContext->BeginFrame();
+		return g_RenderContext->BeginFrame();
 	}
 
 	void EndFrame()
 	{
-		s_RenderContext->EndFrame();
+		g_RenderContext->EndFrame();
 	}
 
 	void SwapFrame()
 	{
-		s_RenderContext->SwapFrame();
+		g_RenderContext->SwapFrame();
 	}
 
 	void Resize(uint32_t width, uint32_t height)
 	{
-		s_RenderContext->Resize(width, height);
+		g_RenderContext->Resize(width, height);
 	}
 
 	bool Shutdown()
 	{
-		if (s_RenderContext)
-			s_RenderContext->Destroy();
+		if (g_RenderContext)
+			g_RenderContext->Destroy();
 
 		return true;
 	}
