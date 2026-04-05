@@ -2,7 +2,6 @@
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/RenderContext.h"
 
-#include "Aurora/Renderer/VulkanHelper.h"
 #include "Aurora/Renderer/DataStructs/QueueFamilies.h"
 
 #define GLFW_INCLUDE_VULKAN
@@ -20,11 +19,11 @@ namespace Aurora::VK {
 		{
 			switch (type)
 			{
-				case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
-				case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
-				case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
-				case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
-				default: return "Other";
+			case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
+			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
+			default: return "Other";
 			}
 		}
 
@@ -52,9 +51,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-
 		if (!CreateInstance(
-			m_Specification.AppName, 
+			m_Specification.AppName,
 			m_Specification.InstanceSpecs,
 			m_Specification.AppVersion,
 			m_Specification.AuroraVersion,
@@ -95,11 +93,17 @@ namespace Aurora::VK {
 			return;
 		}
 
+		if (!CreateFramesInFlight(m_Specification.SurfaceSpecs.FramesPerFlight))
+		{
+			AURORA_ERROR("Failed to create per-frame data. VulkanContext could not be initialized.");
+			return;
+		}
+
 		if (!CreateSwapchain(m_Specification.SurfaceSpecs))
 		{
 			AURORA_ERROR("Failed to create swapchain. VulkanContext could not be initialized.");
 			return;
-		}		
+		}
 
 		//This initializes FIF, such that the very first rendered frame still is index 0;
 		m_RendererStatistics.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
@@ -113,25 +117,38 @@ namespace Aurora::VK {
 
 		vkDeviceWaitIdle(m_Device);
 
+		m_MainDeletionQueue.FlushDeletions();
+
 		m_Swapchain->Destroy();
 		m_Swapchain = nullptr;
 
-		vkDestroyCommandPool(m_Device, m_GraphicsCmdPool, nullptr);
+		for (auto& fif : m_FramesInFlight)
+		{
+			fif.DeletionQueue.FlushDeletions();
+
+			vkDestroyCommandPool(m_Device, fif.CommandPool, m_AllocationCallbacks);
+			vkDestroySemaphore(m_Device, fif.ImageAvailableSemaphore, m_AllocationCallbacks);
+			vkDestroySemaphore(m_Device, fif.RenderFinishedSemaphore, m_AllocationCallbacks);
+			vkDestroyFence(m_Device, fif.InFlightFence, m_AllocationCallbacks);
+		}
+		m_FramesInFlight.clear();
+
+		vkDestroyCommandPool(m_Device, m_GraphicsCmdPool, m_AllocationCallbacks);
 		m_GraphicsCmdPool = VK_NULL_HANDLE;
 
 		vmaDestroyAllocator(m_VmAllocator);
 		m_VmAllocator = VK_NULL_HANDLE;
 
-		vkDestroyDevice(m_Device, nullptr);
+		vkDestroyDevice(m_Device, m_AllocationCallbacks);
 		m_Device = VK_NULL_HANDLE;
 
-		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+		vkDestroySurfaceKHR(m_Instance, m_Surface, m_AllocationCallbacks);
 		m_Surface = VK_NULL_HANDLE;
-				
-		Debug::DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, nullptr);
+
+		Debug::DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessenger, m_AllocationCallbacks);
 		m_DebugMessenger = VK_NULL_HANDLE;
-		
-		vkDestroyInstance(m_Instance, nullptr);
+
+		vkDestroyInstance(m_Instance, m_AllocationCallbacks);
 		m_Instance = VK_NULL_HANDLE;
 
 		AURORA_INFO("Destroyed all vulkan context objects.");
@@ -144,23 +161,19 @@ namespace Aurora::VK {
 
 		IncrementFramesInFlightIdx();
 		AURORA_TRACE("Beginning frame {}", m_RendererStatistics.FramesInFlightIdx);
-		//Acquire next image available image from swapchain
-		//pass relevant information to renderers
-		if (!m_Swapchain->PrepareFrame(m_RendererStatistics.FramesInFlightIdx))
+		FrameData& frame = GetCurrentFrameData();
+		if (!m_Swapchain->PrepareFrame(frame))
 			return false;
-
-		//Todo: move into call "start recording"
-		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		cmdInfo.pNext = nullptr;
 		cmdInfo.pInheritanceInfo = nullptr;
 		cmdInfo.flags = 0;
 
-		AURORA_VK_CHECK(vkBeginCommandBuffer(frame->CommandBuffer, &cmdInfo), VK_SUCCESS, "Failed to begin command buffer (frame index: {}).", frame->FrameIndex);
+		AURORA_VK_CHECK(vkBeginCommandBuffer(frame.CommandBuffer, &cmdInfo), VK_SUCCESS, "Failed to begin command buffer (frame index: {}).", frame.FrameIndex);
 
 		//TEMP:
-		m_Swapchain->RecordFallbackSwapchainRenderPass();
+		m_Swapchain->RecordFallbackSwapchainRenderPass(frame);
 
 		return true;
 	}
@@ -169,18 +182,15 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		//Todo: move into call "end recording"
-		//finalize command buffers
-		//pass relevant information to swapchain (submit)
-		const FrameData* frame = m_Swapchain->GetCurrentFrameData();
-		AURORA_VK_CHECK(vkEndCommandBuffer(frame->CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame->FrameIndex);
+		const FrameData& frame = GetCurrentFrameData();
+		AURORA_VK_CHECK(vkEndCommandBuffer(frame.CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame.FrameIndex);
 	}
 
 	void RenderContext::SwapFrame()
 	{
 		PROFILE_FUNCTION;
 
-		if (m_Swapchain->SwapImages())
+		if (m_Swapchain->SwapImages(GetCurrentFrameData()))
 			m_RendererStatistics.m_TotalFinishedFrames++;
 	}
 
@@ -194,8 +204,8 @@ namespace Aurora::VK {
 	// ========== Object Creation ==========
 	bool RenderContext::CreateInstance(
 		const std::string& appName,
-		const RenderContextSpecification::InstanceSpecification instanceSpecs, 
-		RenderContextSpecification::ApplicationVersionNumber appVersion, 
+		const RenderContextSpecification::InstanceSpecification instanceSpecs,
+		RenderContextSpecification::ApplicationVersionNumber appVersion,
 		RenderContextSpecification::AuroraVersionNumber auroraVersion,
 		WSIPlatformType wsi)
 	{
@@ -218,7 +228,7 @@ namespace Aurora::VK {
 		}
 
 		// ===== Extensions =====
-		std::vector<const char*> requiredExtensions = GetRequiredInstanceExtensions(wsi);	
+		std::vector<const char*> requiredExtensions = GetRequiredInstanceExtensions(wsi);
 
 #if AURORA_VK_VALIDATION_ENABLED
 		bool useDebugUtils = instanceSpecs.EnableDebugUtils;
@@ -242,6 +252,7 @@ namespace Aurora::VK {
 		appInfo.pApplicationName = appName.c_str();
 		appInfo.applicationVersion = VK_MAKE_VERSION(appVersion.Major, appVersion.Minor, appVersion.Patch);
 		appInfo.engineVersion = VK_MAKE_VERSION(auroraVersion.Major, auroraVersion.Minor, auroraVersion.Patch);
+		m_AppInfo = appInfo;
 
 		// ===== Instance =====
 
@@ -261,7 +272,7 @@ namespace Aurora::VK {
 		instanceInfo.ppEnabledExtensionNames = requiredExtensions.data();
 		instanceInfo.pApplicationInfo = &appInfo;
 
-		AURORA_VK_CHECK(vkCreateInstance(&instanceInfo, nullptr, &m_Instance), VK_SUCCESS, "Failed to create VkInstance.");
+		AURORA_VK_CHECK(vkCreateInstance(&instanceInfo, m_AllocationCallbacks, &m_Instance), VK_SUCCESS, "Failed to create VkInstance.");
 		AURORA_TRACE("Created VkInstance.");
 
 
@@ -282,17 +293,17 @@ namespace Aurora::VK {
 
 		switch (surfaceSpecs.WSI)
 		{
-			case WSIPlatformType::SURFACE_PLATFORM_GLFW:
-			{
-				AURORA_VK_CHECK(glfwCreateWindowSurface(m_Instance, (GLFWwindow*)surfaceSpecs.WindowHandle, nullptr, &m_Surface), VK_SUCCESS, "Failed to create GLFWWindow Surface.");
-				break;
-			}
-			case WSIPlatformType::SURFACE_PLAFORM_NONE:				
-			default:
-			{
-				AURORA_ERROR("WSI currently not supported!");
-				return false;
-			}
+		case WSIPlatformType::SURFACE_PLATFORM_GLFW:
+		{
+			AURORA_VK_CHECK(glfwCreateWindowSurface(m_Instance, (GLFWwindow*)surfaceSpecs.WindowHandle, m_AllocationCallbacks, &m_Surface), VK_SUCCESS, "Failed to create GLFWWindow Surface.");
+			break;
+		}
+		case WSIPlatformType::SURFACE_PLAFORM_NONE:
+		default:
+		{
+			AURORA_ERROR("WSI currently not supported!");
+			return false;
+		}
 		}
 
 		if (m_Surface == nullptr)
@@ -304,7 +315,7 @@ namespace Aurora::VK {
 		AURORA_TRACE("Created vulkan surface.");
 		return true;
 	}
-	
+
 	bool RenderContext::PickPhysicalDevice(const DeviceRequirements& deviceRequirements)
 	{
 		PROFILE_FUNCTION;
@@ -370,7 +381,7 @@ namespace Aurora::VK {
 		queueInfos.reserve(uniqueQueueFamilyIndices.size());
 
 		float priority = 1.0f;
-		for(const auto& index : uniqueQueueFamilyIndices)
+		for (const auto& index : uniqueQueueFamilyIndices)
 		{
 			VkDeviceQueueCreateInfo queueInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 			queueInfo.pNext = nullptr;
@@ -390,15 +401,26 @@ namespace Aurora::VK {
 
 		VkPhysicalDeviceFeatures features{};
 		auto requiredExtension = GetRequiredDeviceExtensions(deviceRequirements);
+
+		VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		//features12.DescriptorIndexing = true;
+
+
+		VkPhysicalDeviceVulkan13Features features13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+		features13.pNext = &features12;
+		features13.dynamicRendering = true;
+		features13.synchronization2 = true;
+
+
 		VkDeviceCreateInfo deviceInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-		deviceInfo.pNext = nullptr;
+		deviceInfo.pNext = &features13;
 		deviceInfo.flags = 0;
 		deviceInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtension.size());
 		deviceInfo.ppEnabledExtensionNames = requiredExtension.data();
 		deviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
 		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.pEnabledFeatures = &features;
-		AURORA_VK_CHECK(vkCreateDevice(m_PhysicalDevice, &deviceInfo, nullptr, &m_Device), VK_SUCCESS, "Failed to create device!");
+		AURORA_VK_CHECK(vkCreateDevice(m_PhysicalDevice, &deviceInfo, m_AllocationCallbacks, &m_Device), VK_SUCCESS, "Failed to create device!");
 
 		if (m_Device == VK_NULL_HANDLE)
 		{
@@ -424,7 +446,7 @@ namespace Aurora::VK {
 			finalComputeSlot = (indices.UnifiedCount + 1) % indices.UnifiedCount;
 		vkGetDeviceQueue(m_Device, indices.Compute, finalComputeSlot, &m_QueueFamilies.Compute);
 		AURORA_TRACE("Got compute queue from queue family {} at slot {}", indices.Compute, finalComputeSlot);
-		
+
 		uint32_t finalTransferSlot;
 		if (indices.HasDedicatedCompute || indices.Transfer != indices.Graphics)
 			finalTransferSlot = 0;
@@ -448,7 +470,7 @@ namespace Aurora::VK {
 		alInfo.physicalDevice = m_PhysicalDevice;
 		alInfo.vulkanApiVersion = VK_API_VERSION_1_3;
 		alInfo.flags = 0;
-		alInfo.pAllocationCallbacks = nullptr;
+		alInfo.pAllocationCallbacks = m_AllocationCallbacks;
 		alInfo.pDeviceMemoryCallbacks = nullptr;
 		alInfo.pHeapSizeLimit = nullptr;
 		alInfo.pTypeExternalMemoryHandleTypes = nullptr;
@@ -470,12 +492,85 @@ namespace Aurora::VK {
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
-		
-		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_GraphicsCmdPool), VK_SUCCESS, "Failed to create graphics command pool.");
+
+		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_GraphicsCmdPool), VK_SUCCESS, "Failed to create graphics command pool.");
 		if (m_GraphicsCmdPool == VK_NULL_HANDLE)
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_GraphicsCmdPool, "GraphicsCommandPool");
 
+		return true;
+	}
+
+	bool RenderContext::CreateFramesInFlight(uint8_t framesInFlight)
+	{
+		PROFILE_FUNCTION;
+
+		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		poolInfo.pNext = nullptr;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+
+		VkCommandBufferAllocateInfo cmdAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		cmdAllocInfo.pNext = nullptr;
+		cmdAllocInfo.commandBufferCount = 1;
+		cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		VkSemaphoreCreateInfo semaInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+		semaInfo.pNext = nullptr;
+		semaInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
+
+		VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+		fenceInfo.pNext = nullptr;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		m_FramesInFlight.resize(framesInFlight);
+		uint8_t i = 0;
+		for (auto& fif : m_FramesInFlight)
+		{
+			fif.FrameIndex = i;
+			const std::string iString = std::to_string(i);
+			// ===== Frame command pool =====
+			{
+				const std::string poolName = "Frame_commandPool_" + iString;
+				AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &fif.CommandPool), VK_SUCCESS, "Failed to create frame command pool.");
+				if (fif.CommandPool == VK_NULL_HANDLE)
+					return false;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)fif.CommandPool, poolName.c_str());
+			}
+
+			// ===== Frame command buffer =====
+			{
+				cmdAllocInfo.commandPool = fif.CommandPool;
+				const std::string cmdName = "Frame_commandBuffer_" + iString;
+				AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &cmdAllocInfo, &fif.CommandBuffer), VK_SUCCESS, "Failed to allocate swapchain command buffer.");
+				if (fif.CommandBuffer == VK_NULL_HANDLE)
+					return false;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)fif.CommandBuffer, cmdName.c_str());
+			}
+
+			// ===== Frame semaphores =====
+			{
+				AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &fif.ImageAvailableSemaphore), VK_SUCCESS, "Failed to create image available semaphore.");
+				AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &fif.RenderFinishedSemaphore), VK_SUCCESS, "Failed to create render finished semaphore.");
+				if (fif.ImageAvailableSemaphore == VK_NULL_HANDLE || fif.RenderFinishedSemaphore == VK_NULL_HANDLE)
+					return false;
+
+				const std::string availableName = "Frame_Sema_Ava_" + iString;
+				const std::string renderFinName = "Frame_Sema_RenderFin_" + iString;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)fif.ImageAvailableSemaphore, availableName.c_str());
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)fif.RenderFinishedSemaphore, "Swapchain_Sema_RenderFin_" + iString);
+			}
+
+			// ===== Frame fence =====
+			{
+				const std::string inFlightName = "Frame_Fence_" + iString;
+				AURORA_VK_CHECK(vkCreateFence(m_Device, &fenceInfo, m_AllocationCallbacks, &fif.InFlightFence), VK_SUCCESS, "Failed to create in-flight fence.");
+				if (fif.InFlightFence == VK_NULL_HANDLE)
+					return false;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_FENCE, (uint64_t)fif.InFlightFence, inFlightName.c_str());
+			}
+			i++;
+		}
 		return true;
 	}
 
@@ -485,9 +580,9 @@ namespace Aurora::VK {
 
 		SwapchainSpecification swapchainSpecs{};
 		swapchainSpecs.Device = m_Device;
+		swapchainSpecs.AllocationCallbacks = m_AllocationCallbacks;
 		swapchainSpecs.PhysicalDevice = m_PhysicalDevice;
 		swapchainSpecs.Surface = m_Surface;
-		swapchainSpecs.GraphicsCmdPool = m_GraphicsCmdPool;
 		swapchainSpecs.GraphicsQueue = m_QueueFamilies.Graphics;
 		swapchainSpecs.PresentQueue = m_QueueFamilies.Present;
 		swapchainSpecs.FramesInFlight = surfaceSpecs.FramesPerFlight;
@@ -509,12 +604,12 @@ namespace Aurora::VK {
 			AURORA_TRACE("Failed to initialize swapchain.");
 			return false;
 		}
-		
-		
+
+
 		AURORA_TRACE("Created and initialized swapchain.");
 		return true;
-	}	
-	
+	}
+
 	void RenderContext::IncrementFramesInFlightIdx()
 	{
 		PROFILE_FUNCTION;
@@ -531,7 +626,7 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		int score = 0;
-		
+
 		QueueFamilyIndices indices = Helper::FindQueueFamilies(phDevice, m_Surface);
 		if (!indices.IsComplete())
 			return 0;
@@ -581,7 +676,7 @@ namespace Aurora::VK {
 		{
 			if (requiredExtensions.find(extension.extensionName) == requiredExtensions.end())
 				continue;
-			
+
 			AURORA_INFO("Found required device extension {}", extension.extensionName);
 			requiredExtensions.erase(extension.extensionName);
 
@@ -598,7 +693,7 @@ namespace Aurora::VK {
 
 	const std::vector<const char*> RenderContext::GetRequiredDeviceExtensions(const DeviceRequirements& deviceRequirements) const
 	{
-		//TODO: Write parsing between devideRequirements and the actual extensions
+		//TODO: Write parsing between deviceRequirements and the actual extensions
 
 		return { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	}
@@ -664,7 +759,7 @@ namespace Aurora::VK {
 			bool foundExtension = false;
 			for (const auto& available : availableExtensions)
 			{
-				if(strcmp(required, available.extensionName) == 0)
+				if (strcmp(required, available.extensionName) == 0)
 				{
 					foundExtension = true;
 					AURORA_INFO("Required instance extension {} found.", required);
@@ -690,7 +785,7 @@ namespace Aurora::VK {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		PopulateDebugMessengerCreateInfo(createInfo, enableInfoDebugLevel);
 
-		AURORA_VK_CHECK(Debug::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &m_DebugMessenger), VK_SUCCESS, "Failed to create debug messenger.");
+		AURORA_VK_CHECK(Debug::CreateDebugUtilsMessengerEXT(instance, &createInfo, m_AllocationCallbacks, &m_DebugMessenger), VK_SUCCESS, "Failed to create debug messenger.");
 	}
 
 	void RenderContext::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel /*= false*/)
@@ -701,22 +796,17 @@ namespace Aurora::VK {
 		createInfo.pNext = nullptr;
 		createInfo.flags = 0;
 
-		VkDebugUtilsMessageSeverityFlagsEXT severityFlags = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT 
+		VkDebugUtilsMessageSeverityFlagsEXT severityFlags = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
 			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 #if defined(AURORA_DEBUG_MODE) && allowInfoLevel
 		severityFlags |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
 #endif
 		createInfo.messageSeverity = severityFlags;
-		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT 
-			| VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT 
+		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+			| VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
 			| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = Debug::VulkanDebugCallback;
 	}
-
-	
-	
-
-
 }
 
 

@@ -17,6 +17,9 @@ namespace Sandbox {
 		virtual void OnEvent(StarFire::Event& e) override;
 
 	private:
+		void Test();
+
+	private:
 
 	};
 	

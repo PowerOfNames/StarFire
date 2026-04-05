@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Aurora/Renderer/VulkanCore.h"
+#include "Aurora/Renderer/DataStructs/FrameData.h"
+#include "Aurora/Renderer/DataStructs/SwapchainSupportDetails.h"
+#include "Aurora/Renderer/VulkanHelper.h"
 
 #include <vector>
 
@@ -12,8 +15,8 @@ namespace Aurora::VK {
 		VkSurfaceKHR Surface = VK_NULL_HANDLE;
 		VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice Device = VK_NULL_HANDLE;
+		const VkAllocationCallbacks* AllocationCallbacks = nullptr;
 
-		VkCommandPool GraphicsCmdPool = VK_NULL_HANDLE;
 		VkQueue GraphicsQueue = VK_NULL_HANDLE;
 		VkQueue PresentQueue = VK_NULL_HANDLE;
 
@@ -36,17 +39,6 @@ namespace Aurora::VK {
 		} ClearColor;
 	};
 
-	struct FrameData
-	{
-		VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
-		uint8_t FrameIndex = 0;
-		//The index of all frames. Inclusive (When this is the 5th frame ever rendered, this is 5)
-		uint64_t FrameCount = 0;
-		VkExtent2D Extent{};
-
-		bool IsReady = false;
-	};
-
 	class Swapchain : public Substrate::RefCounted
 	{
 	public:
@@ -54,15 +46,19 @@ namespace Aurora::VK {
 		~Swapchain() = default;
 
 		void Init();
-		bool PrepareFrame(uint32_t framesInFlightIdx);		
-		bool SwapImages();
+		bool PrepareFrame(FrameData& frame);
+		bool SwapImages(FrameData& frame);
 		void OnResize(uint32_t width, uint32_t height);
 		void Destroy();
 
-		inline const FrameData* GetCurrentFrameData() const { return &m_FramesInFlight[m_FramesInFlightIdx]; }
 		inline const SwapchainSpecification& GetSpecification() const { return m_Specification; }
 		inline SwapchainSpecification& GetSpecification() { return m_Specification; }
 		inline VkSwapchainKHR GetHandle() const { return m_Swapchain; }	
+
+		inline uint32_t GetImageCount() const { return static_cast<uint32_t>(m_Images.size()); }
+		inline VkFormat GetImageFormat() const { return m_ImageFormat; }
+		inline VkExtent2D GetExtent() const { return m_Extent; }
+		inline const SwapchainSupportDetails GetSupportDetails() const { return Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface); }
 
 		static Ref<Swapchain> Create(const SwapchainSpecification& spec);
 
@@ -72,21 +68,15 @@ namespace Aurora::VK {
 		/// Use this function as fallback if something breaks down somewhere else during development.
 		/// Draws just the clear color.
 		/// </summary>
-		void RecordFallbackSwapchainRenderPass();
+		void RecordFallbackSwapchainRenderPass(const FrameData& frame);
 
 	private:
 		void CleanupSwapchain();
-		void AcquireNextFrameData();
-		void Submit();
-		bool Present();
 
 		bool CreateSwapchain(uint32_t width, uint32_t height);
 		bool CreateImageViews();
 		bool CreateRenderPass();
 		bool CreateFramebuffers();
-		bool AllocateCommandBuffers();
-		bool CreateSyncObjects();
-		bool InitializeFrames();
 
 		//For Fallback:
 		bool CreateFallbackPipeline();
@@ -108,12 +98,6 @@ namespace Aurora::VK {
 		std::vector<VkFramebuffer> m_Framebuffers;
 				
 		//per frame data
-		uint8_t m_FramesInFlightIdx = UINT8_MAX;
-		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
-		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
-		std::vector<VkFence> m_InFlightFences;
-		std::vector<VkCommandBuffer> m_CommandBuffers;
-		std::vector<FrameData> m_FramesInFlight;
 				
 		//Fallback rendering only
 		VkPipelineLayout m_FallbackPipelineLayout = VK_NULL_HANDLE;

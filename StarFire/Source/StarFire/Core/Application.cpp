@@ -5,13 +5,10 @@
 #include "StarFire/Core/Timestep.h"
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
-
+#include "StarFire/Imgui/ImGuiLayer.h"
 
 #include <Aurora/Aurora.h>
 #include <Aurora/Logging/LogLevel.h>
-
-
-#include <thread>
 
 namespace StarFire {
 
@@ -81,6 +78,11 @@ namespace StarFire {
 		auto& appSettings = Aurora::ChangeAppSettings();
 		appSettings.SetRootPath(std::filesystem::current_path());
 
+		if (m_Specification.UseImGui)
+		{
+			m_ImGuiLayer = new ImGuiLayer();
+			PushOverlay(m_ImGuiLayer);
+		}
 
 		bool is = std::filesystem::path("blob.ext") == "blob.ext";
 		auto ext = std::filesystem::path("blob.frag.spv").extension();
@@ -94,11 +96,11 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
+		m_LayerStack.Clear();
 		Aurora::Shutdown();
 		m_MainWindow->Close();
 
 		RefRegistry::Get()->PrintRegister();
-		//LayerStack is cleaned automatically
 	}
 
 	void Application::PushOverlay(Layer* overlay)
@@ -132,21 +134,47 @@ namespace StarFire {
 		PROFILE_FUNCTION;
 		PROFILE_THREAD_NAME("Main Thread", 0);
 
-
 		SF_CORE_TRACE("Starting main loop...");
-
-		//temp
-		std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
+		//std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
+		Utils::Timer timer;
 		while (m_Running)
-		{			
-			PROFILE_SCOPE("Event polling loop");
-
-
+		{
+			PROFILE_SCOPE("Frame loop");
 			m_MainWindow->PollEvents();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
+			m_DeltaTimeInS = timer.Timestamp();
+			HandleUserInput();
 
-		appThread.join();
+			if (m_Minimized)
+				SF_CORE_INFO("Application minimized");
+
+
+			if (!Aurora::BeginFrame())
+				continue;
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(Timestep(m_DeltaTimeInS));
+			}
+
+			if (m_ImGuiLayer)
+				m_ImGuiLayer->BeginFrame();
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnGuiRender();
+			}
+
+			if (m_ImGuiLayer)
+				m_ImGuiLayer->EndFrame();
+
+			Aurora::EndFrame();
+			Aurora::SwapFrame();
+
+			PROFILE_FRAME_MARK;
+		}
+		SF_CORE_WARN("Leaving main loop!");
+
+		//appThread.join();
 		SF_CORE_TRACE("Ending main loop...");	
 	}
 
@@ -162,31 +190,32 @@ namespace StarFire {
 
 			m_DeltaTimeInS = timer.Timestamp();
 			HandleUserInput();
-			if (!m_Minimized)
-			{
-
-				if(!Aurora::BeginFrame())
-					continue;
-
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnUpdate(Timestep(m_DeltaTimeInS));
-				}
-				Aurora::EndFrame();
-
-				//Todo: add Aurora::BeginUiFrame
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnGuiRender();
-				}
-				//Todo: add Aurora::EndUiFrame
-
-				Aurora::SwapFrame();
-			}
-			else
-			{
+			if (m_Minimized)
 				SF_CORE_INFO("Application minimized");
+			
+
+			if(!Aurora::BeginFrame())
+				continue;
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(Timestep(m_DeltaTimeInS));
 			}
+
+			if(m_ImGuiLayer)
+				m_ImGuiLayer->BeginFrame();
+			
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnGuiRender();
+			}
+
+			if (m_ImGuiLayer)			
+				m_ImGuiLayer->EndFrame();
+
+			Aurora::EndFrame();
+			Aurora::SwapFrame();
+
 			PROFILE_FRAME_MARK;
 		}
 		SF_CORE_WARN("Leaving main loop!");

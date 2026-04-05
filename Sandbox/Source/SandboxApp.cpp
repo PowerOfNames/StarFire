@@ -33,6 +33,7 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 	StarFire::ApplicationSpecification specs;
 	specs.Name = "StarFire - Sandbox";
+	specs.UseImGui = true;
 
 	return new Sandbox::SandboxApp(specs);
 }

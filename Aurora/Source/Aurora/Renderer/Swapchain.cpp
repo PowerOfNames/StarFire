@@ -47,20 +47,6 @@ namespace Aurora::VK {
 			return;
 		}
 
-		if (!AllocateCommandBuffers())
-		{
-			AURORA_TRACE("Failed to allocate command buffers");
-			return;
-		}
-
-		if (!CreateSyncObjects())
-		{
-			AURORA_TRACE("Failed to create swapchain sync objects");
-			return;
-		}
-
-		InitializeFrames();
-
 		if (!CreateFallbackPipeline())
 		{
 			AURORA_TRACE("Failed to create fallabck pipeline");
@@ -95,21 +81,7 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		vkDeviceWaitIdle(m_Specification.Device);
-
-		for(auto sema : m_ImageAvailableSemaphores)
-			vkDestroySemaphore(m_Specification.Device, sema, nullptr);
-		m_ImageAvailableSemaphores.clear();
-
-		for(auto sema : m_RenderFinishedSemaphores)
-			vkDestroySemaphore(m_Specification.Device, sema, nullptr);
-		m_RenderFinishedSemaphores.clear();
-
-		for(auto fence : m_InFlightFences)
-			vkDestroyFence(m_Specification.Device, fence, nullptr);	
-		m_InFlightFences.clear();
 		
-		vkFreeCommandBuffers(m_Specification.Device, m_Specification.GraphicsCmdPool, static_cast<uint32_t>(m_CommandBuffers.size()), m_CommandBuffers.data());
-
 		CleanupSwapchain();
 
 		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, nullptr);
@@ -125,100 +97,79 @@ namespace Aurora::VK {
 		AURORA_INFO("Destroyed swapchain.");
 	}
 	
-	bool Swapchain::PrepareFrame(uint32_t framesInFlightIdx)
+	bool Swapchain::PrepareFrame(FrameData& frame)
 	{
 		PROFILE_FUNCTION;
-
-		m_FramesInFlightIdx = framesInFlightIdx;
-		AURORA_TRACE("New FIF index: {}", m_FramesInFlightIdx);
-		
+				
 		// EO, because this only happens if Present captured suboptimal but no resize event was triggered yet
 		if (m_NeedsResize)
 			return false;
 
-		AcquireNextFrameData();
+		AURORA_TRACE("Acquire next image {}", frame.FrameIndex);
+		vkWaitForFences(m_Specification.Device, 1, &frame.InFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_Specification.Device, 1, &frame.InFlightFence);
+
+		frame.InPresentation = false;
+
+		VkResult result = vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, 1'000'000'000 /*1sec*/, frame.ImageAvailableSemaphore, VK_NULL_HANDLE, &m_ImageIndex);
+		if (result == VK_SUBOPTIMAL_KHR)
+		{
+			m_NeedsResize = true;
+			AURORA_WARN("Swapchain not optimal.");
+			return false;
+		}
+		
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			m_NeedsResize = true;
+			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
+			return false;
+		}
+		else
+		{
+			AURORA_ASSERT(result == VK_SUCCESS, "Failed to acquire swap chain image!");
+		}
+		frame.TargetView = m_ImageViews[m_ImageIndex];
+		frame.Extent = m_Extent;
+
+		vkResetCommandBuffer(frame.CommandBuffer, 0);
+		AURORA_TRACE("Acquired image {}", frame.FrameIndex);
+
 		if (m_NeedsResize)
 			return false;
-
-		m_FramesInFlight[m_FramesInFlightIdx].IsReady = true;
 
 		return true;
 	}
 
-	void Swapchain::AcquireNextFrameData()
+	bool Swapchain::SwapImages(FrameData& frame)
 	{
 		PROFILE_FUNCTION;
 
-		AURORA_TRACE("Acquire next image {}", m_FramesInFlightIdx);
-
-		FrameData& frame = m_FramesInFlight[m_FramesInFlightIdx];
-
-		vkWaitForFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx], VK_TRUE, UINT64_MAX);
-
-		VkResult result = vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_FramesInFlightIdx], VK_NULL_HANDLE, &m_ImageIndex);
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR)
-		{
-			AURORA_ERROR("Swapchain not fitting. Failed image acquisition. Needs immediate resize.");
-			m_NeedsResize = true;
-			return;
-		}
-		else
-		{
-			AURORA_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Swapchain suboptimal. Require recreate.");
-		}
-
-		vkResetFences(m_Specification.Device, 1, &m_InFlightFences[m_FramesInFlightIdx]);
-		vkResetCommandBuffer(m_CommandBuffers[m_FramesInFlightIdx], 0);
-
-		frame.CommandBuffer = m_CommandBuffers[m_FramesInFlightIdx];
-		frame.FrameIndex = m_FramesInFlightIdx;
-		frame.FrameCount++;
-		AURORA_TRACE("Acquired image {}", m_FramesInFlightIdx);
-	}
-
-	bool Swapchain::SwapImages()
-	{
-		PROFILE_FUNCTION;
-
-		Submit();
-		return Present();
-	}
-
-	void Swapchain::Submit()
-	{
-		PROFILE_FUNCTION;
-
+		// ===== Submission =====
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.pNext = nullptr;
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_FramesInFlight[m_FramesInFlightIdx].CommandBuffer;
+		submitInfo.pCommandBuffers = &frame.CommandBuffer;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[m_FramesInFlightIdx]; //wait until image is available to render/draw to
+		submitInfo.pWaitSemaphores = &frame.ImageAvailableSemaphore; //wait until image is available to render/draw to
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &m_RenderFinishedSemaphores[m_FramesInFlightIdx]; //signal when drawing is finished and ready to be presented
-		AURORA_TRACE("Submitting frame {}", m_FramesInFlightIdx);
+		submitInfo.pSignalSemaphores = &frame.RenderFinishedSemaphore; //signal when drawing is finished and ready to be presented
+		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, frame.InFlightFence), VK_SUCCESS, "Failed to submit draw render buffer!");
 
-		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, m_InFlightFences[m_FramesInFlightIdx]), VK_SUCCESS, "Failed to submit draw render buffer!");
-	}
+		frame.InPresentation = true;
 
-	bool Swapchain::Present()
-	{
-		PROFILE_FUNCTION;
-
-		AURORA_TRACE("Presenting frame {}", m_FramesInFlightIdx);
-
+		// ===== Presentation =====
 		VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 		presentInfo.pNext = nullptr;
 
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &m_Swapchain;
-		presentInfo.pWaitSemaphores = &m_RenderFinishedSemaphores[m_FramesInFlightIdx]; //wait until ready to be presented
+		presentInfo.pWaitSemaphores = &frame.RenderFinishedSemaphore; //wait until ready to be presented
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &m_ImageIndex;
 		presentInfo.pResults = nullptr;
@@ -231,24 +182,24 @@ namespace Aurora::VK {
 		{
 			m_NeedsResize = true;
 			AURORA_WARN("Swapchain not optimal.");
+			return false;
 		}
-		else if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			m_NeedsResize = true;
 			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
 			return false;
 		}
-		else
-		{
-			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");
-		}
-		AURORA_TRACE("Presented frame {}", m_FramesInFlightIdx);
+		AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");
+
+		AURORA_TRACE("Presented frame {}", frame.FrameIndex);
 		return true;
 	}
 
 	void Swapchain::OnResize(uint32_t width, uint32_t height)
 	{
 		PROFILE_FUNCTION;
+
 
 		if (m_Extent.width == width && m_Extent.height == height)
 		{
@@ -285,9 +236,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+
 		SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
 
-		VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
+		//VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
+		VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
 		VkPresentModeKHR presentMode = Helper::ChooseSwapPresentMode(details.PresentModes, VK_PRESENT_MODE_MAILBOX_KHR);
 		VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, width, height);
 
@@ -306,7 +259,7 @@ namespace Aurora::VK {
 		swapInfo.presentMode = presentMode;
 		swapInfo.imageExtent = extent;
 		swapInfo.imageArrayLayers = 1; // for multi target rendering like VR, other 3D applications
-		swapInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		swapInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		QueueFamilyIndices indices = Helper::FindQueueFamilies(m_Specification.PhysicalDevice, m_Specification.Surface);
 		if (indices.SamePresentGraphics)
@@ -423,7 +376,7 @@ namespace Aurora::VK {
 		passInfo.subpassCount = 1;
 		passInfo.pSubpasses = &subpass;
 
-		AURORA_VK_CHECK(vkCreateRenderPass(m_Specification.Device, &passInfo, nullptr, &m_RenderPass), VK_SUCCESS, "Failed to create swapchain render pass");
+		AURORA_VK_CHECK(vkCreateRenderPass(m_Specification.Device, &passInfo, m_Specification.AllocationCallbacks, &m_RenderPass), VK_SUCCESS, "Failed to create swapchain render pass");
 		if (m_RenderPass == VK_NULL_HANDLE)
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)m_RenderPass, "Swapchain_RenderPass");
@@ -452,7 +405,7 @@ namespace Aurora::VK {
 			fbInfo.width = m_Extent.width;
 			fbInfo.layers = 1;
 			fbInfo.renderPass = m_RenderPass;
-			AURORA_VK_CHECK(vkCreateFramebuffer(m_Specification.Device, &fbInfo, nullptr, &m_Framebuffers[i]), VK_SUCCESS, "Failed to create swapchain framebuffer");
+			AURORA_VK_CHECK(vkCreateFramebuffer(m_Specification.Device, &fbInfo, m_Specification.AllocationCallbacks, &m_Framebuffers[i]), VK_SUCCESS, "Failed to create swapchain framebuffer");
 			if (m_Framebuffers[i] == VK_NULL_HANDLE)
 				return false;
 			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)m_Framebuffers[i], "Swapchain_Framebuffer");
@@ -460,72 +413,8 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	bool Swapchain::AllocateCommandBuffers()
-	{
-		PROFILE_FUNCTION;
-
-		m_CommandBuffers.resize(m_Specification.FramesInFlight);
-		VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-		allocInfo.pNext = nullptr;
-		allocInfo.commandBufferCount = 1;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = m_Specification.GraphicsCmdPool;
-		for (uint32_t i = 0; i < m_Specification.FramesInFlight; i++)
-		{
-			AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Specification.Device, &allocInfo, &m_CommandBuffers[i]), VK_SUCCESS, "Failed to allocate swapchain command buffer.");
-			if (m_CommandBuffers[i] == VK_NULL_HANDLE)
-				return false;
-			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_CommandBuffers[i], "Swapchain_commandBuffer_" + std::to_string(i));
-		}
-		return true;
-	}
-
-	bool Swapchain::CreateSyncObjects()
-	{
-		PROFILE_FUNCTION;
-
-		VkSemaphoreCreateInfo semaInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-		semaInfo.pNext = nullptr;
-		semaInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
-		
-		VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-		fenceInfo.pNext = nullptr;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		
-		m_ImageAvailableSemaphores.resize(m_Specification.FramesInFlight);
-		m_RenderFinishedSemaphores.resize(m_Specification.FramesInFlight);
-		m_InFlightFences.resize(m_Specification.FramesInFlight);
-		for (uint32_t i = 0; i < m_Specification.FramesInFlight; i++)
-		{
-			AURORA_VK_CHECK(vkCreateSemaphore(m_Specification.Device, &semaInfo, nullptr, &m_ImageAvailableSemaphores[i]), VK_SUCCESS, "Failed to create image available semaphore.");
-			AURORA_VK_CHECK(vkCreateSemaphore(m_Specification.Device, &semaInfo, nullptr, &m_RenderFinishedSemaphores[i]), VK_SUCCESS, "Failed to create render finished semaphore.");		
-			if (m_ImageAvailableSemaphores[i] == VK_NULL_HANDLE || m_RenderFinishedSemaphores[i] == VK_NULL_HANDLE)
-				return false;
-
-			std::string availableName = "Swapchain_Sema_Ava_" + std::to_string(i);
-			std::string renderFinName = "Swapchain_Sema_RenderFin_" + std::to_string(i);
-			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ImageAvailableSemaphores[i], availableName.c_str());
-			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_RenderFinishedSemaphores[i], "Swapchain_Sema_RenderFin_" + std::to_string(i));
-			
-			std::string inFlightName = "Swapchain_Fence_" + std::to_string(i);
-			AURORA_VK_CHECK(vkCreateFence(m_Specification.Device, &fenceInfo, nullptr, &m_InFlightFences[i]), VK_SUCCESS, "Failed to create in-flight fence.");
-			if (m_InFlightFences[i] == VK_NULL_HANDLE)
-				return false;
-			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_FENCE, (uint64_t)m_InFlightFences[i], inFlightName.c_str());		
-		}
-		return true;
-	}
-
-	bool Swapchain::InitializeFrames()
-	{
-		PROFILE_FUNCTION;
-
-		m_FramesInFlight.resize(m_Specification.FramesInFlight);
-		return true;
-	}	
-
 	//========== Fallback ==========
-	void Swapchain::RecordFallbackSwapchainRenderPass()
+	void Swapchain::RecordFallbackSwapchainRenderPass(const FrameData& frame)
 	{
 		PROFILE_FUNCTION;
 
@@ -539,7 +428,7 @@ namespace Aurora::VK {
 		rpInfo.clearValueCount = 1;
 		rpInfo.pClearValues = &clearColor;
 
-		VkCommandBuffer cmd = m_CommandBuffers[m_FramesInFlightIdx];
+		VkCommandBuffer cmd = frame.CommandBuffer;
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FallbackPipeline);
 

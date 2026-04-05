@@ -1,8 +1,12 @@
 #pragma once
 #include "Aurora/Renderer/VulkanCore.h"
-#include "Aurora/Renderer/RenderContextSpecification.h"
 #include "Aurora/Renderer/DataStructs/PhysicalDeviceLimits.h"
+#include "Aurora/Renderer/DataStructs/FrameData.h"
+#include "Aurora/Renderer/DeletionQueue.h"
+#include "Aurora/Renderer/RenderContextSpecification.h"
 #include "Aurora/Renderer/Swapchain.h"
+#include "Aurora/Renderer/VulkanHelper.h"
+
 
 #include "Substrate/RefCounted.h"
 
@@ -35,7 +39,42 @@ namespace Aurora::VK {
 		void Resize(uint32_t width, uint32_t height);
 		void Destroy();
 
+		inline void SubmitToMainDeletionQueue(std::function<void()> func)
+		{
+			m_MainDeletionQueue.SubmitDeletion(func);
+		}
+		inline void FlushMainDeletionQueue()
+		{
+			m_MainDeletionQueue.FlushDeletions();
+		}
+
+		inline void SubmitToFrameDeletionQueue(uint8_t frameIdx, std::function<void()> func)
+		{
+			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func);
+		}
+
 		inline const RenderContextSpecification& GetSpecification() const { return m_Specification; }
+		
+		inline const FrameData& GetFrameData(uint8_t frameIdx) const { return m_FramesInFlight[frameIdx]; }
+		inline FrameData& GetFrameData(uint8_t frameIdx) { return m_FramesInFlight[frameIdx]; }
+		inline const FrameData& GetCurrentFrameData() const { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
+		inline FrameData& GetCurrentFrameData() { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
+
+		
+		inline VkInstance GetVulkanInstance() const { return m_Instance; }
+		inline VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
+		inline const PhysicalDeviceLimits& GetPhysicalDeviceLimits() const { return m_PhDeviceLimits; }
+		inline VkDevice GetLogicalDevice() const { return m_Device; }
+		inline const QueueFamilies& GetQueueFamilies() const { return m_QueueFamilies; }
+		inline const QueueFamilyIndices GetQueueFamilyIndices() const { return Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface); }
+		inline const VmaAllocator& GetVmaAllocator() const { return m_VmAllocator; }
+		inline const VkApplicationInfo& GetApplicationInfo() const { return m_AppInfo; }
+		inline const VkAllocationCallbacks* GetAllocationCallbacks() const { return m_AllocationCallbacks; }
+
+		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
+		inline Ref<Swapchain> GetSwapchain() const { return m_Swapchain; }
+
+		inline void SetImGuiActivity(bool state) { m_ImGuiInitialized = state; }
 
 		static Ref<RenderContext> Create(const RenderContextSpecification& specs);
 
@@ -52,6 +91,7 @@ namespace Aurora::VK {
 		bool CreateLogicalDevice(const DeviceRequirements& deviceRequirements);
 		bool CreateVmAllocator();
 		bool CreateGraphicsCmdPool();
+		bool CreateFramesInFlight(uint8_t framesInFlight);
 		bool CreateSwapchain(const RenderContextSpecification::SurfaceSpecification& surfaceSpecs);
 
 
@@ -82,12 +122,19 @@ namespace Aurora::VK {
 		VkCommandPool m_GraphicsCmdPool = VK_NULL_HANDLE;
 
 		VmaAllocator m_VmAllocator = VK_NULL_HANDLE;
+		VkAllocationCallbacks* m_AllocationCallbacks = nullptr;
+
+		VkApplicationInfo m_AppInfo{};
 
 		QueueFamilies m_QueueFamilies{};
 
 		PhysicalDeviceLimits m_PhDeviceLimits{};
 
 		Ref<Swapchain> m_Swapchain = nullptr;
+		std::vector<FrameData> m_FramesInFlight;
+		
+
+		DeletionQueue m_MainDeletionQueue{};
 
 		struct RendererStatistics
 		{
@@ -96,6 +143,8 @@ namespace Aurora::VK {
 			uint64_t m_TotalFinishedFrames = 0;
 		};
 		RendererStatistics m_RendererStatistics{};
+
+		bool m_ImGuiInitialized = false;
 	};
 
 }

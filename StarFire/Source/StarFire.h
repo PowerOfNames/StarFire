@@ -7,5 +7,7 @@
 #include "StarFire/Core/Layer.h"
 #include "StarFire/Core/Logging.h"
 
+#include "StarFire/ImGui/ImGuiLayer.h"
+
 
 #include "StarFire/Core/Timestep.h"

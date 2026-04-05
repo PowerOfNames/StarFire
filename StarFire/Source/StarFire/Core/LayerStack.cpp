@@ -10,12 +10,19 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
+		Clear();
+	}
+
+	void LayerStack::Clear()
+	{
+		PROFILE_FUNCTION;
+
 		for (Layer* layer : m_Layers)
 		{
+			PopLayer(layer);
 			delete layer;
 		}
 	}
-
 
 	void LayerStack::PushLayer(Layer* layer)
 	{
