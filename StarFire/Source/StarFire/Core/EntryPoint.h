@@ -27,10 +27,6 @@ int main(int argc, char** argv)
 	SF_CORE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
 	SF_CORE_TRACE("Closing application after {}s", timer.ElapsedTime());
 	StarFire::Log::Shutdown();
-
-#if defined(STARFIRE_DEBUG_MODE)
-	std::cin.get();
-#endif
 }
 #endif
 

@@ -187,6 +187,4 @@ namespace Aurora::Shaders {
     };
     constexpr size_t SwapchainFallback_vert_size = 1500;
 
-
-
 }

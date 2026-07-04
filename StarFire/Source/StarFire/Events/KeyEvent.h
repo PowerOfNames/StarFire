@@ -1,5 +1,6 @@
 #pragma once
 #include "StarFire/Events/Event.h"
+#include "StarFire/Events/EventCategory.h"
 
 #include <sstream>
 

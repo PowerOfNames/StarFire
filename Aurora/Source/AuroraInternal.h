@@ -1,7 +1,10 @@
 #pragma once
-#include "Aurora/Renderer/RenderContext.h"
 #include "Aurora/Core/Core.h"
+#include "Aurora/Renderer/Vulkan/VulkanContext.h"
+#include "Aurora/Renderer/Vulkan/VulkanResourceManager.h"
 
 namespace Aurora {
-	Ref<VK::RenderContext> GetRenderContext();
+	// ========== General ==========
+	Ref<VK::VulkanContext> GetRenderContext();
+	Ref<VK::VulkanResourceManager> GetResourceManager();
 }

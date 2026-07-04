@@ -5,10 +5,6 @@ IncludeDir = {}
 IncludeDir["Aurora"]				= "%{wks.location}/Aurora/Include"
 IncludeDir["Substrate"]				= "%{wks.location}/Substrate/Include"
 
---For unit testing only
-SourceDir = {}
-SourceDir["Substrate"]				= "%{wks.location}/Substrate/Source"
-
 IncludeDir["glm"]					= "%{wks.location}/Dependencies/glm"
 IncludeDir["GLFW"]					= "%{wks.location}/Dependencies/GLFW/include"
 IncludeDir["spdlog"]				= "%{wks.location}/Dependencies/spdlog/include"

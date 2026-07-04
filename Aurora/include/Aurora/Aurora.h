@@ -1,7 +1,8 @@
 #pragma once
 #include "Aurora/Logging/LogLevel.h"
-
-#include "Aurora/Renderer/AssetHandles.h"
+#include "Aurora/Renderer/Handles.h"
+#include "Aurora/Renderer/Image.h"
+#include "Aurora/Renderer/Buffer.h"
 
 #include "Aurora/Renderer/RenderContextSpecification.h"
 
@@ -9,11 +10,13 @@
 
 #include <atomic>
 #include <string>
-#include <string_view>
 
 #define ENABLE_TRACE 0
 
 namespace Aurora {
+
+	// ========== Settings ==========
+	inline AppSettings& ChangeAppSettings() { return AppSettings::Instance(); }
 
 	// ========== Logging ==========
 	using LogCallback = void(*)(LogLevel, const std::string&, const char* file, const char* func, int line);
@@ -25,15 +28,25 @@ namespace Aurora {
 	void SetRefRegistryUnregisterCallback(RegistryUnregisterCallback callback);
 
 	// ========== Render Context ==========
-	bool InitializeRenderContext(const RenderContextSpecification& contextSpecs);
+	bool Initialize(const InitializationSpecification& contextSpecs);
+	bool Shutdown();
 
 	bool BeginFrame();
 	void EndFrame();
 	void SwapFrame();
 	void Resize(uint32_t width, uint32_t height);
-
-	bool Shutdown();
 	
-	// ========== Settings ==========
-	inline AppSettings& ChangeAppSettings() { return AppSettings::Instance(); }
+	// ========== Resources ==========
+	ImageHandle CreateImage(const ImageSpecification& imageSpecs);
+	bool IsHandleValid(ImageHandle handle);
+	void DestroyImage(ImageHandle handle);
+	
+	BufferHandle CreateBuffer(const BufferSpecification& bufferSpecs);
+	void DestroyBuffer(BufferHandle handle);
+
+	VertexBufferHandle CreateVertexBuffer(const VertexBufferSpecification& bufferSpecs);
+	void DestroyVertexBuffer(VertexBufferHandle handle);
+
+	IndexBufferHandle CreateIndexBuffer(const IndexBufferSpecification& bufferSpecs);
+	void DestroyIndexBuffer(IndexBufferHandle handle);
 }

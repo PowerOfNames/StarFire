@@ -4,7 +4,6 @@
 #include "StarFire/Core/Window.h"
 #include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Events/EventQueue.h"
-//#include "StarFire/ImGui/ImGuiLayer.h"
 
 #include <string>
 #include <atomic>
@@ -16,7 +15,6 @@ namespace StarFire {
 		std::string Name;
 		bool UseImGui = false;
 	};
-
 
 	class ImGuiLayer;
 
@@ -36,6 +34,7 @@ namespace StarFire {
 		//Call from the code to stop the update loop
 		void Close();
 
+		inline ImGuiLayer* GetImGuiLayer() const { return m_ImGuiLayer;	}
 
 		inline static Application* Get() { return s_Instance; }
 		inline ApplicationSpecification& GetSpecification() { return m_Specification; }

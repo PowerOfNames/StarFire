@@ -5,7 +5,11 @@
 #include <concepts>
 #include <cstdint>
 
+
 namespace Substrate {
+
+	template<typename TRefCounted>
+	class RefPtr;
 
 	/// <summary>
 	/// Must be derived from and then used with RefPtr to provide reference counting functionality.
@@ -17,6 +21,23 @@ namespace Substrate {
 		RefCounted& operator=(const RefCounted&) = delete;
 		RefCounted(RefCounted&&) = delete;
 		RefCounted& operator=(RefCounted&&) = delete;
+
+
+#if SUBSTRATE_DETAILS_ENABLED
+		uint32_t GetRefCount() const
+		{
+			return m_RefCount.load(std::memory_order_relaxed);
+		}
+#endif
+
+	protected:
+		RefCounted() = default;
+		virtual ~RefCounted() = default;
+
+		//templated friend
+		template<typename TRefCounted>
+		friend class RefPtr;
+		//
 
 		void AddRef()
 		{
@@ -32,16 +53,12 @@ namespace Substrate {
 			}
 		}
 
-#if SUBSTRATE_DETAILS_ENABLED
-		uint32_t GetRefCount() const
+		template<typename TDerived>
+		RefPtr<TDerived> CreateRefFromThis()
 		{
-			return m_RefCount.load(std::memory_order_relaxed);
+			static_assert(std::derived_from<TDerived, RefCounted>, "TDerived must be derived from RefCounted");
+			return RefPtr<TDerived>(static_cast<TDerived*>(this));
 		}
-#endif
-	protected:
-		RefCounted() = default;
-		virtual ~RefCounted() = default;
-
 
 	private:
 		std::atomic<uint32_t> m_RefCount{ 1 };

@@ -1,8 +1,8 @@
 #include "sfpch.h"
 
+#include "StarFire/Core/Core.h"
 #include "StarFire/ImGui/ImGuiLayer.h"
 #include "StarFire/Core/Application.h"
-#include "Aurora/ImGui/ImGuiRenderer.h"
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -24,17 +24,19 @@ namespace StarFire {
 		io.ConfigDpiScaleFonts = true; // Enable DPI scaling for fonts - automatically scales the font size based on DPpi of current display
 
 		ImGui::StyleColorsDark();
+
+		m_ImGuiRenderer = Aurora::ImGuiRenderer::Create();
 	}
 
 	void ImGuiLayer::OnAttach()
 	{
 		ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(Application::Get()->GetMainWindowPtr()->GetNativeWindow()), true);
-		Aurora::ImGuiImpl::Init();
+		m_ImGuiRenderer->Init();
 	}
 
 	void ImGuiLayer::OnDetach()
 	{
-		Aurora::ImGuiImpl::Shutdown();
+		m_ImGuiRenderer->Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
 	}
@@ -47,11 +49,29 @@ namespace StarFire {
 			e.Handled |= e.IsInCategory(EventCategory::MOUSE) & io.WantCaptureMouse;
 			e.Handled |= e.IsInCategory(EventCategory::KEYBOARD) & io.WantCaptureKeyboard;
 		}
+
+		EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(ImGuiLayer::OnWindowResize));
+	}
+
+	bool ImGuiLayer::OnWindowResize(WindowResizeEvent& e)
+	{
+		PROFILE_FUNCTION;
+
+		uint32_t newWidth = e.GetWidth();
+		uint32_t newHeight = e.GetHeight();
+		if (newWidth == 0 || newHeight == 0)	
+			return false;
+		
+		m_ImGuiRenderer->OnWindowResize(newWidth, newHeight);
+		SF_CORE_DEBUG("New extent: [{}|{}]", newWidth, newHeight);
+
+		return false;
 	}
 
 	void ImGuiLayer::BeginFrame() const
 	{
-		Aurora::ImGuiImpl::BeginFrame();
+		m_ImGuiRenderer->BeginFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 	}
@@ -59,7 +79,7 @@ namespace StarFire {
 	void ImGuiLayer::EndFrame() const
 	{
 		ImGui::Render();
-		Aurora::ImGuiImpl::EndFrame();
+		m_ImGuiRenderer->EndFrame();
 		ImGui::EndFrame();
 
 		ImGuiIO& io = ImGui::GetIO();

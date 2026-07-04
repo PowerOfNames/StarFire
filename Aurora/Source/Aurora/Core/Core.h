@@ -2,6 +2,8 @@
 
 #include "Aurora/Core/Logging.h"
 #include "Substrate/RefPtr.h"
+#include "Aurora/Core/Defines.h"
+#include "Aurora/Profiling/Profiling.h"
 
 #ifdef AURORA_DEBUG_MODE
 #define AURORA_ASSERT_ENABLED
@@ -12,14 +14,3 @@
 #else
 #define AURORA_ASSERT(x, ...) do{}while(0)
 #endif
-
-namespace Aurora {
-
-	template<typename TRefCounted>
-	using Ref = Substrate::RefPtr<TRefCounted>;
-	template<typename TRefCounted, typename ... Args>
-	constexpr Ref<TRefCounted> CreateRef(Args&& ... args)
-	{
-		return Ref<TRefCounted>(new TRefCounted(std::forward<Args>(args)...));
-	}
-}

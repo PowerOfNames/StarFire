@@ -51,7 +51,6 @@ filter{}
 	
 	links
 	{
-		"Substrate",
 		"GLFW",
 		"ImGui",
 		"%{Library.Vulkan}",

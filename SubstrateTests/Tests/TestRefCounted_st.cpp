@@ -13,15 +13,12 @@ public:
 	{
 		s_DestructorCalled++;
 	};
-};
 
-template<typename TRefCounted>
-using Ref = Substrate::RefPtr<TRefCounted>;
-template<typename TRefCounted, typename ... Args>
-constexpr Ref<TRefCounted> CreateRef(Args&& ... args)
-{
-	return Ref<TRefCounted>(new TRefCounted(std::forward<Args>(args)...));
-}
+	void DecRefPublic()
+	{
+		DecRef();
+	}
+};
 
 
 TEST_CASE("RefCounted testing (single threaded) - Creation, Destruction", "[RefCounted][CstrDstr_st]")
@@ -118,7 +115,7 @@ TEST_CASE("RefCounted testing (single threaded) - Release", "[RefCounted][Releas
 	TestClass* testRef = instanceOne.Release();
 	REQUIRE(instanceOne.Get() == nullptr);
 	REQUIRE(TestClass::s_DestructorCalled == 0);
-	testRef->DecRef();
+	testRef->DecRefPublic();
 	REQUIRE(TestClass::s_DestructorCalled == 1);
 }
 

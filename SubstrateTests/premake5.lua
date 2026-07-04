@@ -29,13 +29,11 @@ filter {"configurations:Tests"}
 	{
 		"Tests/",
 		"%{IncludeDir.Substrate}",
-		"%{SourceDir.Substrate}",
 		"%{IncludeDir.Catch2}"
 	}
 	
 	links
 	{	
-		"Substrate",
 		"Catch2",
 	}
 	

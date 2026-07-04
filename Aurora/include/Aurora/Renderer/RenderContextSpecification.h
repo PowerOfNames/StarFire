@@ -1,9 +1,11 @@
 #pragma once
 #include "Aurora/Renderer/WSIPlatform.h"
 
+#include <string>
+
 namespace Aurora
 {
-	struct RenderContextSpecification
+	struct InitializationSpecification
 	{
 		std::string AppName = "Sandbox";
 

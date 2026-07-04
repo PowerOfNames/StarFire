@@ -32,7 +32,6 @@ project "Nebula"
 	{
 		"StarFire",
 		"Aurora",
-		"Substrate",
 	}
 	
 	

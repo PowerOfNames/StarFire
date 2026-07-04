@@ -2,8 +2,6 @@
 #include "Substrate/RefCounted.h"
 #include "Substrate/TypeInfo.h"
 
-#include <concepts>
-
 
 namespace Substrate {
 
@@ -237,4 +235,23 @@ namespace Substrate {
 	private:
 		TRefCounted* m_Ptr;
 	};
+}
+
+template<typename TRefCounted>
+using Ref = Substrate::RefPtr<TRefCounted>;
+template<typename TRefCounted, typename ... Args>
+constexpr Ref<TRefCounted> CreateRef(Args&& ... args)
+{
+	return Ref<TRefCounted>(new TRefCounted(std::forward<Args>(args)...));
+}
+
+//TODO: Create unique ptr implementation that is similar to RefPtr but does not have reference counting and only allows move semantics. 
+//		This should be used for objects that are owned by a single owner and do not need shared ownership. We can also add a MakeUnique function similar to CreateRef for convenience.
+#include <memory>
+template<typename T>
+using Scope = std::unique_ptr<T>;
+template<typename T, typename... Args>
+constexpr Scope<T> CreateScope(Args&&... args)
+{
+	return std::make_unique<T>(std::forward<Args>(args)...);
 }

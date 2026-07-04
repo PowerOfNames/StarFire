@@ -5,7 +5,7 @@
 #include "StarFire/Core/Timestep.h"
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
-#include "StarFire/Imgui/ImGuiLayer.h"
+#include "StarFire/ImGui/ImGuiLayer.h"
 
 #include <Aurora/Aurora.h>
 #include <Aurora/Logging/LogLevel.h>
@@ -58,21 +58,21 @@ namespace StarFire {
 				RefRegistry::Get()->Unregister(typeName);
 			});
 		
-		Aurora::RenderContextSpecification renderSpecs{};
-		renderSpecs.AppName = m_Specification.Name;
-		renderSpecs.AppVersion = { 1, 0, 0 };
-		renderSpecs.AuroraVersion = { 1, 0, 0 };
-		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
-		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
-		renderSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
-		renderSpecs.SurfaceSpecs.FramesPerFlight = 2;
-		renderSpecs.SurfaceSpecs.VSync = false;
-		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
-		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
-		renderSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
-		renderSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
-		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
-		Aurora::InitializeRenderContext(renderSpecs);
+		Aurora::InitializationSpecification initSpecs{};
+		initSpecs.AppName = m_Specification.Name;
+		initSpecs.AppVersion = { 1, 0, 0 };
+		initSpecs.AuroraVersion = { 1, 0, 0 };
+		initSpecs.InstanceSpecs.EnableDebugUtils = true;
+		initSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
+		initSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
+		initSpecs.SurfaceSpecs.FramesPerFlight = 2;
+		initSpecs.SurfaceSpecs.VSync = false;
+		initSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
+		initSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
+		initSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
+		initSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
+		initSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
+		Aurora::Initialize(initSpecs);
 		
 		// ========== Register Resources ==========
 		auto& appSettings = Aurora::ChangeAppSettings();
@@ -84,8 +84,8 @@ namespace StarFire {
 			PushOverlay(m_ImGuiLayer);
 		}
 
-		bool is = std::filesystem::path("blob.ext") == "blob.ext";
-		auto ext = std::filesystem::path("blob.frag.spv").extension();
+		//bool is = std::filesystem::path("blob.ext") == "blob.ext";
+		//auto ext = std::filesystem::path("blob.frag.spv").extension();
 
 		RefRegistry::Get()->PrintRegister();
 
@@ -273,7 +273,8 @@ namespace StarFire {
 			return false;
 		}
 		m_Minimized = false;
-		SF_CORE_DEBUG("Window resize to to [{}|{}]", newWidth, newHeight);
+		
+		SF_CORE_DEBUG("Window resize to [{}|{}]", newWidth, newHeight);
 
 		return false;
 	}

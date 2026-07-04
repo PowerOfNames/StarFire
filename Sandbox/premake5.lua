@@ -27,7 +27,6 @@ project "Sandbox"
 	{
 		"StarFire",	
 		"Aurora",
-		"Substrate",
 		--"ImGui",
 	}
 	

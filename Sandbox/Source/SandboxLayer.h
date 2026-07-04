@@ -1,5 +1,8 @@
 #pragma once
-#include <StarFire.h>
+#include "StarFire.h"
+#include "Substrate/RefPtr.h"
+
+#include <glm/glm.hpp>
 
 namespace Sandbox {
 
@@ -20,7 +23,29 @@ namespace Sandbox {
 		void Test();
 
 	private:
+		bool m_OpenDemoWindow = true;
 
+		Ref<Aurora::RenderGraph> m_DefaultRenderGraph;
+		Ref<Aurora::RenderPass> m_TrianglePass;
+		Aurora::Shape2DHandle m_TriangleShapeHandle;
+		Aurora::MaterialHandle m_TriangleColorMaterialHandle;
+
+		struct ViewportPanel
+		{
+			glm::vec2 Bounds[2];
+			uint32_t Width;
+			uint32_t Height;
+			bool IsFocused = false;
+			bool IsHovered = false;
+		};
+		ViewportPanel m_ViewportPanel;
+
+		Aurora::ImageHandle m_ViewportImageHandle;
+
+		Aurora::VertexBufferHandle m_TriangleVertexBufferHandle;
+		Aurora::IndexBufferHandle m_TriangleIndexBufferHandle;
+
+		uint64_t m_ViewportTextureID;
 	};
 	
 }

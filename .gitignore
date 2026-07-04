@@ -13,6 +13,11 @@
 **.spv
 **/Cache/
 
+# Claude Code / local dev tooling
+.claude/
+CLAUDE.md
+Fabric/
+
 # StarFire
 
 # Aurora

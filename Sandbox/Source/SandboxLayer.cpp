@@ -1,6 +1,12 @@
 #include "SandboxLayer.h"
 #include "Profiling/Profiling.h"
 
+#include "StarFire.h"
+#include "Aurora/Aurora.h"
+#include "Aurora/Renderer/RenderGraph.h"
+#include "Aurora/Renderer/RenderPass.h"
+
+
 #include <imgui.h>
 
 namespace Sandbox {
@@ -9,12 +15,71 @@ namespace Sandbox {
 	{
 		PROFILE_FUNCTION;
 
+		Aurora::RenderGraphSpecification rgSpecs{};
+		rgSpecs.Name = "Default Render Graph";
+		m_DefaultRenderGraph = Aurora::RenderGraph::Create(rgSpecs);
+
+		uint32_t width = 800;
+		uint32_t height = 600;
+		// == Simple 2D pass for triangle rendering as test ==
+		{
+			Aurora::RenderPassSpecification specs{};
+			specs.Name = "Triangle Render Pass";
+			Aurora::ImageSpecification color{};
+			color.Name = "Color Attachment";
+			color.Usage = Aurora::ImageUsageFlags::COLOR_ATTACHMENT | Aurora::ImageUsageFlags::SAMPLED;
+			color.Format = Aurora::Format::RGBA8_UNORM;
+			color.Width = width;
+			color.Height = height;
+			specs.ColorAttachments.push_back(std::move(color));
+			specs.DepthAttachment.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT;
+			specs.DepthAttachment.Format = Aurora::Format::DEPTH32_SFLOAT;
+			specs.DepthAttachment.Width = width;
+			specs.DepthAttachment.Height = height;
+			m_TrianglePass = Aurora::RenderPass::Create(specs);
+		}
+
+		{
+			Aurora::ImageSpecification viewportTarget{};
+			viewportTarget.Name = "Viewport Target";
+			viewportTarget.Usage = Aurora::ImageUsageFlags::SAMPLED;
+			viewportTarget.Format = Aurora::Format::RGBA8_UNORM;
+			viewportTarget.Width = width;
+			viewportTarget.Height = height;
+			m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
+		}
+
+		m_ViewportTextureID = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(m_TrianglePass->GetColorAttachmentHandle());
+
+
+		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
+		Aurora::ImageCopyInfo cpyInfo{};
+		cpyInfo.SrcImage = m_TrianglePass->GetColorAttachmentHandle();
+		cpyInfo.DstImage = m_ViewportImageHandle;
+		m_DefaultRenderGraph->AddImageCopy(cpyInfo);
+
+		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
+		m_DefaultRenderGraph->Compile();
 	}
 
 	void SandboxLayer::OnAttach()
 	{
 		PROFILE_FUNCTION;
 
+		// == 1. Build scene ==
+		// We do initial scene building here probably. Not sure if this is also the place to load assets etc for the given scene
+
+		Aurora::VertexLayout vertexBufferLayout({
+			{.Name = "a_Position", .Location = 0, .Type = Aurora::FieldType::POSITION, .Offset = offsetof(StarFire::Vertex, Position) },
+			{.Name = "a_Color", .Location = 1, .Type = Aurora::FieldType::COLOR, .Offset = offsetof(StarFire::Vertex, Color) }
+			});
+		Aurora::VertexBufferSpecification vertexBufferSpecs{};
+		vertexBufferSpecs.Name = "Triangle Vertex Buffer";
+		vertexBufferSpecs.Layout = vertexBufferLayout;
+		vertexBufferSpecs.Size = StarFire::TriangleVertices.size() * sizeof(StarFire::Vertex);
+		vertexBufferSpecs.SpecializationType = Aurora::BufferSpecializationType::STATIC_VERTEX_BUFFER;
+		vertexBufferSpecs.Data = (void*)StarFire::TriangleVertices.data();
+		m_TriangleVertexBufferHandle = Aurora::CreateVertexBuffer(vertexBufferSpecs);
 	}
 
 
@@ -22,12 +87,36 @@ namespace Sandbox {
 	{
 		PROFILE_FUNCTION;
 
+		StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->ReturnTextureIDFromHandle(m_ViewportImageHandle);
+		Aurora::DestroyImage(m_ViewportImageHandle);
+
+		m_DefaultRenderGraph->Destroy();
+		m_DefaultRenderGraph = nullptr;
+		m_TrianglePass = nullptr;
+		//Here the scene resources should be freed (or pushed into destruction queues, etc). This is also probably the place to save the scene if needed
 	}
 
 
 	void SandboxLayer::OnUpdate(StarFire::Timestep deltaTime)
 	{
 		PROFILE_FUNCTION;
+
+		// == 2. Update Scene ==
+
+		//StarFire::RendererAPI::DrawSprite(m_TriangleShapeHandle, m_TriangleTransform, m_TriangleColorMaterialHandle);
+
+		// == 3. Update Physics ==
+
+		// 2. and 3. should probably be just a call into the respective systems to kick their workers
+
+		// == 4. Sync ==
+		// If necessary, we must sync scene and physics now before rendering. This is also the place to do any late updates to the scene that must happen after physics, etc.
+
+		// == 5. Render scene ==
+		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
+
+		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
+		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle);
 
 	}
 
@@ -53,14 +142,14 @@ namespace Sandbox {
 			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 		}
 
-		if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
 			window_flags |= ImGuiWindowFlags_NoBackground;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		ImGui::Begin("Dockspace Demo", &dockspaceOpen, window_flags);
 		ImGui::PopStyleVar();
 
-		
+
 
 		if (opt_fullscreen)
 			ImGui::PopStyleVar(2);
@@ -81,13 +170,8 @@ namespace Sandbox {
 		{
 			if (ImGui::BeginMenu("Test"))
 			{
-				if (ImGui::MenuItem("Nested Test", "Crt+O"))
-					Test();
-
-				ImGui::Separator();
-
 				if (ImGui::MenuItem("Nested Test 2", "Crt+P"))
-					Test();
+					ImGui::Checkbox("Demo", &m_OpenDemoWindow);
 
 				ImGui::EndMenu();
 			}
@@ -95,11 +179,33 @@ namespace Sandbox {
 			ImGui::EndMenuBar();
 		}
 
-		ImGui::ShowDemoWindow();
+		if (m_OpenDemoWindow)
+			ImGui::ShowDemoWindow();
+
+		// ===== Viewport =====
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		{
+			ImGui::Begin("Viewport");
+			ImVec2 viewportMinRegion = ImGui::GetWindowContentRegionMin();
+			ImVec2 viewportMaxRegion = ImGui::GetWindowContentRegionMax();
+			ImVec2 viewportOffset = ImGui::GetWindowPos();
+
+			m_ViewportPanel.Bounds[0] = { viewportMinRegion.x + viewportOffset.x, viewportMinRegion.y + viewportOffset.y };
+			m_ViewportPanel.Bounds[1] = { viewportMaxRegion.x + viewportOffset.x, viewportMaxRegion.y + viewportOffset.y };
+
+			m_ViewportPanel.IsFocused = ImGui::IsWindowFocused();
+			m_ViewportPanel.IsHovered = ImGui::IsWindowHovered();
+			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
+
+			ImGui::Image(m_ViewportTextureID, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+
+			ImGui::End();
+		}
+		ImGui::PopStyleVar();
 
 
 		ImGui::End();
-	}	
+	}
 
 	void SandboxLayer::OnEvent(StarFire::Event& e)
 	{

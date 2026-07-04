@@ -44,7 +44,6 @@ filter{}
 	links
 	{
 		"Aurora",
-		"Substrate",
 		"GLFW",
 		"ImGui",
 	}
