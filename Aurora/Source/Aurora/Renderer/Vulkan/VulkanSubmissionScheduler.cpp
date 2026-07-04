@@ -34,15 +34,6 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-
-		if (!forceNow)
-		{
-			m_Context->AddDeferredBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions);
-			return;
-		}
-
-		m_Context->ImmediateSubmit([this](VkCommandBuffer) {
-
-		});
+		m_Context->AddDeferredBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions, forceNow);
 	}
 }

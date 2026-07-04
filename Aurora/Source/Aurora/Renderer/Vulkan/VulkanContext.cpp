@@ -118,7 +118,7 @@ namespace Aurora::VK {
 
 		AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
 
-		m_MainDeletionQueue.FlushDeletions();
+		m_MainDeletionQueue.Flush(m_Device);
 		m_FramesInFlight.clear();
 
 		AURORA_INFO("Destroyed all vulkan context objects.");
@@ -129,7 +129,12 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+		//Cleanup old frame
+		FlushFrameDeletionQueue(m_RendererStatistics.FramesInFlightIdx);
+		
+		//Prepare next frame
 		IncrementFramesInFlightIdx();
+
 		AURORA_TRACE("Beginning frame {}", m_RendererStatistics.FramesInFlightIdx);
 		VulkanFrame& frame = GetCurrentFrameData();
 		if (!m_Swapchain->PrepareFrame(frame))
@@ -944,6 +949,21 @@ namespace Aurora::VK {
 		return true;
 	}
 
+
+	// == Frame management ==
+	void VulkanContext::FlushFrameDeletionQueue(uint8_t frameIdx)
+	{
+		PROFILE_FUNCTION;
+
+		if (frameIdx >= m_FramesInFlight.size())
+		{
+			AURORA_ERROR("Invalid frame index for deletion queue flush!");
+			return;
+		}
+
+		m_FramesInFlight[frameIdx].DeletionQueue.Flush(m_Device);
+	}
+
 	void VulkanContext::IncrementFramesInFlightIdx()
 	{
 		PROFILE_FUNCTION;
@@ -952,11 +972,16 @@ namespace Aurora::VK {
 		m_RendererStatistics.TotalAttemptedFrames++;
 	}
 
-	void VulkanContext::AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops)
+	// == Submissions == TODO: to be refactored
+	void VulkanContext::AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
-		m_DeferredBufferCopySubmissionOps.insert(m_DeferredBufferCopySubmissionOps.end(), ops.begin(), ops.end());
+		if(!forceNow)
+			m_DeferredBufferCopySubmissionOps.insert(m_DeferredBufferCopySubmissionOps.end(), ops.begin(), ops.end());
+		else
+			for (const VulkanBufferCopyOp& op : ops)
+				HandleBufferCopySubmissionOp(op);
 	}
 
 	void VulkanContext::HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op)
@@ -978,7 +1003,6 @@ namespace Aurora::VK {
 			return;
 		}
 
-		//3.
 		if (dstData->Size < srcData->Size)
 		{
 			AURORA_ERROR("Dst data too small for src");
@@ -986,14 +1010,14 @@ namespace Aurora::VK {
 		}
 
 		//TODO: decide which queue should handle this
-		//4.
 		QueueOwner copyQueue = QueueOwner::TRANSFER;
 		uint32_t copyQueueIndex = GetQueueFamilyIndexFromOwner(copyQueue);
-		//5.
+		std::vector<TimelineSemaphore> additionalWaits;
 		//We need to realase them on their current queue if they are currently in an owned state (current != unknown) and if current differs from copyQueue
 		if (srcData->CurrentOwner != QueueOwner::UNKNOWN && srcData->CurrentOwner != copyQueue)
 		{
 			uint32_t srcQueueIndex = GetQueueFamilyIndexFromOwner(srcData->CurrentOwner);
+			SubmitSpecifications submitSpecs{ srcData->CurrentOwner };
 			//6.1 transfer src ownership - release
 			ImmediateSubmit([
 				this,
@@ -1027,17 +1051,18 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 				vkCmdPipelineBarrier2(cmd, &dependency);
 				//release barrier
-			}, srcData->CurrentOwner);
+			}, submitSpecs);
 			srcData->LastOwner = srcData->CurrentOwner;
 			srcData->CurrentOwner = QueueOwner::UNKNOWN;
 			srcData->NextOwner = copyQueue;
+			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(srcData->LastOwner));
 		}
 
 		//we cant handle both resources in one submit because they might be used in different pipeline stages, as well as different queues (src.CurrentOwner != dst.CurrentOwner) and we need to release them on their current queue
 		if (dstData->CurrentOwner != QueueOwner::UNKNOWN && dstData->CurrentOwner != copyQueue)
 		{
 			uint32_t dstQueueIndex = GetQueueFamilyIndexFromOwner(dstData->CurrentOwner);
-
+			SubmitSpecifications submitSpecs{ dstData->CurrentOwner };
 			//6.1 transfer dst ownership - release
 			ImmediateSubmit([
 				this,
@@ -1070,11 +1095,12 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 
 				vkCmdPipelineBarrier2(cmd, &dependency);
-			}, dstData->CurrentOwner);
+			}, submitSpecs);
 
 			dstData->LastOwner = dstData->CurrentOwner;
 			dstData->CurrentOwner = QueueOwner::UNKNOWN;
 			dstData->NextOwner = copyQueue;
+			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstData->LastOwner));
 		}
 
 		//No sure if we need to check if current is UNKNOWN, because we set current owner to UNKNOWN after releasing, so technically we need to check if last was unknown as well
@@ -1086,6 +1112,8 @@ namespace Aurora::VK {
 		uint32_t dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstData->LastOwner);
 		uint32_t dstTarQueueIndex = GetQueueFamilyIndexFromOwner(op.NextDstOwner);
 		
+		SubmitSpecifications submitSpecs{ copyQueue };
+		submitSpecs.AdditionalWaitSemaphores = additionalWaits;
 		ImmediateSubmit([
 			this,
 			srcNeedsAcquire = srcNeedsAcquire,
@@ -1176,10 +1204,11 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 				vkCmdPipelineBarrier2(cmd, &dependency);
 			}
-		}, copyQueue);
+		}, submitSpecs);
 
 		srcData->CurrentOwner = copyQueue;
 		srcData->NextOwner = op.NextDstOwner;
+
 		dstData->LastOwner = copyQueue;
 		dstData->CurrentOwner = op.NextDstOwner;
 		dstData->NextOwner = QueueOwner::UNKNOWN;
@@ -1213,40 +1242,19 @@ namespace Aurora::VK {
 
 		//TODO: for now we just clear the ops, but we might want to keep them around for debugging or replaying later
 		m_DeferredBufferCopySubmissionOps.clear();
-	}
+	}	
 
 	void VulkanContext::CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/)
 	{
 		PROFILE_FUNCTION;
 
-		//early outs
-		//1. check if src and dst are not the same
-		//2. check if src and dst are valid
-		//3. check if dst has enough space for src
-
-		// preparation
-		//4. check if we should do the copy on graphics or transfer queue (TODO: decide on metric for this)
-		//5. check current owners of buffers, if target queue is decided, transfer ownership of buffers over if needed
-		//6.1 either submit release and acquire immediately (forceNow == true) or split them up
-		//6.2 chain release->acquire using timeline but wait on cpu (if not forceNow)
-		//7. chain copy behind acquire
-		//8. chain release of ownership back to target and signal on cpu if not forceNow
-		//9. signaled semaphore is owned by copy queue, so we cup wait on that before we even submit the acquire on the target queue
-		//10. target queue waits on release semaphore on cpu
-		//11. target submits acquire barrier
-		//12. target signals target queue semaphore such that target can wait on it before using it ? not sure (barrier SHOULD be enough,
-		//	at least if acquire and usage are recorded in porper order on same cmd, otherwise we need semaphore
-
-		//1.
 		if (src == dst)
 		{
 			AURORA_ERROR("Src handle equals dst handle");
 			return;
 		}
 
-
 		Ref<VulkanResourceManager> res = GetResourceManager();
-		//2.
 		VulkanBufferData* srcData = res->GetBufferData(src);
 		if (!srcData)
 		{
@@ -1260,39 +1268,40 @@ namespace Aurora::VK {
 			return;
 		}
 
-		//3.
 		if (dstData->Size < srcData->Size)
 		{
 			AURORA_ERROR("Dst data too small for src");
 			return;
 		}
 
-
 		VulkanSubmissionScheduler(CreateRefFromThis<VulkanContext>())
 			.CopyBufferToBuffer(src, dst, destroySrc, QueueOwner::GRAPHICS)
 			.ScheduleSubmissions(forceNow);
-
 	}
 
-	void VulkanContext::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& recordFunc, QueueOwner owner /*= QueueOwner::GRAPHICS*/)
+	void VulkanContext::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& recordFunc, const SubmitSpecifications& specs)
 	{
 		PROFILE_FUNCTION;
 
 		//AURORA_VK_CHECK(vkWaitForFences(m_Device, 1, &m_TransferFence, VK_TRUE, UINT64_MAX), VK_SUCCESS, "Failed to wait for transfer fence.");
 		//AURORA_VK_CHECK(vkResetFences(m_Device, 1, &m_TransferFence), VK_SUCCESS, "Failed to reset transfer fence.");
 
+		VkCommandBuffer cmd = GetCommandBufferFromQueueOwner(specs.Queue);
+		TimelineSemaphore& semaphore = GetSubmissionSemaFromQueueOwner(specs.Queue);
+		std::vector<TimelineSemaphore> waits = specs.AdditionalWaitSemaphores;
+		waits.push_back(semaphore);
 
-		const uint64_t waitValue = m_TransferSubmitSemaphore.Value;
-		const uint64_t signalValue = ++m_TransferSubmitSemaphore.Value;
-		VkCommandBuffer cmd = owner == QueueOwner::GRAPHICS ? m_GraphicsTransferCmdBuffer : (owner == QueueOwner::TRANSFER ? m_TransferCmdBuffer : m_ComputeTransferCmdBuffer);
-		TimelineSemaphore& semaphore = owner == QueueOwner::GRAPHICS ? m_GraphicsSubmitSemaphore : (owner == QueueOwner::TRANSFER ? m_TransferSubmitSemaphore : m_ComputeSubmitSemaphore);
-
-		VkSemaphoreSubmitInfo waitSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
-		waitSemaphoreInfo.pNext = nullptr;
-		waitSemaphoreInfo.semaphore = semaphore.Semaphore;
-		waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		waitSemaphoreInfo.deviceIndex = 0;
-		waitSemaphoreInfo.value = semaphore.Value;
+		std::vector<VkSemaphoreSubmitInfo> waitSemaphoreInfos;
+		for (const TimelineSemaphore& semaphore : waits)
+		{
+			VkSemaphoreSubmitInfo waitSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+			waitSemaphoreInfo.pNext = nullptr;
+			waitSemaphoreInfo.semaphore = semaphore.Semaphore;
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+			waitSemaphoreInfo.deviceIndex = 0;
+			waitSemaphoreInfo.value = semaphore.Value;
+			waitSemaphoreInfos.push_back(waitSemaphoreInfo);
+		}
 
 		VkSemaphoreSubmitInfo signalSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
 		signalSemaphoreInfo.pNext = nullptr;
@@ -1320,21 +1329,27 @@ namespace Aurora::VK {
 		submitInfo.flags = 0;
 		submitInfo.commandBufferInfoCount = 1;
 		submitInfo.pCommandBufferInfos = &cmdBufferSubmitInfo;
-		submitInfo.waitSemaphoreInfoCount = 1;
-		submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+		submitInfo.waitSemaphoreInfoCount = static_cast<uint32_t>(waitSemaphoreInfos.size());
+		submitInfo.pWaitSemaphoreInfos = waitSemaphoreInfos.data();
 		submitInfo.signalSemaphoreInfoCount = 1;
 		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
 
-		VkQueue queue = GetQueueFromOwner(owner);
-		if (queue == VK_NULL_HANDLE)
+		VkQueue vkQueue = GetQueueFromOwner(specs.Queue);
+		if (vkQueue == VK_NULL_HANDLE)
 		{
 			AURORA_ERROR("Failed to get queue for immediate submit.");
 			return;
 		}
 
-		AURORA_VK_CHECK(vkQueueSubmit2(queue, 1, &submitInfo, nullptr), VK_SUCCESS, "Failed to submit command buffer for immediate submit.");
+		AURORA_VK_CHECK(vkQueueSubmit2(vkQueue, 1, &submitInfo, nullptr), VK_SUCCESS, "Failed to submit command buffer for immediate submit.");
 	}
 
+	TimelineSemaphore VulkanContext::GetQueueSemaphoreSnapshot(QueueOwner owner)
+	{
+		if (owner == QueueOwner::UNKNOWN)
+			return {};
+		return GetSubmissionSemaFromQueueOwner(owner);
+	}
 
 	uint32_t VulkanContext::GetQueueFamilyIndexFromOwner(QueueOwner owner) const
 	{
@@ -1353,6 +1368,49 @@ namespace Aurora::VK {
 
 		AURORA_ERROR("Queue for owner {} not found.", QueueOwnerToString(owner));
 		return VK_NULL_HANDLE;
+	}
+	TimelineSemaphore& VulkanContext::GetSubmissionSemaFromQueueOwner(QueueOwner owner)
+	{
+		PROFILE_FUNCTION;
+
+		switch (owner)
+		{
+			case QueueOwner::GRAPHICS:
+				return m_GraphicsSubmitSemaphore;
+				break;
+			case QueueOwner::TRANSFER:
+				return m_TransferSubmitSemaphore;
+				break;
+			case QueueOwner::COMPUTE:
+				return m_ComputeSubmitSemaphore;
+				break;
+			default:
+				AURORA_ERROR("Invalid queue owner for TimelineSemaphore. Using Graphics semaphore (default).");
+				AURORA_ASSERT(false, "Invalid queue owner for TimelineSemaphore selection.");
+				return m_GraphicsSubmitSemaphore;
+		}
+	}
+	VkCommandBuffer VulkanContext::GetCommandBufferFromQueueOwner(QueueOwner owner)
+	{
+		PROFILE_FUNCTION;
+		VkCommandBuffer cmd = VK_NULL_HANDLE;
+		switch (owner)
+		{
+			case QueueOwner::GRAPHICS:
+				cmd = m_GraphicsTransferCmdBuffer;
+				break;
+			case QueueOwner::TRANSFER:
+				cmd = m_TransferCmdBuffer;
+				break;
+			case QueueOwner::COMPUTE:
+				cmd = m_ComputeTransferCmdBuffer;
+				break;
+			default:
+				AURORA_ERROR("Invalid queue owner for CommandBuffer. Using Graphics command buffer (default).");
+				AURORA_ASSERT(false, "Invalid queue owner for CommandBuffer selection.");
+				return m_GraphicsTransferCmdBuffer;
+		}
+		return cmd;
 	}
 
 	bool VulkanContext::CheckTimelineSemaphore(VkSemaphore sema, uint64_t targetValue) const

@@ -264,10 +264,13 @@ namespace Aurora::VK {
 			return;
 		}
 
+		// CAUTION: this currently only works for Submission only resources. As soon as a resource is used by the GPU during frames, which do currently not use the submission semaphores (queuSemaphors)
+		//			this is not true anymore.
+		TimelineSemaphore semaphoreSnapshot = m_VulkanContext->GetQueueSemaphoreSnapshot(data->CurrentOwner);
 		m_VulkanContext->SubmitToFrameDeletionQueue([vmaAllocator = m_VulkanContext->GetVmaAllocator(), handle = data->Buffer, allocation = data->Allocation]()
 		{
 			vmaDestroyBuffer(vmaAllocator, handle, allocation);
-		});
+		}, semaphoreSnapshot.Semaphore, semaphoreSnapshot.Value);
 
 		m_BufferAllocator.Free(handle);
 	}

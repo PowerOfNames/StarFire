@@ -16,6 +16,14 @@ namespace Aurora::VK {
 		
 	using RenderCommand = std::function<void(VkCommandBuffer cmd)>;
 
+	//TODO: refactor out:
+	struct SubmitSpecifications
+	{
+		QueueOwner Queue = QueueOwner::GRAPHICS;
+		std::vector<TimelineSemaphore> AdditionalWaitSemaphores;
+		std::vector<TimelineSemaphore> AdditionalSignalSemaphores;
+	};
+
 	class VulkanContext : public Substrate::RefCounted
 	{
 	public:
@@ -36,12 +44,12 @@ namespace Aurora::VK {
 		}
 		inline void FlushMainDeletionQueue()
 		{
-			m_MainDeletionQueue.FlushDeletions();
+			m_MainDeletionQueue.Flush(m_Device);
 		}
 
-		inline void SubmitToFrameDeletionQueue(std::function<void()> func)
+		inline void SubmitToFrameDeletionQueue(std::function<void()> func, VkSemaphore semaphore = VK_NULL_HANDLE, uint64_t value = 0)
 		{
-			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func);
+			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func, semaphore, value);
 		}
 
 		inline void SubmitRenderCommand(const RenderCommand&& cmd)
@@ -49,13 +57,13 @@ namespace Aurora::VK {
 			RenderCommandQueue.push_back(cmd);
 		}
 
-		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops);
+		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
 
-		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow = false, bool destroySrc = true);
+		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
+		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
 
-		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, QueueOwner owner = QueueOwner::GRAPHICS);
-
+		
 		inline const InitializationSpecification& GetSpecification() const { return m_Specification; }
 		
 		inline const VulkanFrame& GetFrameData(uint8_t frameIdx) const { return m_FramesInFlight[frameIdx]; }
@@ -63,6 +71,7 @@ namespace Aurora::VK {
 		inline const VulkanFrame& GetCurrentFrameData() const { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
 		inline VulkanFrame& GetCurrentFrameData() { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
 
+		TimelineSemaphore GetQueueSemaphoreSnapshot(QueueOwner owner);
 		uint32_t GetQueueFamilyIndexFromOwner(QueueOwner owner) const;
 		VkQueue GetQueueFromOwner(QueueOwner owner) const;
 
@@ -116,12 +125,18 @@ namespace Aurora::VK {
 
 
 		// ===== SubmissionHelper =====
-		// TODO: refactor out
+		// TODO: refactor out - needs to be public atm to grant access to SubmissionScheduler for immediate submit
 		void HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op);
-
-
+		TimelineSemaphore& GetSubmissionSemaFromQueueOwner(QueueOwner owner);
+		VkCommandBuffer GetCommandBufferFromQueueOwner(QueueOwner owner);
+		
 		// ===== =====
 
+		// == Frame management ==
+		void FlushFrameDeletionQueue(uint8_t frameIdx);
+		void IncrementFramesInFlightIdx();		
+		
+		
 		//keep scoring up-to-date later (#76)
 		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
 		bool CheckRequiredDeviceExtensionSupport(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
@@ -135,7 +150,7 @@ namespace Aurora::VK {
 		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel = false);
 
-		void IncrementFramesInFlightIdx();		
+
 
 	private:
 		InitializationSpecification m_Specification;
