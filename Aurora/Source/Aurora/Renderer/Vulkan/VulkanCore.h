@@ -85,30 +85,17 @@ namespace Aurora::VK {
 		}
 	};
 
-	struct BufferQueueOwnershipTransferData
-	{
-		BufferHandle Buffer;
-		VkPipelineStageFlags2 SrcStage = 0;
-		VkAccessFlags2 SrcAccess = 0;
-		VkPipelineStageFlags2 DstStage = 0;
-		VkAccessFlags2 DstAccess = 0;
-
-		uint64_t TimelineWaitValue = 0;
-		uint32_t OtherQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		bool IsRelease = false; // if false -> acquire
-	};
-
-	struct SubmitBarrierData
-	{
-		BufferHandle Buffer = BufferHandle::INVALID_HANDLE;
-		ImageHandle Image = ImageHandle::INVALID_HANDLE;
-
-	};
-
 	struct TimelineSemaphore
 	{
 		VkSemaphore Semaphore = VK_NULL_HANDLE;
 		uint64_t Value = 0;
+	};
+
+	struct PendingResourceUpload
+	{
+		VkSemaphore SignalSemaphore = VK_NULL_HANDLE;
+		uint64_t SignalValue = 0;
+		BufferHandle Handle = BufferHandle::INVALID_HANDLE;
 	};
 
 	enum class QueueOwner : uint8_t
@@ -191,8 +178,6 @@ namespace Aurora::VK {
 		QueueOwner LastOwner = QueueOwner::UNKNOWN;			//42 - aligned to 48 bytes
 		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;		//43 - aligned to 48 bytes
 		QueueOwner NextOwner = QueueOwner::UNKNOWN;			//44 - aligned to 48 bytes
-
-		bool InUse = false; // Set to true when the image is in use by the GPU (e.g. during rendering or a copy operation). Used to prevent resource deletion while the image is still in use.
 	};
 
 	struct VulkanBufferData
@@ -210,6 +195,6 @@ namespace Aurora::VK {
 		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;
 		QueueOwner NextOwner = QueueOwner::UNKNOWN;
 
-		bool InUse = false; // Set to true when the buffer is in use by the GPU (e.g. during rendering or a copy operation). Used to prevent resource deletion while the buffer is still in use.
+		bool IsReady = true;
 	};
 }

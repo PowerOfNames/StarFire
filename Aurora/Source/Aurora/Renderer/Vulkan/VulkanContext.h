@@ -2,7 +2,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/DeletionQueue.h"
 #include "Aurora/Renderer/RenderContextSpecification.h"
-#include "Aurora/Renderer/SubmissionOps.h"
+#include "Aurora/Renderer/Handles.h"
 
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
@@ -133,7 +133,9 @@ namespace Aurora::VK {
 		// ===== =====
 
 		// == Frame management ==
+		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle);
 		void FlushFrameDeletionQueue(uint8_t frameIdx);
+		void PollPendingResourceUploads();
 		void IncrementFramesInFlightIdx();		
 		
 		
@@ -180,6 +182,7 @@ namespace Aurora::VK {
 		std::unordered_map<QueueOwner, uint32_t> m_QueueOwnerIndices;
 		std::unordered_map<QueueOwner, VkQueue> m_QueueOwnerQueues;
 		std::vector<VulkanBufferCopyOp> m_DeferredBufferCopySubmissionOps;
+		std::vector<PendingResourceUpload> m_PendingResourceUploads;
 
 		VmaAllocator m_VmAllocator = VK_NULL_HANDLE;
 		VkAllocationCallbacks* m_AllocationCallbacks = nullptr;

@@ -140,6 +140,7 @@ namespace Aurora::VK {
 		if (!m_Swapchain->PrepareFrame(frame))
 			return false;
 
+		PollPendingResourceUploads();
 		FlushDeferredSubmissionOps();
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -964,6 +965,43 @@ namespace Aurora::VK {
 		m_FramesInFlight[frameIdx].DeletionQueue.Flush(m_Device);
 	}
 
+	void VulkanContext::AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle)
+	{
+		PROFILE_FUNCTION;
+
+		PendingResourceUpload upload{};
+		upload.SignalSemaphore = semaphore;
+		upload.SignalValue = signalValue;
+		upload.Handle = handle;
+		m_PendingResourceUploads.push_back(upload);
+	}
+
+	void VulkanContext::PollPendingResourceUploads()
+	{
+		PROFILE_FUNCTION;
+
+
+		for (size_t i = 0; i < m_PendingResourceUploads.size();)
+		{
+			const auto& res = m_PendingResourceUploads[i];
+			uint64_t currentValue = 0;
+			AURORA_VK_CHECK(vkGetSemaphoreCounterValue(m_Device, res.SignalSemaphore, &currentValue), VK_SUCCESS, "Failed to get semaphore counter value.");
+			if (currentValue < res.SignalValue)
+			{
+				++i;
+				continue;
+			}
+
+			if (VulkanBufferData* data = GetResourceManager()->GetBufferData(res.Handle))
+			{
+				data->IsReady = true;
+				AURORA_INFO("Resource upload completed for buffer handle {}.", (uint16_t)res.Handle);
+			}
+			m_PendingResourceUploads[i] = m_PendingResourceUploads.back();
+			m_PendingResourceUploads.pop_back();
+		}
+	}
+
 	void VulkanContext::IncrementFramesInFlightIdx()
 	{
 		PROFILE_FUNCTION;
@@ -1205,14 +1243,59 @@ namespace Aurora::VK {
 				vkCmdPipelineBarrier2(cmd, &dependency);
 			}
 		}, submitSpecs);
+				
 
 		srcData->CurrentOwner = copyQueue;
 		srcData->NextOwner = op.NextDstOwner;
 
+
+		dstData->LastOwner = copyQueue;
+		dstData->CurrentOwner = QueueOwner::UNKNOWN;
+		dstData->NextOwner = op.NextDstOwner;
+
+		TimelineSemaphore uploadSignalSema = GetSubmissionSemaFromQueueOwner(dstData->LastOwner);
+		AddPendingUpload(uploadSignalSema.Semaphore, uploadSignalSema.Value, op.Dst);
+
+		if (dstNeedsRelease)
+		{
+			additionalWaits.clear();
+			additionalWaits.push_back(uploadSignalSema);
+			uint32_t srcQueueIndex = GetQueueFamilyIndexFromOwner(dstData->LastOwner);
+			uint32_t dstQueueIndex = GetQueueFamilyIndexFromOwner(dstData->NextOwner);
+			SubmitSpecifications submitSpecs{ dstData->NextOwner, additionalWaits };
+			ImmediateSubmit([
+				this,
+				buffer = dstData->Buffer,
+				offset = dstData->Offset,
+				size = dstData->Size,
+				srcQIndex = srcQueueIndex,
+				dstQIndex = dstQueueIndex,
+				lastUsage = dstData->Usage,
+				queue = op.NextDstOwner
+			](VkCommandBuffer cmd) {
+				//acquire barrier
+				VkBufferMemoryBarrier2 acquireBarrier = Creators::EmitAcquireBarrier(buffer,
+					offset,
+					size,
+					srcQIndex,
+					dstQIndex,
+					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
+					GetStageFromBufferUsage(lastUsage),
+					GetAccessFromBufferUsage(lastUsage));
+
+				VkDependencyInfo dependency{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+				dependency.pNext = nullptr;
+				dependency.bufferMemoryBarrierCount = 1;
+				dependency.pBufferMemoryBarriers = &acquireBarrier;
+				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
+
+				vkCmdPipelineBarrier2(cmd, &dependency);
+			}, submitSpecs);
+		}
+
 		dstData->LastOwner = copyQueue;
 		dstData->CurrentOwner = op.NextDstOwner;
-		dstData->NextOwner = QueueOwner::UNKNOWN;
-				
+		dstData->NextOwner = QueueOwner::UNKNOWN;				
 
 		if (op.DestroySrc)
 			res->DestroyBuffer(op.Src);

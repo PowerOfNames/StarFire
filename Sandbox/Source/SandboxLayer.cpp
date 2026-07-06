@@ -93,6 +93,8 @@ namespace Sandbox {
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
 		m_TrianglePass = nullptr;
+		Aurora::DestroyVertexBuffer(m_TriangleVertexBufferHandle);
+		m_TriangleVertexBufferHandle = Aurora::VertexBufferHandle::INVALID_HANDLE;
 		//Here the scene resources should be freed (or pushed into destruction queues, etc). This is also probably the place to save the scene if needed
 	}
 

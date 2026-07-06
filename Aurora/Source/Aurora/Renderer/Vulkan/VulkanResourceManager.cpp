@@ -113,7 +113,7 @@ namespace Aurora::VK {
 		if (!success)
 		{
 			AURORA_ERROR("Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle));
-			m_BufferAllocator.Free(handle);
+			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingData->Buffer), "StagingBuffer");
@@ -128,6 +128,8 @@ namespace Aurora::VK {
 		if (!mappedData)
 		{
 			AURORA_ERROR("Failed to map memory for buffer upload.");
+			vmaDestroyBuffer(m_VulkanContext->GetVmaAllocator(), stagingData->Buffer, stagingData->Allocation);
+			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
 		std::memcpy(mappedData, data, size);
@@ -343,11 +345,15 @@ namespace Aurora::VK {
 		data->LastOwner = QueueOwner::UNKNOWN;
 		data->CurrentOwner = QueueOwner::UNKNOWN;
 		data->NextOwner = QueueOwner::UNKNOWN;
+		data->Usage = BufferUsageFlags::VERTEX_BUFFER;
 
 		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownershitp to transfer queue 
 		// and then upload the data via a staging buffer and then copy the staging content into data
 		if (bufferSpecs.Data)
-			UploadBufferData(handle.As<BufferHandle>(), data, data->Size);
+		{
+			data->IsReady = false; // mark buffer as not ready until the upload is finished
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+		}
 		
 
 		return handle;
