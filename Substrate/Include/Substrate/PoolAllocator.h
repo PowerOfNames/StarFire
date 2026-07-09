@@ -134,7 +134,7 @@ namespace Substrate {
 		if (!IsHandleValid(resourceHandle))
 			return nullptr; // Invalid handle or handle was already freed
 
-		TBlockType* blockPtr = m_MemoryBlock + (sizeof(TBlockType) * internal.Index());
+		TBlockType* blockPtr = m_MemoryBlock + internal.Index();
 		return blockPtr;
 	}
 

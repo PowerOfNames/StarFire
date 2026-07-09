@@ -101,7 +101,13 @@ TEST_CASE("Pool Allocator", "[Allocator][Pool]")
 		Allocator allocator;
 		for (size_t i = 0; i < MaxAllocations; i++)
 		{
-			allocator.Allocate();
+			uint32_t handle = allocator.Allocate();
+			TestStruct* ptr = allocator.GetPointerFromHandle(handle);
+			ptr->a = static_cast<uint32_t>(i);
+			REQUIRE(ptr != nullptr);
+
+			TestStruct* ptr2 = allocator.GetPointerFromHandle(handle);
+			REQUIRE(ptr2->a == static_cast<uint32_t>(i));
 		}
 		REQUIRE(allocator.GetUsedMemory() == MaxAllocations * TestStructSize);
 		REQUIRE(allocator.GetCurrentAllocationCount() == MaxAllocations);

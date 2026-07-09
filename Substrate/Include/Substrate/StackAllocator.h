@@ -43,7 +43,7 @@ namespace Substrate {
 	StackAllocator::StackAllocator(size_t size)
 		: m_TotalSize(size)
 	{
-		m_MemoryBlock = malloc(size);		
+		m_MemoryBlock = malloc(size);	
 	}
 
 	StackAllocator::~StackAllocator()
@@ -72,38 +72,44 @@ namespace Substrate {
 	template<typename TBlockType>
 	TBlockType* StackAllocator::Allocate()
 	{
-		//Check if the requested allocation fits in the remaining memory
-		// We realign the blocksize immediately to a uint64_t boundary, because we will attach a uint64_t header after the block
+		static_assert(alignof(TBlockType) <= alignof(uint64_t),
+		"StackAllocator only supports types aligned to 8 bytes; over-aligned types need the alignment overhaul.");
+
+		// header must stay 8-aligned, so never align to less than 8
+		constexpr size_t alignment = std::max(alignof(TBlockType), alignof(uint64_t));
 		constexpr size_t blockSize = Utility::AlignUpToMultipleOfMinAlignment(sizeof(TBlockType), sizeof(uint64_t));
-		if ((m_CurrentOffset + blockSize + sizeof(uint64_t)) > m_TotalSize)
+
+		const size_t prevOffset = m_CurrentOffset;
+		const size_t blockStart = Utility::AlignUpToMultipleOfMinAlignment(m_CurrentOffset, alignment); // ← the new line
+		const size_t headerStart = blockStart + blockSize;
+
+		if (headerStart + sizeof(uint64_t) > m_TotalSize)
 			return nullptr;
 
-		//Allocate the block (We dont need to handle alignment here, because we will attach a uint64_t header after the block)
-		TBlockType* blockPtr = reinterpret_cast<TBlockType*>(reinterpret_cast<uint8_t*>(m_MemoryBlock) + m_CurrentOffset);
-		m_CurrentOffset += blockSize;
+		auto* base = static_cast<uint8_t*>(m_MemoryBlock);
+		auto* block = reinterpret_cast<TBlockType*>(base + blockStart);
+		auto* header = reinterpret_cast<uint64_t*>(base + headerStart);
+
+		*header = static_cast<uint64_t>(prevOffset);   // store where to rewind — not blockSize
+		m_CurrentOffset = headerStart + sizeof(uint64_t);
 
 #ifdef SUBSTRATE_DETAILS_ENABLED
 		m_CurrentAllocationCount++;
 		m_TotalAllocationCount++;
 #endif
-		
-		//Store the block size in the header.
-		uint64_t* header = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(m_MemoryBlock) + m_CurrentOffset);
-		*header = static_cast<uint64_t>(blockSize);
-		m_CurrentOffset += sizeof(uint64_t);
-
-		return blockPtr;
+		return block;
 	}
 
 	void StackAllocator::Pop()
 	{
 		if (m_CurrentOffset == 0)
 			return;
+
 		//Get the size of the last allocated block
-		uint64_t* header = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(m_MemoryBlock) + m_CurrentOffset - sizeof(uint64_t));
-		size_t blockSize = static_cast<size_t>(*header);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+		uint64_t* header = reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(m_MemoryBlock) + m_CurrentOffset - sizeof(uint64_t));
 		//Move the current offset back to free the last allocated block
-		m_CurrentOffset -= (blockSize + sizeof(uint64_t));
+		m_CurrentOffset = static_cast<size_t>(*header);
 
 #ifdef SUBSTRATE_DETAILS_ENABLED
 		m_CurrentAllocationCount--;
