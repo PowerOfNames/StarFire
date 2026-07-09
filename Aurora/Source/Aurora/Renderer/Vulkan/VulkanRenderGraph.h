@@ -12,6 +12,28 @@
 
 namespace Aurora::VK {
 
+	struct CompiledColorAttachment
+	{
+		ImageHandle Handle;
+		VkRenderingAttachmentInfo AttachmentInfo;
+	};
+
+	struct CompiledPassSlot
+	{
+		std::vector<CompiledColorAttachment> ColorAttachments;
+		ImageHandle DepthHandle;
+		VkRenderingAttachmentInfo DepthAttachmentInfo{};
+	};
+
+	struct CompiledPass
+	{
+		std::string Name;
+		//one per frame in flight
+		std::vector<CompiledPassSlot> Slots;
+		VkRect2D RenderArea{};
+	};
+
+
 	class VulkanRenderGraph : public RenderGraph
 	{
 	public:
@@ -33,5 +55,8 @@ namespace Aurora::VK {
 		RenderGraphSpecification m_Specification;
 
 		std::vector<Ref<RenderPass>> m_RenderPasses;
+
+		std::vector<CompiledPass> m_CompiledPasses;
+		std::vector<ImageCopyInfo> m_ImageCopies;
 	};
 }

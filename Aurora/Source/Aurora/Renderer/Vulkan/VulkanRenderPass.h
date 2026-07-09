@@ -2,6 +2,7 @@
 #include "Aurora/Renderer/RenderPass.h"
 #include "Aurora/Renderer/Handles.h"
 
+#include <unordered_map>
 
 namespace Aurora::VK {
 
@@ -14,8 +15,14 @@ namespace Aurora::VK {
 
 		void Destroy() override;
 
-		const ImageHandle GetColorAttachmentHandle(uint32_t index = 0) const override;
-		inline const ImageHandle GetDepthAttachmentHandle() const override { return m_DepthAttachmentHandle; }
+		const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const override;
+		const std::vector<RenderPassAttachment>& GetColorAttachments() const override {	return m_ColorAttachments; }
+		const RenderPassAttachment& GetDepthAttachment() const override;
+		bool HasDepthAttachment() const override;
+
+		const glm::uvec2& GetRenderArea() const override { return m_Specification.RenderArea; }
+		const float GetClearDepth() const override {return m_Specification.ClearDepth; }
+
 
 		inline const RenderPassSpecification& GetSpecification() const override { return m_Specification; }
 
@@ -25,8 +32,10 @@ namespace Aurora::VK {
 	private:
 		RenderPassSpecification m_Specification;
 
-		std::vector<ImageHandle> m_ColorAttachmentHandles;
-		ImageHandle m_DepthAttachmentHandle = ImageHandle::INVALID_HANDLE;
+		std::unordered_map<std::string, uint32_t> m_ColorAttachmentIndices;
+		std::vector<RenderPassAttachment> m_ColorAttachments;
+		RenderPassAttachment m_DepthAttachment;
+		bool m_HasDepthAttachment = false;
 	};
 
 }

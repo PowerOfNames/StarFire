@@ -16,15 +16,31 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+		uint8_t framesInFLight = GetRenderContext()->GetFramesInFlightCount();
 
 		for (const auto& colorAttachmentSpec : m_Specification.ColorAttachments)
 		{
-			m_ColorAttachmentHandles.push_back(CreateAttachment(colorAttachmentSpec));
+			RenderPassAttachment attachment{};
+			attachment.Name = colorAttachmentSpec.Name;
+			attachment.Index = m_ColorAttachments.size();
+			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = m_ColorAttachments.size();
+			for (uint8_t i = 0; i < framesInFLight; i++)
+			{
+				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec));
+			}
+			attachment.ClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			m_ColorAttachments.push_back(std::move(attachment));
 		}
 
 		if (m_Specification.DepthAttachment.Format != Format::UNKNOWN)
 		{
-			m_DepthAttachmentHandle = CreateAttachment(m_Specification.DepthAttachment);
+			m_DepthAttachment.Name = m_Specification.DepthAttachment.Name;
+			m_DepthAttachment.Index = 0; // Depth attachment is always at slot 0
+			for (uint8_t i = 0; i < framesInFLight; i++)
+			{
+				m_DepthAttachment.ImageHandlesPerFiF.push_back(CreateAttachment(m_Specification.DepthAttachment));
+			}
+			m_HasDepthAttachment = true;
 		}
 	}
 
@@ -32,33 +48,30 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-
 		AURORA_INFO("Destroying renderPass '{}'...", m_Specification.Name.c_str());
-
-		if (m_Specification.DepthAttachment.Format != Format::UNKNOWN)
+		for (auto& colorAttachment : m_ColorAttachments)
 		{
-			DestroyImage(m_DepthAttachmentHandle);
+			for (const auto& handle : colorAttachment.ImageHandlesPerFiF)
+			{
+				DestroyImage(handle);
+			}
+			colorAttachment.ImageHandlesPerFiF.clear();
 		}
-		
-		for (const auto& colorHandle : m_ColorAttachmentHandles)
+		m_ColorAttachmentIndices.clear();
+		m_ColorAttachments.clear();
+		if (m_HasDepthAttachment)
 		{
-			DestroyImage(colorHandle);
+			for (const auto& handle : m_DepthAttachment.ImageHandlesPerFiF)
+			{
+				DestroyImage(handle);
+			}
 		}
-	}
-
-	const ImageHandle VulkanRenderPass::GetColorAttachmentHandle(uint32_t index) const
-	{
-		PROFILE_FUNCTION;
-
-
-		AURORA_ASSERT(index < m_ColorAttachmentHandles.size(), "Color attachment index out of bounds!");
-		return m_ColorAttachmentHandles[index];
+		m_DepthAttachment.ImageHandlesPerFiF.clear();
 	}
 
 	ImageHandle VulkanRenderPass::CreateAttachment(const ImageSpecification& attachmentSpecs)
 	{
 		PROFILE_FUNCTION;
-
 		
 		ImageHandle handle = CreateImage(attachmentSpecs);
 		if (handle == ImageHandle::INVALID_HANDLE)
@@ -67,5 +80,32 @@ namespace Aurora::VK {
 			return ImageHandle::INVALID_HANDLE;
 		}
 		return handle;
+	}
+
+	const RenderPassAttachment& VulkanRenderPass::GetColorAttachment(std::string_view attachmentName) const
+	{
+		PROFILE_FUNCTION;
+
+		auto it = m_ColorAttachmentIndices.find(std::string(attachmentName));
+		if (it == m_ColorAttachmentIndices.end())
+		{
+			AURORA_ERROR("Attachment '{}' not found in render pass '{}'", attachmentName, m_Specification.Name);
+			static RenderPassAttachment emptyAttachment;
+			return emptyAttachment;
+		}
+		return m_ColorAttachments[it->second];
+	}
+
+	const RenderPassAttachment& VulkanRenderPass::GetDepthAttachment() const
+	{
+		PROFILE_FUNCTION;
+
+		if (!m_HasDepthAttachment)
+		{
+			AURORA_ERROR("Render pass '{}' does not have a depth attachment", m_Specification.Name);
+			static RenderPassAttachment emptyAttachment;
+			return emptyAttachment;
+		}
+		return m_DepthAttachment;
 	}
 }

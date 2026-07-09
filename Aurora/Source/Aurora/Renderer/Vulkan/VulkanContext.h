@@ -57,6 +57,8 @@ namespace Aurora::VK {
 			RenderCommandQueue.push_back(cmd);
 		}
 
+		inline const uint8_t GetFramesInFlightCount() const { return m_FramesInFlight.size(); }
+
 		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
 

@@ -49,14 +49,14 @@ namespace Sandbox {
 			m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
 		}
 
-		m_ViewportTextureID = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(m_TrianglePass->GetColorAttachmentHandle());
+		//m_ViewportTextureID = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(m_TrianglePass->GetColorAttachmentHandle());
 
 
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
-		Aurora::ImageCopyInfo cpyInfo{};
-		cpyInfo.SrcImage = m_TrianglePass->GetColorAttachmentHandle();
-		cpyInfo.DstImage = m_ViewportImageHandle;
-		m_DefaultRenderGraph->AddImageCopy(cpyInfo);
+		//Aurora::ImageCopyInfo cpyInfo{};
+		//cpyInfo.SrcImage = m_TrianglePass->GetColorAttachmentHandle();
+		//cpyInfo.DstImage = m_ViewportImageHandle;
+		//m_DefaultRenderGraph->AddImageCopy(cpyInfo);
 
 		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
 		m_DefaultRenderGraph->Compile();
