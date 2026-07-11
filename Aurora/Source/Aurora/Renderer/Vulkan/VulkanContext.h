@@ -4,17 +4,15 @@
 #include "Aurora/Renderer/RenderContextSpecification.h"
 #include "Aurora/Renderer/Handles.h"
 
+#include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
 
 #include "Substrate/RefCounted.h"
 
 #include <vector>
-#include <functional>
 
 namespace Aurora::VK {
-		
-	using RenderCommand = std::function<void(VkCommandBuffer cmd)>;
 
 	//TODO: refactor out:
 	struct SubmitSpecifications
@@ -52,11 +50,6 @@ namespace Aurora::VK {
 			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func, semaphore, value);
 		}
 
-		inline void SubmitRenderCommand(const RenderCommand&& cmd)
-		{
-			RenderCommandQueue.push_back(cmd);
-		}
-
 		inline const uint8_t GetFramesInFlightCount() const { return m_FramesInFlight.size(); }
 
 		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
@@ -90,16 +83,10 @@ namespace Aurora::VK {
 		inline const VkCommandPool GetGraphicsCommandPool() const { return m_MainGraphicsCmdPool; }
 		inline const VkCommandPool GetTransferCommandPool() const { return m_TransferCmdPool; }
 
-		inline const VkDescriptorPool GetBindlessDescriptorPool() const { return m_BindlessDescriptorPool; }
-		inline const VkDescriptorSetLayout GetBindlessDescriptorSetLayout() const { return m_BindlessDescriptorSetLayout; }
-		inline const VkDescriptorSet GetBindlessDescriptorSet() const { return m_BindlessDescriptorSet; }
-
-		inline const VkPipeline GetBindlessGraphicsPipeline() const { return m_BindlessGraphicsPipeline; }
-		inline const VkPipelineLayout GetBindlessGraphicsPipelineLayout() const { return m_BindlessGraphicsPipelineLayout; }
-
 		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
+		
 		inline Ref<VulkanSwapchain> GetSwapchain() const { return m_Swapchain; }
-
+		inline Ref<VulkanRenderer> GetRenderer() const { return m_Renderer; }
 
 
 		static Ref<VulkanContext> Create(const InitializationSpecification& specs);
@@ -119,8 +106,6 @@ namespace Aurora::VK {
 		bool CreateGraphicsCommandPools();
 		bool CreateTransferSubmissionStructures();
 		bool CreateFramesInFlight(uint8_t framesInFlight);
-		bool CreateBindlessDescriptorSet();
-		bool CreateBindlessGraphicsPipeline();
 		bool CreateSwapchain(const InitializationSpecification::SurfaceSpecification& surfaceSpecs);
 
 		bool CheckTimelineSemaphore(VkSemaphore sema, uint64_t targetValue) const;
@@ -154,8 +139,6 @@ namespace Aurora::VK {
 		void SetupDebugMessenger(VkInstance instance, bool allowInfoLevel = false);
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo, bool allowInfoLevel = false);
 
-
-
 	private:
 		InitializationSpecification m_Specification;
 
@@ -165,7 +148,10 @@ namespace Aurora::VK {
 		VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		VkDevice m_Device = VK_NULL_HANDLE;
+		VmaAllocator m_VmAllocator = VK_NULL_HANDLE;
 
+
+		VkAllocationCallbacks* m_AllocationCallbacks = nullptr;
 		VkCommandPool m_MainGraphicsCmdPool = VK_NULL_HANDLE;
 		
 		VkCommandPool m_TransferCmdPool = VK_NULL_HANDLE;
@@ -181,35 +167,24 @@ namespace Aurora::VK {
 		TimelineSemaphore m_ComputeSubmitSemaphore{};
 		
 
+		QueueFamilies m_QueueFamilies{};
 		std::unordered_map<QueueOwner, uint32_t> m_QueueOwnerIndices;
 		std::unordered_map<QueueOwner, VkQueue> m_QueueOwnerQueues;
 		std::vector<VulkanBufferCopyOp> m_DeferredBufferCopySubmissionOps;
 		std::vector<PendingResourceUpload> m_PendingResourceUploads;
 
-		VmaAllocator m_VmAllocator = VK_NULL_HANDLE;
-		VkAllocationCallbacks* m_AllocationCallbacks = nullptr;
 
 		VkApplicationInfo m_AppInfo{};
-
-		VkDescriptorPool m_BindlessDescriptorPool = VK_NULL_HANDLE;
-		VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-		VkDescriptorSet m_BindlessDescriptorSet = VK_NULL_HANDLE;
-
-		VkPipelineLayout m_BindlessGraphicsPipelineLayout = VK_NULL_HANDLE;
-		VkPipeline m_BindlessGraphicsPipeline = VK_NULL_HANDLE;
-
-		QueueFamilies m_QueueFamilies{};
-		
-		
+				
 
 		PhysicalDeviceLimits m_PhDeviceLimits{};
 
 		Ref<VulkanSwapchain> m_Swapchain = nullptr;
 		std::vector<VulkanFrame> m_FramesInFlight;
 
-		std::deque<RenderCommand> RenderCommandQueue;
-
 		DeletionQueue m_MainDeletionQueue{};
+
+		Ref<VulkanRenderer> m_Renderer = nullptr;
 
 		struct RendererStatistics
 		{

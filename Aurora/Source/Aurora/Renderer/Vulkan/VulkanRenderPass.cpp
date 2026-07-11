@@ -26,19 +26,19 @@ namespace Aurora::VK {
 			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = m_ColorAttachments.size();
 			for (uint8_t i = 0; i < framesInFLight; i++)
 			{
-				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec));
+				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec.ImageSpecs));
 			}
-			attachment.ClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			attachment.ClearColor = colorAttachmentSpec.ClearColor;
 			m_ColorAttachments.push_back(std::move(attachment));
 		}
 
-		if (m_Specification.DepthAttachment.Format != Format::UNKNOWN)
+		if (m_Specification.DepthAttachment.ImageSpecs.Format != Format::UNKNOWN)
 		{
 			m_DepthAttachment.Name = m_Specification.DepthAttachment.Name;
 			m_DepthAttachment.Index = 0; // Depth attachment is always at slot 0
 			for (uint8_t i = 0; i < framesInFLight; i++)
 			{
-				m_DepthAttachment.ImageHandlesPerFiF.push_back(CreateAttachment(m_Specification.DepthAttachment));
+				m_DepthAttachment.ImageHandlesPerFiF.push_back(CreateAttachment(m_Specification.DepthAttachment.ImageSpecs));
 			}
 			m_HasDepthAttachment = true;
 		}

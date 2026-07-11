@@ -21,7 +21,7 @@ namespace Aurora::VK {
 		bool HasDepthAttachment() const override;
 
 		const glm::uvec2& GetRenderArea() const override { return m_Specification.RenderArea; }
-		const float GetClearDepth() const override {return m_Specification.ClearDepth; }
+		const float GetClearDepth() const override {return m_Specification.DepthAttachment.ClearDepth; }
 
 
 		inline const RenderPassSpecification& GetSpecification() const override { return m_Specification; }

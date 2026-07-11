@@ -16,6 +16,7 @@ namespace Aurora {
 		Format Format = Format::UNKNOWN;
 		ImageUsageFlags Usage = ImageUsageFlags::NONE;
 		MemoryUsage MemUsage = MemoryUsage::GPU_ONLY;
+		ImageTiling Tiling = ImageTiling::OPTIMAL;
 
 		uint8_t MipLevels = 1;
 	};

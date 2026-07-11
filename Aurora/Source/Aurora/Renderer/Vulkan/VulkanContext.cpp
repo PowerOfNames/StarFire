@@ -14,7 +14,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <algorithm>
 
 namespace Aurora::VK {
 
@@ -86,23 +85,23 @@ namespace Aurora::VK {
 		{
 			AURORA_ERROR("Failed to create per-frame data. VulkanContext could not be initialized.");
 			return;
-		}
-
-		if (!CreateBindlessDescriptorSet())
-		{
-			AURORA_ERROR("Failed to create bindless descriptor set. VulkanContext could not be initialized.");
-			return;
-		}
-
-		if (!CreateBindlessGraphicsPipeline())
-		{
-			AURORA_ERROR("Failed to create bindless graphics pipeline. VulkanContext could not be initialized.");
-			return;
-		}
+		}		
 
 		if (!CreateSwapchain(m_Specification.SurfaceSpecs))
 		{
 			AURORA_ERROR("Failed to create swapchain. VulkanContext could not be initialized.");
+			return;
+		}
+
+		m_Renderer = CreateRef<VulkanRenderer>();
+		if (m_Renderer == nullptr)
+		{
+			AURORA_ERROR("Failed to create renderer. VulkanContext could not be initialized.");
+			return;
+		}
+		if (!m_Renderer->Init())
+		{
+			AURORA_ERROR("Failed to initialize renderer. VulkanContext could not be initialized.");
 			return;
 		}
 
@@ -118,6 +117,7 @@ namespace Aurora::VK {
 
 		AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
 
+		m_Renderer->Destroy();
 		m_MainDeletionQueue.Flush(m_Device);
 		m_FramesInFlight.clear();
 
@@ -174,10 +174,10 @@ namespace Aurora::VK {
 
 
 		VkCommandBuffer cmd = GetCurrentFrameData().CommandBuffer;
-		for (const RenderCommand& command : RenderCommandQueue)
+		/*for (const RenderCommand& command : RenderCommandQueue)
 		{
 			command(cmd);
-		}
+		}*/
 	}
 
 	void VulkanContext::SwapFrame()
@@ -783,128 +783,6 @@ namespace Aurora::VK {
 			}
 			i++;
 		}
-		return true;
-	}
-
-	bool VulkanContext::CreateBindlessDescriptorSet()
-	{
-		PROFILE_FUNCTION;
-
-
-		constexpr int STORAGE_BINDING = 0;
-		constexpr int SAMPLER_BINDIG = 1;
-		constexpr int IMAGE_BINDING = 2;
-
-
-		std::vector<VkDescriptorPoolSize> poolSizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_PhDeviceLimits.DescriptorLimits.MaxPerStageDescriptorStorageBuffers},
-			{ VK_DESCRIPTOR_TYPE_SAMPLER, m_PhDeviceLimits.DescriptorLimits.MaxPerStageDescriptorSampledImages },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_PhDeviceLimits.DescriptorLimits.MaxPerStageDescriptorSampledImages }
-		};
-
-		VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.pNext = nullptr;
-		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-		poolInfo.maxSets = 1;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		AURORA_VK_CHECK(vkCreateDescriptorPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_BindlessDescriptorPool), VK_SUCCESS, "Failed to create bindless descriptor pool.");
-		if (m_BindlessDescriptorPool == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t)m_BindlessDescriptorPool, "BindlessDescriptorPool");
-
-		SubmitToMainDeletionQueue([this]()
-		{
-			vkDestroyDescriptorPool(m_Device, m_BindlessDescriptorPool, m_AllocationCallbacks);
-			m_BindlessDescriptorPool = VK_NULL_HANDLE;
-		});
-
-		VkDescriptorSetLayoutBinding storageBinding{};
-		storageBinding.binding = STORAGE_BINDING;
-		storageBinding.descriptorCount = m_PhDeviceLimits.DescriptorLimits.MaxPerStageDescriptorStorageBuffers;
-		storageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		storageBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutBinding samplerBinding{};
-		samplerBinding.binding = SAMPLER_BINDIG;
-		samplerBinding.descriptorCount = m_PhDeviceLimits.DescriptorLimits.MaxPerStageSamplers;
-		samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutBinding imageBinding{};
-		imageBinding.binding = IMAGE_BINDING;
-		imageBinding.descriptorCount = m_PhDeviceLimits.DescriptorLimits.MaxPerStageDescriptorSampledImages;
-		imageBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		imageBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		std::vector<VkDescriptorSetLayoutBinding> bindings = { storageBinding, samplerBinding, imageBinding };
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-		bindingFlagsInfo.pNext = nullptr;
-		VkDescriptorBindingFlags flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
-		std::vector<VkDescriptorBindingFlags> bindingFlags = { flags, flags, flags };
-		bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
-		bindingFlagsInfo.pBindingFlags = bindingFlags.data();
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext = &bindingFlagsInfo;
-		layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
-
-		AURORA_VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &layoutInfo, m_AllocationCallbacks, &m_BindlessDescriptorSetLayout), VK_SUCCESS, "Failed to create bindless descriptor set layout.");
-		if (m_BindlessDescriptorSetLayout == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t)m_BindlessDescriptorSetLayout, "BindlessDescriptorSetLayout");
-
-		SubmitToMainDeletionQueue([this]()
-		{
-			vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, m_AllocationCallbacks);
-			m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-		});
-
-		VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		allocInfo.pNext = nullptr;
-		allocInfo.descriptorPool = m_BindlessDescriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &m_BindlessDescriptorSetLayout;
-		AURORA_VK_CHECK(vkAllocateDescriptorSets(m_Device, &allocInfo, &m_BindlessDescriptorSet), VK_SUCCESS, "Failed to allocate bindless descriptor set.");
-		if (m_BindlessDescriptorSet == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)m_BindlessDescriptorSet, "BindlessDescriptorSet");
-
-		return true;
-	}
-
-	bool VulkanContext::CreateBindlessGraphicsPipeline()
-	{
-		PROFILE_FUNCTION;
-
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = 128;
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext = nullptr;
-		layoutInfo.flags = 0;
-		layoutInfo.setLayoutCount = 1;
-		layoutInfo.pSetLayouts = &m_BindlessDescriptorSetLayout;
-		layoutInfo.pushConstantRangeCount = 1;
-		layoutInfo.pPushConstantRanges = &pushConstantRange;
-		AURORA_VK_CHECK(vkCreatePipelineLayout(m_Device, &layoutInfo, m_AllocationCallbacks, &m_BindlessGraphicsPipelineLayout), VK_SUCCESS, "Failed to create bindless pipeline layout.");
-		if (m_BindlessGraphicsPipelineLayout == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)m_BindlessGraphicsPipelineLayout, "BindlessGraphicsPipelineLayout");
-
-		SubmitToMainDeletionQueue([this]()
-		{
-			vkDestroyPipelineLayout(m_Device, m_BindlessGraphicsPipelineLayout, m_AllocationCallbacks);
-			m_BindlessGraphicsPipelineLayout = VK_NULL_HANDLE;
-		});
-
-
 		return true;
 	}
 

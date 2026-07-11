@@ -8,7 +8,7 @@
 namespace Aurora::VK::Creators {
 
 #pragma region Images
-	bool CreateImage(VmaAllocator allocator, VkImage* image, VmaAllocation* allocation, VkFormat format, VkImageUsageFlags usageFlags, uint32_t width, uint32_t height, uint32_t mipLevels/* = 1*/)
+	bool CreateImage(VmaAllocator allocator, VkImage* image, VmaAllocation* allocation, VkFormat format, VkImageUsageFlags usageFlags, VkImageTiling tiling, uint32_t width, uint32_t height, uint32_t mipLevels/* = 1*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -38,10 +38,7 @@ namespace Aurora::VK::Creators {
 		imageCreateInfo.mipLevels = mipLevels;
 		imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		if ((usageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		else
-			imageCreateInfo.tiling = memUsage == VMA_MEMORY_USAGE_GPU_ONLY ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
+		imageCreateInfo.tiling = tiling;
 		imageCreateInfo.usage = usageFlags;
 		imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageCreateInfo.arrayLayers = 1;

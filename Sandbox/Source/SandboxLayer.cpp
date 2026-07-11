@@ -25,27 +25,34 @@ namespace Sandbox {
 		{
 			Aurora::RenderPassSpecification specs{};
 			specs.Name = "Triangle Render Pass";
-			Aurora::ImageSpecification color{};
-			color.Name = "Color Attachment";
-			color.Usage = Aurora::ImageUsageFlags::COLOR_ATTACHMENT | Aurora::ImageUsageFlags::SAMPLED;
-			color.Format = Aurora::Format::RGBA8_UNORM;
-			color.Width = width;
-			color.Height = height;
-			specs.ColorAttachments.push_back(std::move(color));
-			specs.DepthAttachment.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT;
-			specs.DepthAttachment.Format = Aurora::Format::DEPTH32_SFLOAT;
-			specs.DepthAttachment.Width = width;
-			specs.DepthAttachment.Height = height;
+			Aurora::ColorAttachmentSpecification colorAttachment{};
+			colorAttachment.ImageSpecs.Name = "Color Attachment";
+			colorAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::COLOR_ATTACHMENT | Aurora::ImageUsageFlags::SAMPLED | Aurora::ImageUsageFlags::TRANSFER_SRC;
+			colorAttachment.ImageSpecs.Format = Aurora::Format::RGBA8_UNORM;
+			colorAttachment.ImageSpecs.Width = width;
+			colorAttachment.ImageSpecs.Height = height;
+			colorAttachment.ClearColor = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+			specs.ColorAttachments.push_back(std::move(colorAttachment));
+
+			specs.DepthAttachment.Name = "Depth Attachment";
+			specs.DepthAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | Aurora::ImageUsageFlags::TRANSFER_SRC;
+			specs.DepthAttachment.ImageSpecs.Format = Aurora::Format::DEPTH32_SFLOAT;
+			specs.DepthAttachment.ImageSpecs.Width = width;
+			specs.DepthAttachment.ImageSpecs.Height = height;
+			specs.DepthAttachment.ClearDepth = 1.0f; //needs to be 0.0 if we do infinite far plane, but for now we do a finite far plane so 1.0 is correct
+			specs.RenderArea = { width, height };	
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
 		}
 
 		{
 			Aurora::ImageSpecification viewportTarget{};
 			viewportTarget.Name = "Viewport Target";
-			viewportTarget.Usage = Aurora::ImageUsageFlags::SAMPLED;
+			viewportTarget.Usage = Aurora::ImageUsageFlags::SAMPLED | Aurora::ImageUsageFlags::TRANSFER_DST;
 			viewportTarget.Format = Aurora::Format::RGBA8_UNORM;
 			viewportTarget.Width = width;
 			viewportTarget.Height = height;
+			//TODO: needs verificatrion. I think there was one place in the current pipeline that demanded linear tiling, but I forgot where it was.
+			//viewportTarget.Tiling = Aurora::ImageTiling::LINEAR;
 			m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
 		}
 

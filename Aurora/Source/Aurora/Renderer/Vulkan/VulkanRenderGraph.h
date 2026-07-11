@@ -5,7 +5,6 @@
 #include "Substrate/RefPtr.h"
 
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
-#include "Aurora/Renderer/Vulkan/VulkanContext.h"
 
 
 #include <vector>

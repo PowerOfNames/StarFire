@@ -24,6 +24,12 @@ namespace Aurora {
 		return g_ResourceManager;
 	}
 
+	Ref<VK::VulkanRenderer> GetRenderer()
+	{
+		AURORA_ASSERT(g_RenderContext != nullptr, "ResourceContext not initialized. Cant reach Renderer.");
+		return g_RenderContext->GetRenderer();
+	}
+
 	// ========== Setup ==========
 	void SetLoggingCallback(LogCallback callback)
 	{

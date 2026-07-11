@@ -6,19 +6,31 @@
 #include "Substrate/RefPtr.h"
 
 #include <glm/glm.hpp>
-
 #include <string>
 #include <vector>
 
 namespace Aurora {
 
+	struct ColorAttachmentSpecification
+	{
+		std::string Name = "Color attachment name";
+		ImageSpecification ImageSpecs{};
+		glm::vec4 ClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	};
+
+	struct DepthAttachmentSpecification
+	{
+		std::string Name = "Depth attachment name";
+		ImageSpecification ImageSpecs{};
+		float ClearDepth = 1.0f;
+	};
+
 	struct RenderPassSpecification
 	{
 		std::string Name = "Render pass name";
-		std::vector<ImageSpecification> ColorAttachments;
-		ImageSpecification DepthAttachment{};
+		std::vector<ColorAttachmentSpecification> ColorAttachments;
+		DepthAttachmentSpecification DepthAttachment{};
 		glm::uvec2 RenderArea;
-		float ClearDepth = 1.0f;
 	};
 
 	struct RenderPassAttachment

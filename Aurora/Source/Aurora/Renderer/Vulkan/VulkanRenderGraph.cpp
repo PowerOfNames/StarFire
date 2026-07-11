@@ -1,5 +1,6 @@
 #include "Aurora/Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Aurora/Profiling/Profiling.h"
+#include "Aurora/Core/Core.h"
 
 #include "AuroraInternal.h"
 
@@ -127,10 +128,10 @@ namespace Aurora::VK {
 		VkCommandBuffer cmd = frameData.CommandBuffer;
 
 
-		for (const Ref<RenderPass>& renderPass : m_RenderPasses)
+		for (const auto& pass : m_CompiledPasses)
 		{
-			VkRenderingAttachmentInfo attachmentInfo{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-			attachmentInfo.pNext = nullptr;
+
+
 		}
 	}
 
