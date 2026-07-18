@@ -1,5 +1,6 @@
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanDebug.h"
+#include "Shaders/ShaderByteCodes.h"
 #include "AuroraInternal.h"
 
 namespace Aurora::VK {
@@ -164,34 +165,34 @@ namespace Aurora::VK {
 
 
 		//TODO: bindless uber-shader Shader Modules					
-		//VkShaderModuleCreateInfo vertInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-		//vertInfo.pNext = nullptr;
-		//vertInfo.flags = 0;
-		//vertInfo.codeSize = Shaders::SwapchainFallback_vert_size;
-		//vertInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::SwapchainFallback_vert);
+		VkShaderModuleCreateInfo vertInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		vertInfo.pNext = nullptr;
+		vertInfo.flags = 0;
+		vertInfo.codeSize = Shaders::BindlessTest_vert_size;
+		vertInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessTest_vert);
 
-		//VkShaderModule vertModule = VK_NULL_HANDLE;
-		//AURORA_VK_CHECK(vkCreateShaderModule(m_Specification.Device, &vertInfo, nullptr, &vertModule), VK_SUCCESS, "Failed to create swapchain fallback vertex shader module.");
-		//if (vertModule == VK_NULL_HANDLE)
-		//	return false;
+		VkShaderModule vertModule = VK_NULL_HANDLE;
+		AURORA_VK_CHECK(vkCreateShaderModule(device, &vertInfo, nullptr, &vertModule), VK_SUCCESS, "Failed to create bindlessTest vertex shader module.");
+		if (vertModule == VK_NULL_HANDLE)
+			return false;
 
-		//VkShaderModuleCreateInfo fragInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-		//fragInfo.pNext = nullptr;
-		//fragInfo.flags = 0;
-		//fragInfo.codeSize = Shaders::SwapchainFallback_frag_size;
-		//fragInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::SwapchainFallback_frag);
+		VkShaderModuleCreateInfo fragInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		fragInfo.pNext = nullptr;
+		fragInfo.flags = 0;
+		fragInfo.codeSize = Shaders::BindlessTest_frag_size;
+		fragInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessTest_frag);
 
-		//VkShaderModule fragModule = VK_NULL_HANDLE;
-		//AURORA_VK_CHECK(vkCreateShaderModule(m_Specification.Device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create swapchain fallback fragment shader module.");
-		//if (vertModule == VK_NULL_HANDLE)
-		//	return false;
+		VkShaderModule fragModule = VK_NULL_HANDLE;
+		AURORA_VK_CHECK(vkCreateShaderModule(device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create bindlessTest fragment shader module.");
+		if (vertModule == VK_NULL_HANDLE)
+			return false;
 
 		//Shader stages
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		vertShaderStageInfo.pNext = nullptr;
 		vertShaderStageInfo.flags = 0;
 		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		//vertShaderStageInfo.module = vertModule;
+		vertShaderStageInfo.module = vertModule;
 		vertShaderStageInfo.pName = "main";
 		vertShaderStageInfo.pSpecializationInfo = nullptr;
 
@@ -199,7 +200,7 @@ namespace Aurora::VK {
 		fragShaderStageInfo.pNext = nullptr;
 		fragShaderStageInfo.flags = 0;
 		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		//fragShaderStageInfo.module = fragModule;
+		fragShaderStageInfo.module = fragModule;
 		fragShaderStageInfo.pName = "main";
 		fragShaderStageInfo.pSpecializationInfo = nullptr;
 
@@ -348,7 +349,7 @@ namespace Aurora::VK {
 		//We hardcode vertices into the shader for proof of concept of the pipeline for now
 		//TODO
 		pipelineInfo.pVertexInputState = nullptr;
-		//pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
 		pipelineInfo.pViewportState = &viewportInfo;
 		pipelineInfo.pRasterizationState = &rasterizationInfo;
@@ -365,6 +366,9 @@ namespace Aurora::VK {
 		if (m_BindlessGraphicsPipeline == VK_NULL_HANDLE)
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_PIPELINE, (uint64_t)m_BindlessGraphicsPipeline, "BindlessGraphicsPipeline");
+
+		vkDestroyShaderModule(device, vertModule, allocCallbacks);
+		vkDestroyShaderModule(device, fragModule, allocCallbacks);
 
 		return true;
 	}

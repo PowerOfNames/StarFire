@@ -168,8 +168,9 @@ namespace Aurora::VK {
 		data->Height = imageSpecs.Height;
 		data->MipLevels = imageSpecs.MipLevels;
 		data->Format = static_cast<VkFormat>(imageSpecs.Format);
+		data->Tiling = static_cast<VkImageTiling>(imageSpecs.Tiling);
 		data->Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
-		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, static_cast<VkImageUsageFlags>(imageSpecs.Usage), static_cast<VkImageTiling>(imageSpecs.Tiling), imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
+		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, static_cast<VkImageUsageFlags>(imageSpecs.Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
@@ -269,9 +270,14 @@ namespace Aurora::VK {
 		// CAUTION: this currently only works for Submission only resources. As soon as a resource is used by the GPU during frames, which do currently not use the submission semaphores (queuSemaphors)
 		//			this is not true anymore.
 		TimelineSemaphore semaphoreSnapshot = m_VulkanContext->GetQueueSemaphoreSnapshot(data->CurrentOwner);
-		m_VulkanContext->SubmitToFrameDeletionQueue([vmaAllocator = m_VulkanContext->GetVmaAllocator(), handle = data->Buffer, allocation = data->Allocation]()
+		m_VulkanContext->SubmitToFrameDeletionQueue(
+			[
+				vmaAllocator = m_VulkanContext->GetVmaAllocator(), 
+				buffer = data->Buffer, 
+				allocation = data->Allocation
+			]()
 		{
-			vmaDestroyBuffer(vmaAllocator, handle, allocation);
+			vmaDestroyBuffer(vmaAllocator, buffer, allocation);
 		}, semaphoreSnapshot.Semaphore, semaphoreSnapshot.Value);
 
 		m_BufferAllocator.Free(handle);

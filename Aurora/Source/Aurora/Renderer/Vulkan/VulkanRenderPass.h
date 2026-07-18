@@ -18,7 +18,7 @@ namespace Aurora::VK {
 		const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const override;
 		const std::vector<RenderPassAttachment>& GetColorAttachments() const override {	return m_ColorAttachments; }
 		const RenderPassAttachment& GetDepthAttachment() const override;
-		bool HasDepthAttachment() const override;
+		inline bool HasDepthAttachment() const override { return m_HasDepthAttachment; }
 
 		const glm::uvec2& GetRenderArea() const override { return m_Specification.RenderArea; }
 		const float GetClearDepth() const override {return m_Specification.DepthAttachment.ClearDepth; }

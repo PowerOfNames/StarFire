@@ -53,7 +53,7 @@ namespace Sandbox {
 			viewportTarget.Height = height;
 			//TODO: needs verificatrion. I think there was one place in the current pipeline that demanded linear tiling, but I forgot where it was.
 			//viewportTarget.Tiling = Aurora::ImageTiling::LINEAR;
-			m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
+			//m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
 		}
 
 		//m_ViewportTextureID = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(m_TrianglePass->GetColorAttachmentHandle());
@@ -95,7 +95,7 @@ namespace Sandbox {
 		PROFILE_FUNCTION;
 
 		StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->ReturnTextureIDFromHandle(m_ViewportImageHandle);
-		Aurora::DestroyImage(m_ViewportImageHandle);
+		//Aurora::DestroyImage(m_ViewportImageHandle);
 
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
@@ -206,7 +206,7 @@ namespace Sandbox {
 			m_ViewportPanel.IsHovered = ImGui::IsWindowHovered();
 			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
 
-			ImGui::Image(m_ViewportTextureID, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			//ImGui::Image(m_ViewportTextureID, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 
 			ImGui::End();
 		}

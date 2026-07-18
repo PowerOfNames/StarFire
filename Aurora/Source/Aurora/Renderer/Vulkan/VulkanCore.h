@@ -169,15 +169,16 @@ namespace Aurora::VK {
 		VmaAllocation Allocation = VK_NULL_HANDLE;			//24 - must have
 		VkFormat Format = VK_FORMAT_UNDEFINED;				//28 - must have
 		VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;	//32 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now
+		VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;		//36 - might be extractable by context
 
-		uint32_t Width = 0;									//36 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes (renderpass should know sizes of all targets)
-		uint32_t Height = 0;								//40 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes
-		uint8_t MipLevels = 1;								//41 -> aligned to !!! 48 !!! bytes - should potentially be optional as well, but for simplicity we just store it here for now
+		uint32_t Width = 0;									//40 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes (renderpass should know sizes of all targets)
+		uint32_t Height = 0;								//44 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes
+		uint8_t MipLevels = 1;								//45 -> aligned to !!! 48 !!! bytes - should potentially be optional as well, but for simplicity we just store it here for now
 
 		//Used to track ownership transferring
-		QueueOwner LastOwner = QueueOwner::UNKNOWN;			//42 - aligned to 48 bytes
-		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;		//43 - aligned to 48 bytes
-		QueueOwner NextOwner = QueueOwner::UNKNOWN;			//44 - aligned to 48 bytes
+		QueueOwner LastOwner = QueueOwner::UNKNOWN;			//46 - aligned to 48 bytes
+		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;		//47 - aligned to 48 bytes
+		QueueOwner NextOwner = QueueOwner::UNKNOWN;			//48 - aligned to 48 bytes
 	};
 
 	struct VulkanBufferData

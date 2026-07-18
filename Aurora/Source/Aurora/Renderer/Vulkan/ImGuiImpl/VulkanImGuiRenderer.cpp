@@ -115,7 +115,8 @@ namespace Aurora::VK {
 			imageData.MipLevels = 1;
 			imageData.Format = m_ImageFormat;
 			imageData.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			Creators::CreateImage(allocator, &(imageData.Image), &(imageData.Allocation), imageData.Format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, width, height, imageData.MipLevels);
+			imageData.Tiling = VK_IMAGE_TILING_OPTIMAL;
+			Creators::CreateImage(allocator, &(imageData.Image), &(imageData.Allocation), imageData.Format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, imageData.Tiling, width, height, imageData.MipLevels);
 
 			const std::string iString = std::to_string(i);
 			const std::string imageName = "ImGui_Image_" + iString;

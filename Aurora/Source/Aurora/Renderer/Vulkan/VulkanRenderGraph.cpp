@@ -68,6 +68,11 @@ namespace Aurora::VK {
 					compiledAttachment.Handle = colorAttachment.ImageHandlesPerFiF[i];
 
 					VulkanImageData* imageData = resourceManager->GetImageData(compiledAttachment.Handle);
+					if (!imageData)
+					{
+						AURORA_ERROR("Color Attachment found with invalid handle!");
+						continue;
+					}
 
 					VkRenderingAttachmentInfo attachmentInfo{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 					attachmentInfo.pNext = nullptr;
@@ -90,6 +95,12 @@ namespace Aurora::VK {
 					const RenderPassAttachment& depthAttachment = renderPass->GetDepthAttachment();
 					slot.DepthHandle = depthAttachment.ImageHandlesPerFiF[i];
 					VulkanImageData* imageData = resourceManager->GetImageData(slot.DepthHandle);
+					if (!imageData)
+					{
+						AURORA_ERROR("Depth Attachment found with invalid handle!");
+						continue;
+					}
+
 					VkRenderingAttachmentInfo attachmentInfo{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 					attachmentInfo.pNext = nullptr;
 					attachmentInfo.imageView = imageData->ImageView;
@@ -113,7 +124,7 @@ namespace Aurora::VK {
 			pass.RenderArea.extent = { renderArea.x, renderArea.y };
 			
 			m_CompiledPasses.push_back(std::move(pass));
-		};		
+		};
 	}
 
 	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle)

@@ -19,8 +19,6 @@ namespace Aurora::VK {
 		bool Init();
 		void Destroy();
 
-
-
 		inline void SubmitRenderCommand(const RenderCommand&& cmd)
 		{
 			RenderCommandQueue.push_back(cmd);
