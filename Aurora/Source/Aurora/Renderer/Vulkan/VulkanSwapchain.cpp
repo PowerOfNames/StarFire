@@ -145,6 +145,7 @@ namespace Aurora::VK {
 		frame.TargetImage = m_Images[m_ImageIndex];
 		frame.TargetView = m_ImageViews[m_ImageIndex];
 		frame.Extent = m_Extent;
+		frame.TargetLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		vkResetCommandBuffer(frame.CommandBuffer, 0);
 		AURORA_TRACE("Acquired image {}", frame.FrameIndex);
