@@ -151,7 +151,7 @@ namespace Aurora::VK {
 		AURORA_VK_CHECK(vkBeginCommandBuffer(frame.CommandBuffer, &cmdInfo), VK_SUCCESS, "Failed to begin command buffer (frame index: {}).", frame.FrameIndex);
 
 		//TEMP:
-		m_Swapchain->RecordFallbackSwapchainRenderPass(frame);
+		//m_Swapchain->RecordFallbackSwapchainRenderPass(frame);
 
 		return true;
 	}
@@ -162,8 +162,6 @@ namespace Aurora::VK {
 
 
 		VulkanFrame& frame = GetCurrentFrameData();
-
-
 
 		AURORA_VK_CHECK(vkEndCommandBuffer(frame.CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame.FrameIndex);
 	}
@@ -1208,6 +1206,7 @@ namespace Aurora::VK {
 			.CopyBufferToBuffer(src, dst, destroySrc, QueueOwner::GRAPHICS)
 			.ScheduleSubmissions(forceNow);
 	}
+
 
 	void VulkanContext::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& recordFunc, const SubmitSpecifications& specs)
 	{

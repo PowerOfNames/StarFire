@@ -65,6 +65,7 @@ namespace Aurora::VK {
 				for (const auto& colorAttachment : renderPass->GetColorAttachments())
 				{
 					CompiledColorAttachment compiledAttachment{};
+					compiledAttachment.Name = colorAttachment.Name;
 					compiledAttachment.Handle = colorAttachment.ImageHandlesPerFiF[i];
 
 					VulkanImageData* imageData = resourceManager->GetImageData(compiledAttachment.Handle);
@@ -106,7 +107,7 @@ namespace Aurora::VK {
 					attachmentInfo.imageView = imageData->ImageView;
 					//CAUTION: Bake here, but compare with actual layout during Execute, injecting layout transition
 					//			barrier if needed
-					attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 					attachmentInfo.resolveMode = VK_RESOLVE_MODE_NONE;
 					attachmentInfo.resolveImageView = VK_NULL_HANDLE;
 					attachmentInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -135,15 +136,88 @@ namespace Aurora::VK {
 		// This will also be the place to do any culling if we want the render graph to handle it. We can probably also do some more complex stuff here like automatic batching of draw calls, etc.
 
 		Ref<VulkanContext> renderContext = GetRenderContext();
+		Ref<VulkanRenderer> renderer = GetRenderer();
+		Ref<VulkanResourceManager> resManager = GetResourceManager();
+
 		VulkanFrame& frameData = renderContext->GetCurrentFrameData();
 		VkCommandBuffer cmd = frameData.CommandBuffer;
 
+		renderer->BindBindlessPipeline(cmd);
 
 		for (const auto& pass : m_CompiledPasses)
 		{
+			CompiledPassSlot slot = pass.Slots[frameData.FrameIndex];
 
+			std::vector<VkRenderingAttachmentInfo> colorAttachments;
+			colorAttachments.reserve(slot.ColorAttachments.size());
+			for (uint32_t i = 0; i < slot.ColorAttachments.size(); i++)
+			{
+				CompiledColorAttachment attachment = slot.ColorAttachments[i];
+				if(!CheckAndTransitImage(resManager->GetImageData(attachment.Handle), cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
+					AURORA_ERROR("Image data of attachment '{}' nullptr", attachment.Name.c_str());
+				else
+					colorAttachments.push_back(attachment.AttachmentInfo);
+
+			}
+
+			VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+			renderingInfo.pNext = nullptr;
+			renderingInfo.flags = 0;
+			renderingInfo.colorAttachmentCount = static_cast<uint32_t>(slot.ColorAttachments.size());
+			renderingInfo.pColorAttachments = colorAttachments.data();			
+
+			renderingInfo.pStencilAttachment = nullptr;
+			renderingInfo.renderArea = pass.RenderArea;
+			renderingInfo.layerCount = 1;
+			renderingInfo.viewMask = 0;
+
+			if (slot.DepthHandle != ImageHandle::INVALID_HANDLE)
+			{			
+				VulkanImageData* imageData = resManager->GetImageData(slot.DepthHandle);
+				if(!CheckAndTransitImage(imageData, cmd, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL))
+					AURORA_ERROR("Image data of attachment 'depth' nullptr");
+				else				
+					renderingInfo.pDepthAttachment = &slot.DepthAttachmentInfo;
+			}
+			else
+				renderingInfo.pDepthAttachment = nullptr;		
+			vkCmdBeginRendering(cmd, &renderingInfo);
+
+			VkViewport viewport{};
+			viewport.width = static_cast<float>(pass.RenderArea.extent.width);
+			viewport.height = static_cast<float>(pass.RenderArea.extent.height);
+			viewport.x = static_cast<float>(pass.RenderArea.offset.x);
+			viewport.y = static_cast<float>(pass.RenderArea.offset.y);
+			vkCmdSetViewport(cmd, 0, 1, &viewport);
+			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
+			renderer->Draw(cmd, 3);
+
+			vkCmdEndRendering(cmd);
+
+
+			//Now check if any attachment is set as copy target, if so, append another layoutTransition (for src and dst)
+			// and then blit
 
 		}
 	}
+
+	bool VulkanRenderGraph::CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout)
+	{
+		PROFILE_FUNCTION;
+
+		if (!imageData)		
+			return false;		
+
+		if (imageData->Layout != targetLayout)
+		{
+			Helper::TransitionImageLayout(cmd,
+										  imageData->Image,
+										  imageData->Layout,
+										  targetLayout);
+			imageData->Layout = targetLayout;
+		}
+		return true;
+	}
+
 
 }

@@ -23,6 +23,7 @@ namespace Aurora::VK {
 
 		return true;
 	}
+
 	void VulkanRenderer::Destroy()
 	{
 		PROFILE_FUNCTION;
@@ -45,6 +46,34 @@ namespace Aurora::VK {
 		vkDestroyPipeline(device, m_BindlessGraphicsPipeline, allocCallbacks);
 		m_BindlessGraphicsPipeline = VK_NULL_HANDLE;
 	}
+
+
+	void VulkanRenderer::BindBindlessPipeline(VkCommandBuffer cmd)
+	{
+		PROFILE_FUNCTION;
+
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_BindlessGraphicsPipeline);
+		VkBindDescriptorSetsInfo setInfo{ VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO };
+		setInfo.pNext = nullptr;
+		setInfo.descriptorSetCount = 1;
+		setInfo.pDescriptorSets = &m_BindlessDescriptorSet;
+		setInfo.dynamicOffsetCount = 0;
+		setInfo.firstSet = 0;
+		setInfo.layout = m_BindlessGraphicsPipelineLayout;
+		setInfo.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		vkCmdBindDescriptorSets2(cmd, &setInfo);
+	}
+
+	void VulkanRenderer::Draw(VkCommandBuffer cmd, uint32_t vertexCount)
+	{
+		PROFILE_FUNCTION;
+
+		if (vertexCount == 0)
+			return;
+
+		vkCmdDraw(cmd, vertexCount, 1, 0, 0);
+	}
+
 
 	bool VulkanRenderer::CreateBindlessDescriptorSet()
 	{

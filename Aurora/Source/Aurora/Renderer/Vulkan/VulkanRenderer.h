@@ -19,10 +19,8 @@ namespace Aurora::VK {
 		bool Init();
 		void Destroy();
 
-		inline void SubmitRenderCommand(const RenderCommand&& cmd)
-		{
-			RenderCommandQueue.push_back(cmd);
-		}
+		void BindBindlessPipeline(VkCommandBuffer cmd);
+		void Draw(VkCommandBuffer cmd, uint32_t vertexCount);
 
 		// Delete if not used
 		//inline const VkDescriptorPool GetBindlessDescriptorPool() const {
@@ -48,7 +46,6 @@ namespace Aurora::VK {
 
 
 	private:
-		std::deque<RenderCommand> RenderCommandQueue;
 
 		VkDescriptorPool m_BindlessDescriptorPool = VK_NULL_HANDLE;
 		VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;

@@ -13,6 +13,7 @@ namespace Aurora::VK {
 
 	struct CompiledColorAttachment
 	{
+		std::string Name;
 		ImageHandle Handle;
 		VkRenderingAttachmentInfo AttachmentInfo;
 	};
@@ -30,6 +31,7 @@ namespace Aurora::VK {
 		//one per frame in flight
 		std::vector<CompiledPassSlot> Slots;
 		VkRect2D RenderArea{};
+		bool HasDepthAttachment = false;
 	};
 
 
@@ -49,6 +51,9 @@ namespace Aurora::VK {
 		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle) override;
 
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
+
+	private:
+		bool CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout);
 
 	private:
 		RenderGraphSpecification m_Specification;
