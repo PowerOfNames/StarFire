@@ -16,68 +16,6 @@ namespace Aurora::VK {
 			AURORA_ERROR("VulkanContext cannot be nullptr");
 			return;
 		}
-
-		// we now initialize all buffers for bindless rendering -> create one buffer/ static and frameInFLight*buffers for dynamic resources.
-
-		// == Static vertex buffer ==
-		{
-			VertexBufferHandle handle = m_BufferAllocator.Allocate();
-			if (handle == VertexBufferHandle::INVALID_HANDLE)
-			{
-				AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
-				return;
-			}
-			VulkanBufferData* data = GetBufferData(handle);
-			data->Size = 1024 * 1024;
-			if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(BufferUsageFlags::VERTEX_BUFFER | BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS), VMA_MEMORY_USAGE_GPU_ONLY, data->Size))
-			{
-				AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
-				return;
-			}
-			AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), "StaticVertexBuffer");
-
-			// we keep a persistant pointer to the static vertex buffer data for fatser access.
-			// CAUTION: doings this means that we have to be very careful when destroying the static vertex buffer to avoid dangling pointers.
-			//			We have to make sure that we set the pointer in the cache to nullptr after destroying the buffer and before freeing the handle.
-			m_BufferCache[BufferSpecializationType::STATIC_VERTEX_BUFFER] = { handle.As<BufferHandle>(), data };
-			
-
-			m_VulkanContext->SubmitToMainDeletionQueue([this]()
-			{
-				// we set the pointer in the cache to nullptr before freeing the handle to avoid dangling pointers.
-				m_BufferCache[BufferSpecializationType::STATIC_VERTEX_BUFFER].Data = nullptr;
-				DestroyVertexBuffer((m_BufferCache[BufferSpecializationType::STATIC_VERTEX_BUFFER].Handle).As<VertexBufferHandle>());
-			});
-		}
-
-		// == Static index buffer ==
-		{
-			IndexBufferHandle handle = m_BufferAllocator.Allocate();
-			if (handle == IndexBufferHandle::INVALID_HANDLE)
-			{
-				AURORA_ERROR("Failed to create static index buffer for bindless rendering. Bindless rendering might not work correctly.");
-				return;
-			}
-
-			VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
-			data->Size = 1024 * 1024 * sizeof(uint32_t);
-			if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(BufferUsageFlags::INDEX_BUFFER | BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS), VMA_MEMORY_USAGE_GPU_ONLY, data->Size))
-			{
-				AURORA_ERROR("Failed to create static index buffer for bindless rendering. Bindless rendering might not work correctly.");
-				return;
-			}
-			AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), "StaticIndexBuffer");
-
-			m_BufferCache[BufferSpecializationType::STATIC_INDEX_BUFFER] = {handle.As<BufferHandle>(), data};
-			
-
-			m_VulkanContext->SubmitToMainDeletionQueue([this]()
-			{
-				// we set the pointer in the cache to nullptr before freeing the handle to avoid dangling pointers.
-				m_BufferCache[BufferSpecializationType::STATIC_INDEX_BUFFER].Data = nullptr;
-				DestroyIndexBuffer((m_BufferCache[BufferSpecializationType::STATIC_INDEX_BUFFER].Handle).As<IndexBufferHandle>());
-			});
-		}
 	}
 
 	void VulkanResourceManager::Destroy()
@@ -314,44 +252,20 @@ namespace Aurora::VK {
 			return VertexBufferHandle::INVALID_HANDLE;
 		}
 
-		auto it = m_BufferCache.find(bufferSpecs.SpecializationType);
-		if (it == m_BufferCache.end())
-		{
-			AURORA_ERROR("Failed to find static vertex buffer in cache. This should never happen as the static vertex buffer is created during initialization. Bindless rendering might not work correctly.");
-			m_BufferAllocator.Free(handle);
-			return VertexBufferHandle::INVALID_HANDLE;
-		}
-
-		// this is the main static vertex buffer
-		VulkanBufferData* cachedBufferData = it->second.Data;
-		if (!cachedBufferData)
-		{
-			AURORA_ERROR("Cached buffer data is null for. Bindless rendering might not work correctly.");
-			m_BufferAllocator.Free(handle);
-			return VertexBufferHandle::INVALID_HANDLE;
-		}
-
-		// check if it remains enough space for this allocation
-		//TODO: either dynamically add another new buffer if one is full (buckets) or make sure this never happens
-		if (it->second.CurrentOffset + bufferSpecs.Size > cachedBufferData->Size)
-		{
-			AURORA_ERROR("Not enough space in static vertex buffer for new buffer. Bindless rendering might not work correctly. NOT IMPLEMENTED YET: This should not happen yet (NOT IMPLEMENTED YET: user/scene must recreate these later with a large enough buffer.");
-			m_BufferAllocator.Free(handle);
-			return VertexBufferHandle::INVALID_HANDLE;
-		}
-
-		// data of the new buffer (subbuffer) points to the same VkBuffer as the main static vertex buffer, but with different offset and size
-		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
-		data->Buffer = cachedBufferData->Buffer;
-		data->Allocation = cachedBufferData->Allocation;
-		size_t& offset = it->second.CurrentOffset;
-		data->Offset = offset;
-		offset += bufferSpecs.Size; // increase current offset of the main static vertex buffer (for next allocation)
+		VulkanBufferData* data = GetBufferData(handle);
 		data->Size = bufferSpecs.Size;
+		data->Offset = 0;
+		data->Usage = bufferSpecs.Usage | BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
+		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(data->Usage), static_cast<VmaMemoryUsage>(bufferSpecs.MemUsage), data->Size))
+		{
+			AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
+			m_BufferAllocator.Free(handle);
+			return VertexBufferHandle::INVALID_HANDLE;
+		}
+		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), "StaticVertexBuffer");
 		data->LastOwner = QueueOwner::UNKNOWN;
 		data->CurrentOwner = QueueOwner::UNKNOWN;
 		data->NextOwner = QueueOwner::UNKNOWN;
-		data->Usage = BufferUsageFlags::VERTEX_BUFFER;
 
 		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownershitp to transfer queue 
 		// and then upload the data via a staging buffer and then copy the staging content into data

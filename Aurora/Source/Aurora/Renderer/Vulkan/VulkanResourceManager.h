@@ -49,16 +49,6 @@ namespace Aurora::VK {
 		Ref<VulkanContext> m_VulkanContext = nullptr;
 
 		Substrate::PoolAllocator<VulkanImageData, ImageHandle::Type, 1024 * sizeof(VulkanImageData)> m_ImageAllocator; // we store up to 1024 images in the pool, which should be more than enough for now, but we can always add more pools with different sizes if needed or implement resize functionality
-		
-		struct BufferCacheEntry
-		{
-			BufferHandle Handle = 0;
-			VulkanBufferData* Data = nullptr;
-			//we use the VkBuffer as one bucket and always add to the last entry for now as long as there is enough space for the added buffer
-			size_t CurrentOffset = 0;
-		};
-		std::unordered_map<BufferSpecializationType, BufferCacheEntry> m_BufferCache;
-
 		Substrate::PoolAllocator<VulkanBufferData, BufferHandle::Type, 1024 * sizeof(VulkanBufferData)> m_BufferAllocator; // we store up to 1024 buffers in the pool, which should be more than enough for now, but we can always add more pools with different sizes if needed or implement resize functionality
 	};
 
