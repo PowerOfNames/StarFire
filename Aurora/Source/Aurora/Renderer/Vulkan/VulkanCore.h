@@ -25,8 +25,6 @@ namespace Aurora::VK {
 		VkImageLayout TargetLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		//Syncing:
-		VkSemaphore ImageAvailableSemaphore = VK_NULL_HANDLE;
-		VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;
 		VkFence InFlightFence = VK_NULL_HANDLE;
 
 		// Metadata
@@ -186,8 +184,8 @@ namespace Aurora::VK {
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VmaAllocation Allocation = VK_NULL_HANDLE;
 		VmaAllocationInfo AllocationInfo{}; 
-		VkDeviceSize Size = 0;
-		VkDeviceSize Offset = 0;
+		size_t Size = 0;
+		size_t Offset = 0;
 
 		BufferUsageFlags Usage = BufferUsageFlags::NONE;
 

@@ -699,11 +699,7 @@ namespace Aurora::VK {
 		VkCommandBufferAllocateInfo cmdAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		cmdAllocInfo.pNext = nullptr;
 		cmdAllocInfo.commandBufferCount = 1;
-		cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-		VkSemaphoreCreateInfo semaInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-		semaInfo.pNext = nullptr;
-		semaInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
+		cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;		
 
 		VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 		fenceInfo.pNext = nullptr;
@@ -738,34 +734,7 @@ namespace Aurora::VK {
 				if (fif.CommandBuffer == VK_NULL_HANDLE)
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)fif.CommandBuffer, cmdName.c_str());
-			}
-
-			// ===== Frame semaphores =====
-			{
-				AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &fif.ImageAvailableSemaphore), VK_SUCCESS, "Failed to create image available semaphore.");
-				if (fif.ImageAvailableSemaphore == VK_NULL_HANDLE)
-					return false;
-				const std::string availableName = "Frame_Sema_Ava_" + iString;
-				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)fif.ImageAvailableSemaphore, availableName.c_str());
-
-				SubmitToMainDeletionQueue([this, &avSema = fif.ImageAvailableSemaphore]()
-					{
-						vkDestroySemaphore(m_Device, avSema, m_AllocationCallbacks);
-						avSema = VK_NULL_HANDLE;
-					});
-
-				AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &fif.RenderFinishedSemaphore), VK_SUCCESS, "Failed to create render finished semaphore.");
-				if (fif.RenderFinishedSemaphore == VK_NULL_HANDLE)
-					return false;
-				const std::string renderFinName = "Frame_Sema_RenderFin_" + iString;
-				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)fif.RenderFinishedSemaphore, "Swapchain_Sema_RenderFin_" + iString);
-
-				SubmitToMainDeletionQueue([this, &finSema = fif.RenderFinishedSemaphore]()
-					{
-						vkDestroySemaphore(m_Device, finSema, m_AllocationCallbacks);
-						finSema = VK_NULL_HANDLE;
-					});
-			}
+			}			
 
 			// ===== Frame fence =====
 			{

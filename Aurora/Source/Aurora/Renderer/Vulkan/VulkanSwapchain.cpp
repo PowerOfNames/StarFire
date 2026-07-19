@@ -4,7 +4,7 @@
 #include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
 #include "Shaders/ShaderByteCodes.h"
 
-namespace Aurora::VK {	
+namespace Aurora::VK {
 
 	VulkanSwapchain::VulkanSwapchain(const SwapchainSpecification& spec)
 		: m_Specification(spec)
@@ -33,7 +33,13 @@ namespace Aurora::VK {
 			AURORA_TRACE("Failed to create swapchain image view.");
 			return;
 		}
-				
+
+		if (!CreateImageSemaphores())
+		{
+			AURORA_TRACE("Failed to create swapchain image semaphores");
+			return;
+		}
+
 		if (!CreateRenderPass())
 		{
 			AURORA_TRACE("Failed to create swapchain render pass handle.");
@@ -62,14 +68,22 @@ namespace Aurora::VK {
 		vkDeviceWaitIdle(m_Specification.Device);
 
 		for (auto framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(m_Specification.Device, framebuffer, nullptr);
+			vkDestroyFramebuffer(m_Specification.Device, framebuffer, m_Specification.AllocationCallbacks);
 		m_Framebuffers.clear();
 
+		for (auto sema : m_ImageAvailableSemaphores)
+			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
+		m_ImageAvailableSemaphores.clear();
+
+		for (auto sema : m_ImageRenderFinishedSemaphores)
+			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
+		m_ImageRenderFinishedSemaphores.clear();
+
 		for (auto imageView : m_ImageViews)
-			vkDestroyImageView(m_Specification.Device, imageView, nullptr);
+			vkDestroyImageView(m_Specification.Device, imageView, m_Specification.AllocationCallbacks);
 		m_ImageViews.clear();
 
-		vkDestroySwapchainKHR(m_Specification.Device, m_Swapchain, nullptr);
+		vkDestroySwapchainKHR(m_Specification.Device, m_Swapchain, m_Specification.AllocationCallbacks);
 		m_Swapchain = VK_NULL_HANDLE;
 		m_Images.clear();
 		AURORA_TRACE("Cleaning swapchin finished.");
@@ -80,26 +94,26 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		vkDeviceWaitIdle(m_Specification.Device);
-		
+
 		CleanupSwapchain();
 
-		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, nullptr);
+		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, m_Specification.AllocationCallbacks);
 		m_FallbackPipeline = VK_NULL_HANDLE;
 
-		vkDestroyPipelineLayout(m_Specification.Device, m_FallbackPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(m_Specification.Device, m_FallbackPipelineLayout, m_Specification.AllocationCallbacks);
 		m_FallbackPipelineLayout = VK_NULL_HANDLE;
 
-		vkDestroyRenderPass(m_Specification.Device, m_RenderPass, nullptr);
+		vkDestroyRenderPass(m_Specification.Device, m_RenderPass, m_Specification.AllocationCallbacks);
 		m_RenderPass = VK_NULL_HANDLE;
 
 
 		AURORA_INFO("Destroyed swapchain.");
 	}
-	
+
 	bool VulkanSwapchain::PrepareFrame(VulkanFrame& frame)
 	{
 		PROFILE_FUNCTION;
-				
+
 		// EO, because this only happens if Present captured suboptimal but no resize event was triggered yet
 		if (m_NeedsResize)
 			return false;
@@ -110,14 +124,14 @@ namespace Aurora::VK {
 
 		frame.InPresentation = false;
 
-		VkResult result = vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, 1'000'000'000 /*1sec*/, frame.ImageAvailableSemaphore, VK_NULL_HANDLE, &m_ImageIndex);
+		VkResult result = vkAcquireNextImageKHR(m_Specification.Device, m_Swapchain, 1'000'000'000 /*1sec*/, m_ImageAvailableSemaphores[frame.FrameIndex], VK_NULL_HANDLE, &m_ImageIndex);
 		if (result == VK_SUBOPTIMAL_KHR)
 		{
 			m_NeedsResize = true;
 			AURORA_WARN("Swapchain not optimal.");
 			return false;
 		}
-		
+
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			m_NeedsResize = true;
@@ -154,11 +168,11 @@ namespace Aurora::VK {
 		submitInfo.pCommandBuffers = &frame.CommandBuffer;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &frame.ImageAvailableSemaphore; //wait until image is available to render/draw to
+		submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[frame.FrameIndex]; //wait until image is available to render/draw to
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &frame.RenderFinishedSemaphore; //signal when drawing is finished and ready to be presented
+		submitInfo.pSignalSemaphores = &m_ImageRenderFinishedSemaphores[m_ImageIndex]; //signal when drawing is finished and ready to be presented
 		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, frame.InFlightFence), VK_SUCCESS, "Failed to submit draw render buffer!");
 
 		frame.InPresentation = true;
@@ -169,7 +183,7 @@ namespace Aurora::VK {
 
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &m_Swapchain;
-		presentInfo.pWaitSemaphores = &frame.RenderFinishedSemaphore; //wait until ready to be presented
+		presentInfo.pWaitSemaphores = &m_ImageRenderFinishedSemaphores[m_ImageIndex]; //wait until ready to be presented
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pImageIndices = &m_ImageIndex;
 		presentInfo.pResults = nullptr;
@@ -280,9 +294,9 @@ namespace Aurora::VK {
 		swapInfo.clipped = VK_TRUE;
 		swapInfo.oldSwapchain = VK_NULL_HANDLE;
 
-		AURORA_VK_CHECK(vkCreateSwapchainKHR(m_Specification.Device, &swapInfo, nullptr, &m_Swapchain), VK_SUCCESS, "Failed to create swapchain handle.");
-		if (m_Swapchain == VK_NULL_HANDLE)		
-			return false;		
+		AURORA_VK_CHECK(vkCreateSwapchainKHR(m_Specification.Device, &swapInfo, m_Specification.AllocationCallbacks, &m_Swapchain), VK_SUCCESS, "Failed to create swapchain handle.");
+		if (m_Swapchain == VK_NULL_HANDLE)
+			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t)m_Swapchain, "Swapchain");
 
 		m_Extent = extent;
@@ -325,6 +339,41 @@ namespace Aurora::VK {
 				return false;
 			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_ImageViews[i], "Swapchain_ImageView");
 		}
+		return true;
+	}
+
+	bool VulkanSwapchain::CreateImageSemaphores()
+	{
+		PROFILE_FUNCTION;
+
+		VkSemaphoreCreateInfo semaInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+		semaInfo.pNext = nullptr;
+		semaInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
+
+		m_ImageAvailableSemaphores.resize(m_Specification.FramesInFlight);
+		for (size_t i = 0; i < m_ImageAvailableSemaphores.size(); i++)
+		{
+			const std::string iString = std::to_string(i);
+
+			AURORA_VK_CHECK(vkCreateSemaphore(m_Specification.Device, &semaInfo, m_Specification.AllocationCallbacks, &m_ImageAvailableSemaphores[i]), VK_SUCCESS, "Failed to create image available semaphore.");
+			if (m_ImageAvailableSemaphores[i] == VK_NULL_HANDLE)
+				return false;
+			const std::string availableName = "Frame_Sema_Ava_" + iString;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ImageAvailableSemaphores[i], availableName.c_str());
+		}
+
+		m_ImageRenderFinishedSemaphores.resize(m_Images.size());
+		for (size_t i = 0; i < m_ImageRenderFinishedSemaphores.size(); i++)
+		{
+			const std::string iString = std::to_string(i);
+
+			AURORA_VK_CHECK(vkCreateSemaphore(m_Specification.Device, &semaInfo, m_Specification.AllocationCallbacks, &m_ImageRenderFinishedSemaphores[i]), VK_SUCCESS, "Failed to create render finished semaphore.");
+			if (m_ImageRenderFinishedSemaphores[i] == VK_NULL_HANDLE)
+				return false;
+			const std::string renderFinName = "Image_Sema_RenderFin_" + iString;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ImageRenderFinishedSemaphores[i], "Swapchain_Sema_RenderFin_" + iString);
+		}
+
 		return true;
 	}
 
@@ -381,7 +430,7 @@ namespace Aurora::VK {
 		if (m_RenderPass == VK_NULL_HANDLE)
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)m_RenderPass, "Swapchain_RenderPass");
-		
+
 		return true;
 	}
 
@@ -478,10 +527,10 @@ namespace Aurora::VK {
 		AURORA_VK_CHECK(vkCreateShaderModule(m_Specification.Device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create swapchain fallback fragment shader module.");
 		if (vertModule == VK_NULL_HANDLE)
 			return false;
-		
+
 
 		//Shader stages
-		VkPipelineShaderStageCreateInfo vertShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };					
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		vertShaderStageInfo.pNext = nullptr;
 		vertShaderStageInfo.flags = 0;
 		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -489,7 +538,7 @@ namespace Aurora::VK {
 		vertShaderStageInfo.pName = "main";
 		vertShaderStageInfo.pSpecializationInfo = nullptr;
 
-		VkPipelineShaderStageCreateInfo fragShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };			
+		VkPipelineShaderStageCreateInfo fragShaderStageInfo{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		fragShaderStageInfo.pNext = nullptr;
 		fragShaderStageInfo.flags = 0;
 		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -498,7 +547,7 @@ namespace Aurora::VK {
 		fragShaderStageInfo.pSpecializationInfo = nullptr;
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-		
+
 		//Vertex input state
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		vertexInputInfo.pNext = nullptr;
@@ -514,7 +563,7 @@ namespace Aurora::VK {
 		inputAssemblyInfo.flags = 0;
 		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
-		
+
 		//Viewport
 		// Not used (dynamic state)
 		//VkViewport viewport{};
@@ -574,7 +623,7 @@ namespace Aurora::VK {
 		multiSampInfo.pSampleMask = nullptr;
 		multiSampInfo.alphaToCoverageEnable = VK_FALSE;
 		multiSampInfo.alphaToOneEnable = VK_FALSE;
-		
+
 		//DepthTesting (not used)
 		//VkPipelineDepthStencilStateCreateInfo depthStencilInfo{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 		//depthStencilInfo.pNext = nullptr;
@@ -612,7 +661,7 @@ namespace Aurora::VK {
 		layoutInfo.pSetLayouts = nullptr;
 		layoutInfo.pushConstantRangeCount = 0;
 		layoutInfo.pPushConstantRanges = nullptr;
-		
+
 		AURORA_VK_CHECK(vkCreatePipelineLayout(m_Specification.Device, &layoutInfo, nullptr, &m_FallbackPipelineLayout), VK_SUCCESS, "Failed to create swapchain fallback pipeline layout.");
 		if (m_FallbackPipelineLayout == VK_NULL_HANDLE)
 			return false;
@@ -649,6 +698,6 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	
+
 
 }
