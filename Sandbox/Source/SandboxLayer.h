@@ -40,12 +40,12 @@ namespace Sandbox {
 		};
 		ViewportPanel m_ViewportPanel;
 
-		Aurora::ImageHandle m_ViewportImageHandle;
-
 		Aurora::VertexBufferHandle m_TriangleVertexBufferHandle;
 		Aurora::IndexBufferHandle m_TriangleIndexBufferHandle;
 
-		uint64_t m_ViewportTextureID;
+		const std::string c_DefaultPassName = "TrianglePass";
+		const std::string c_DefaultColorAttachmentName = "TriangleColorAttachment";
+		const std::string c_CopyColorTargetName = "TriangleColorAttachmentCopy";
 	};
 	
 }

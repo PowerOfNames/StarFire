@@ -20,10 +20,4 @@ namespace Aurora {
 
 		uint8_t MipLevels = 1;
 	};
-	
-	struct ImageCopyInfo
-	{
-		ImageHandle SrcImage;
-		ImageHandle DstImage;
-	};
 }

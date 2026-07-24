@@ -2,6 +2,7 @@
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Core/Core.h"
 
+#include "Aurora/Aurora.h"
 #include "AuroraInternal.h"
 
 namespace Aurora::VK {
@@ -9,8 +10,6 @@ namespace Aurora::VK {
 		: m_Specification(specs)
 	{
 		PROFILE_FUNCTION;
-
-
 	}
 
 
@@ -18,13 +17,22 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+
 		AURORA_INFO("Destroying renderGraph '{}'...", m_Specification.Name.c_str());
 
 		for (const auto& rp : m_RenderPasses)
 			rp->Destroy();		
 		m_RenderPasses.clear();
 		m_CompiledPasses.clear();
-		m_ImageCopies.clear();
+		for (auto& [copyName, compiledCopy] : m_CompiledCopies)
+		{
+			for (auto& fifHandle : compiledCopy.CopyTargetsPerFif)
+				DestroyImage(fifHandle);
+			//Sources come from Attachments->get cleared there
+			compiledCopy.CopySourcesPerFif.clear();
+			compiledCopy.CopyTargetsPerFif.clear();				
+		}		
+		m_CompiledCopies.clear();
 	}
 
 	void VulkanRenderGraph::AddRenderPass(const Ref<RenderPass>& renderPass)
@@ -36,12 +44,143 @@ namespace Aurora::VK {
 		m_RenderPasses.push_back(renderPass);
 	}
 
-	void VulkanRenderGraph::AddImageCopy(const ImageCopyInfo& cpyInfo)
+	void VulkanRenderGraph::AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo)
+	{
+		PROFILE_FUNCTION;
+		std::string copyName = std::string(copyRequestName);
+		if (copyName.empty())
+		{
+			AURORA_ERROR("Empty CopyRequestName not allowed.");
+			return;
+		}
+
+		auto it = m_CompiledCopies.find(copyName);
+		if (it != m_CompiledCopies.end())
+		{
+			AURORA_ERROR("Copy request {} already in use.", copyName.c_str());
+			return;
+		}
+
+		
+		const std::vector<CompiledAttachment*> foundAttachments = FindAttachmentByNameInPass(copyInfo.PassName, copyInfo.AttachmentName);
+		if (foundAttachments.size() == 0)
+		{
+			AURORA_ERROR("CopyRequest {}: Could not find any attachments in pass {} with name {}.",
+						 copyName.c_str(),
+						 copyInfo.PassName.c_str(),
+						 copyInfo.AttachmentName.c_str());
+			return;
+		}
+
+		CompiledAttachmentCopy compiledCopy{};
+		compiledCopy.CopySourcesPerFif.reserve(foundAttachments.size());
+		compiledCopy.CopyTargetsPerFif.reserve(foundAttachments.size());
+
+		for (size_t i = 0; i < foundAttachments.size(); i++)		
+			compiledCopy.CopySourcesPerFif.push_back(foundAttachments[i]->Handle);
+
+		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
+		bool success = true;
+		for (size_t i = 0; i < compiledCopy.CopySourcesPerFif.size(); i++)
+		{
+			const auto& src = compiledCopy.CopySourcesPerFif[i];
+			VulkanImageData* srcData = resourceManager->GetImageData(src);
+			if (!srcData)
+			{
+				AURORA_ERROR("Found copy source image handle ({}) has no data.", (uint64_t)src);
+				success = false;
+				break;
+			}
+			ImageSpecification copyTargetInfo{};
+			copyTargetInfo.Format = static_cast<Format>(srcData->Format);
+			copyTargetInfo.Height = srcData->Height;
+			copyTargetInfo.Width = srcData->Width;
+			copyTargetInfo.MemUsage = MemoryUsage::GPU_ONLY;
+			copyTargetInfo.MipLevels = 1;
+			std::string name = copyInfo.AttachmentName + "_FiF" + std::to_string(i);
+			copyTargetInfo.Name = name;
+			copyTargetInfo.Tiling = ImageTiling::OPTIMAL;
+			copyTargetInfo.Usage = ImageUsageFlags::SAMPLED | ImageUsageFlags::TRANSFER_DST;
+			ImageHandle handle = CreateImage(copyTargetInfo);
+			if (handle == ImageHandle::INVALID_HANDLE)
+			{
+				AURORA_ERROR("Failed to create copy target image ({})", name.c_str());
+				success = false;
+				break;
+			}
+			compiledCopy.CopyTargetsPerFif.push_back(handle);
+		}
+
+		if (!success)
+		{
+			AURORA_WARN("Failed to set up compiled copy {}. Clearing up already created resources.", copyName.c_str());
+			for (size_t i = 0; i < compiledCopy.CopyTargetsPerFif.size(); i++)
+				DestroyImage(compiledCopy.CopyTargetsPerFif[i]);
+
+			compiledCopy.CopySourcesPerFif.clear();
+			compiledCopy.CopyTargetsPerFif.clear();
+			return;
+		}
+
+		for (size_t i = 0; i < foundAttachments.size(); i++)
+			foundAttachments[i]->CopyRequested = true;
+
+		compiledCopy.PassName = copyInfo.PassName;
+		compiledCopy.AttachmentName = copyInfo.AttachmentName;
+		m_CompiledCopies[copyName] = std::move(compiledCopy);
+	}
+
+	void VulkanRenderGraph::RemoveAttachmentCopy(std::string_view copyRequestName)
 	{
 		PROFILE_FUNCTION;
 
 
+		std::string copyName = std::string(copyRequestName);
+		auto it = m_CompiledCopies.find(copyName);
+		if (it == m_CompiledCopies.end())
+		{
+			AURORA_WARN("Copy request {} was not registered.", copyName.c_str());
+			return;
+		}
 
+		for (auto& target : it->second.CopyTargetsPerFif)
+			DestroyImage(target);
+		it->second.CopyTargetsPerFif.clear();
+		it->second.CopySourcesPerFif.clear();
+
+		const std::vector<CompiledAttachment*> foundAttachments = FindAttachmentByNameInPass(it->second.PassName, it->second.AttachmentName);
+		if (foundAttachments.size() == 0)
+		{
+			AURORA_WARN("No attachments were found during removal of attachment copy request {}. This should never happen and might cause leaks!", copyName.c_str());
+		}
+		else
+			for (size_t i = 0; i < foundAttachments.size(); i++)
+				foundAttachments[i]->CopyRequested = false;
+
+		m_CompiledCopies.erase(copyName);		
+	}
+
+	ImageHandle VulkanRenderGraph::GetCopyTarget(std::string_view copyRequestName)
+	{
+		PROFILE_FUNCTION;
+
+		std::string copyName = std::string(copyRequestName);
+		auto it = m_CompiledCopies.find(copyName);
+		if (it == m_CompiledCopies.end())
+		{
+			AURORA_WARN("Copy request {} was not registered.", copyName.c_str());
+			return ImageHandle::INVALID_HANDLE;
+		}
+
+		const uint8_t fif = GetRenderContext()->GetCurrentFrameInFlightIndex();
+		uint8_t copyTargetCount = static_cast<uint8_t>(it->second.CopyTargetsPerFif.size());
+		if (copyTargetCount <= fif)
+		{
+			AURORA_WARN("Fif index larger then copy targets array ({})", copyTargetCount);
+			return ImageHandle::INVALID_HANDLE;
+		}
+
+		return it->second.CopyTargetsPerFif[fif];
 	}
 
 	void VulkanRenderGraph::Compile()
@@ -64,7 +203,7 @@ namespace Aurora::VK {
 				CompiledPassSlot slot{};
 				for (const auto& colorAttachment : renderPass->GetColorAttachments())
 				{
-					CompiledColorAttachment compiledAttachment{};
+					CompiledAttachment compiledAttachment{};
 					compiledAttachment.Name = colorAttachment.Name;
 					compiledAttachment.Handle = colorAttachment.ImageHandlesPerFiF[i];
 
@@ -94,8 +233,9 @@ namespace Aurora::VK {
 				if (renderPass->HasDepthAttachment())
 				{				
 					const RenderPassAttachment& depthAttachment = renderPass->GetDepthAttachment();
-					slot.DepthHandle = depthAttachment.ImageHandlesPerFiF[i];
-					VulkanImageData* imageData = resourceManager->GetImageData(slot.DepthHandle);
+					slot.DepthAttachment.Name = depthAttachment.Name;
+					slot.DepthAttachment.Handle = depthAttachment.ImageHandlesPerFiF[i];
+					VulkanImageData* imageData = resourceManager->GetImageData(slot.DepthAttachment.Handle);
 					if (!imageData)
 					{
 						AURORA_ERROR("Depth Attachment found with invalid handle!");
@@ -115,7 +255,8 @@ namespace Aurora::VK {
 					attachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 					attachmentInfo.clearValue.depthStencil.depth = renderPass->GetClearDepth();
 					attachmentInfo.clearValue.depthStencil.stencil = 0;
-					slot.DepthAttachmentInfo = attachmentInfo;
+					slot.DepthAttachment.AttachmentInfo = attachmentInfo;
+					pass.HasDepthAttachment = true;
 				}
 				
 				pass.Slots.push_back(std::move(slot));
@@ -148,22 +289,25 @@ namespace Aurora::VK {
 		{
 			CompiledPassSlot slot = pass.Slots[frameData.FrameIndex];
 
+			std::unordered_map<std::string, VulkanImageData*> copySources;
 			std::vector<VkRenderingAttachmentInfo> colorAttachments;
 			colorAttachments.reserve(slot.ColorAttachments.size());
 			for (uint32_t i = 0; i < slot.ColorAttachments.size(); i++)
 			{
-				CompiledColorAttachment attachment = slot.ColorAttachments[i];
-				if(!CheckAndTransitImage(resManager->GetImageData(attachment.Handle), cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
+				CompiledAttachment attachment = slot.ColorAttachments[i];
+				VulkanImageData* imageData = resManager->GetImageData(attachment.Handle);
+				if(!CheckAndTransitImage(imageData, cmd, attachment.AttachmentInfo.imageLayout))
 					AURORA_ERROR("Image data of attachment '{}' nullptr", attachment.Name.c_str());
 				else
 					colorAttachments.push_back(attachment.AttachmentInfo);
-
+				if (attachment.CopyRequested)
+					copySources[attachment.Name] = imageData;
 			}
 
 			VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
 			renderingInfo.pNext = nullptr;
 			renderingInfo.flags = 0;
-			renderingInfo.colorAttachmentCount = static_cast<uint32_t>(slot.ColorAttachments.size());
+			renderingInfo.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size());
 			renderingInfo.pColorAttachments = colorAttachments.data();			
 
 			renderingInfo.pStencilAttachment = nullptr;
@@ -171,16 +315,19 @@ namespace Aurora::VK {
 			renderingInfo.layerCount = 1;
 			renderingInfo.viewMask = 0;
 
-			if (slot.DepthHandle != ImageHandle::INVALID_HANDLE)
-			{			
-				VulkanImageData* imageData = resManager->GetImageData(slot.DepthHandle);
-				if(!CheckAndTransitImage(imageData, cmd, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL))
+			if (pass.HasDepthAttachment)
+			{
+				VulkanImageData* imageData = resManager->GetImageData(slot.DepthAttachment.Handle);
+				if (!CheckAndTransitImage(imageData, cmd, slot.DepthAttachment.AttachmentInfo.imageLayout))
 					AURORA_ERROR("Image data of attachment 'depth' nullptr");
-				else				
-					renderingInfo.pDepthAttachment = &slot.DepthAttachmentInfo;
+				else
+					renderingInfo.pDepthAttachment = &slot.DepthAttachment.AttachmentInfo;
+
+				if (slot.DepthAttachment.CopyRequested)
+					copySources[slot.DepthAttachment.Name] = imageData;
 			}
 			else
-				renderingInfo.pDepthAttachment = nullptr;		
+				renderingInfo.pDepthAttachment = nullptr;
 			vkCmdBeginRendering(cmd, &renderingInfo);
 
 			VkViewport viewport{};
@@ -192,12 +339,28 @@ namespace Aurora::VK {
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 			renderer->Draw(cmd, 3);
 
-			vkCmdEndRendering(cmd);
+			vkCmdEndRendering(cmd);		
+			
+			//Manage copies
+			if (copySources.size() == 0)
+				continue;
+			for (auto& [copyName, copy] : m_CompiledCopies)
+			{
+				if(std::strcmp(copy.PassName.c_str(), pass.Name.c_str()) != 0)
+				   continue;
 
-
-			//Now check if any attachment is set as copy target, if so, append another layoutTransition (for src and dst)
-			// and then blit
-
+				VulkanImageData* dst = resManager->GetImageData(copy.CopyTargetsPerFif[frameData.FrameIndex]);
+				if (!dst)
+				{
+					AURORA_ERROR("VulkanImageData of target image in frame {} of attachment {} is nullptr", frameData.FrameIndex, copy.AttachmentName);
+					continue;
+				}
+				CheckAndTransitImage(dst, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				VulkanImageData* src = copySources.at(copy.AttachmentName);
+				CheckAndTransitImage(src, cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				Helper::BlitImageToImage(cmd, src->Image, src->Width, src->Height, dst->Image, src->Width, src->Height);
+				CheckAndTransitImage(dst, cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
 		}
 	}
 
@@ -217,6 +380,68 @@ namespace Aurora::VK {
 			imageData->Layout = targetLayout;
 		}
 		return true;
+	}
+
+
+	const std::vector<CompiledAttachment*> VulkanRenderGraph::FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName)
+	{
+		PROFILE_FUNCTION;
+
+		std::string passNameStr = std::string(passName);
+		std::string attachmentNameStr = std::string(attachmentName);
+
+		CompiledPass* foundPass = nullptr;
+		std::vector<CompiledAttachment*> foundAttachments;
+		for (size_t i = 0; i < m_CompiledPasses.size(); i++)
+		{
+			if (std::strcmp(m_CompiledPasses[i].Name.c_str(), passNameStr.c_str()) != 0)
+				continue;
+			foundPass = &m_CompiledPasses[i];
+		}
+		if (!foundPass)
+		{
+			AURORA_ERROR("PassName {} not found.", passNameStr.c_str());
+			return foundAttachments;
+		}
+
+
+		int foundColorIndex = -1;
+		bool isDepth = false;
+		for (size_t fif = 0; fif < foundPass->Slots.size(); fif++)
+		{
+			auto& slot = foundPass->Slots[fif];
+			if (foundColorIndex > -1)
+			{
+				foundAttachments.push_back(&slot.ColorAttachments[foundColorIndex]);
+				continue;
+			}
+
+			if (isDepth)
+			{
+				foundAttachments.push_back(&slot.DepthAttachment);
+				continue;
+			}
+
+			if (std::strcmp(slot.DepthAttachment.Name.c_str(), attachmentNameStr.c_str()) == 0)
+			{
+				isDepth = true;
+				foundAttachments.push_back(&slot.DepthAttachment);
+				continue;
+			}
+
+			for (size_t i = 0; i < slot.ColorAttachments.size(); i++)
+			{
+				auto& colorAttachment = slot.ColorAttachments[i];
+				if (std::strcmp(colorAttachment.Name.c_str(), attachmentNameStr.c_str()) != 0)
+					continue;
+
+				foundColorIndex = static_cast<int>(i);
+				foundAttachments.push_back(&colorAttachment);
+				break;
+			}
+		}
+
+		return foundAttachments;
 	}
 
 

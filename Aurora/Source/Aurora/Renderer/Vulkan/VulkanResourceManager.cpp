@@ -108,7 +108,8 @@ namespace Aurora::VK {
 		data->Format = static_cast<VkFormat>(imageSpecs.Format);
 		data->Tiling = static_cast<VkImageTiling>(imageSpecs.Tiling);
 		data->Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
-		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, static_cast<VkImageUsageFlags>(imageSpecs.Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
+		data->Usage = imageSpecs.Usage | ImageUsageFlags::TRANSFER_SRC;
+		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, static_cast<VkImageUsageFlags>(data->Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image for handle {}. Freeing handle.", static_cast<uint16_t>(handle));

@@ -92,7 +92,7 @@ namespace Aurora {
 		SAMPLED = BIT(2),
 		STORAGE = BIT(3),
 		COLOR_ATTACHMENT = BIT(4),
-		DEPTH_STENCIL_ATTACHMENT = BIT(5),
+		DEPTH_STENCIL_ATTACHMENT = BIT(5),	
 	};
 
 	enum class MemoryUsage

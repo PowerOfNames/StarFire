@@ -9,6 +9,7 @@
 
 #include <imgui.h>
 
+
 namespace Sandbox {
 
 	SandboxLayer::SandboxLayer() : StarFire::Layer("SandboxLayer")
@@ -16,17 +17,19 @@ namespace Sandbox {
 		PROFILE_FUNCTION;
 
 		Aurora::RenderGraphSpecification rgSpecs{};
-		rgSpecs.Name = "Default Render Graph";
+		rgSpecs.Name = "Triangle Test RG";
 		m_DefaultRenderGraph = Aurora::RenderGraph::Create(rgSpecs);
+			
 
 		uint32_t width = 800;
 		uint32_t height = 600;
 		// == Simple 2D pass for triangle rendering as test ==
 		{
 			Aurora::RenderPassSpecification specs{};
-			specs.Name = "Triangle Render Pass";
+			specs.Name = c_DefaultPassName;
 			Aurora::ColorAttachmentSpecification colorAttachment{};
-			colorAttachment.ImageSpecs.Name = "Color Attachment";
+			colorAttachment.Name = c_DefaultColorAttachmentName;
+			colorAttachment.ImageSpecs.Name = colorAttachment.Name + "_Image";
 			colorAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::COLOR_ATTACHMENT | Aurora::ImageUsageFlags::SAMPLED | Aurora::ImageUsageFlags::TRANSFER_SRC;
 			colorAttachment.ImageSpecs.Format = Aurora::Format::RGBA8_UNORM;
 			colorAttachment.ImageSpecs.Width = width;
@@ -34,7 +37,8 @@ namespace Sandbox {
 			colorAttachment.ClearColor = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
 			specs.ColorAttachments.push_back(std::move(colorAttachment));
 
-			specs.DepthAttachment.Name = "Depth Attachment";
+			specs.DepthAttachment.Name = "Depth";
+			specs.DepthAttachment.ImageSpecs.Name = specs.DepthAttachment.Name + "_Image";
 			specs.DepthAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | Aurora::ImageUsageFlags::TRANSFER_SRC;
 			specs.DepthAttachment.ImageSpecs.Format = Aurora::Format::DEPTH32_SFLOAT;
 			specs.DepthAttachment.ImageSpecs.Width = width;
@@ -44,29 +48,14 @@ namespace Sandbox {
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
 		}
 
-		{
-			Aurora::ImageSpecification viewportTarget{};
-			viewportTarget.Name = "Viewport Target";
-			viewportTarget.Usage = Aurora::ImageUsageFlags::SAMPLED | Aurora::ImageUsageFlags::TRANSFER_DST;
-			viewportTarget.Format = Aurora::Format::RGBA8_UNORM;
-			viewportTarget.Width = width;
-			viewportTarget.Height = height;
-			//TODO: needs verificatrion. I think there was one place in the current pipeline that demanded linear tiling, but I forgot where it was.
-			//viewportTarget.Tiling = Aurora::ImageTiling::LINEAR;
-			//m_ViewportImageHandle = Aurora::CreateImage(viewportTarget);
-		}
-
-		//m_ViewportTextureID = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(m_TrianglePass->GetColorAttachmentHandle());
-
-
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
-		//Aurora::ImageCopyInfo cpyInfo{};
-		//cpyInfo.SrcImage = m_TrianglePass->GetColorAttachmentHandle();
-		//cpyInfo.DstImage = m_ViewportImageHandle;
-		//m_DefaultRenderGraph->AddImageCopy(cpyInfo);
 
 		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
 		m_DefaultRenderGraph->Compile();
+		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
+		colorAttachmentCopy.PassName = c_DefaultPassName;
+		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
+		m_DefaultRenderGraph->AddAttachmentCopy(c_CopyColorTargetName, colorAttachmentCopy);
 	}
 
 	void SandboxLayer::OnAttach()
@@ -93,9 +82,6 @@ namespace Sandbox {
 	void SandboxLayer::OnDetach()
 	{
 		PROFILE_FUNCTION;
-
-		StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->ReturnTextureIDFromHandle(m_ViewportImageHandle);
-		//Aurora::DestroyImage(m_ViewportImageHandle);
 
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
@@ -204,9 +190,12 @@ namespace Sandbox {
 
 			m_ViewportPanel.IsFocused = ImGui::IsWindowFocused();
 			m_ViewportPanel.IsHovered = ImGui::IsWindowHovered();
-			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
 
-			//ImGui::Image(m_ViewportTextureID, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
+			Aurora::ImageHandle viewportImage = m_DefaultRenderGraph->GetCopyTarget(c_CopyColorTargetName);
+			uint64_t textureId = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
+
+			ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 
 			ImGui::End();
 		}

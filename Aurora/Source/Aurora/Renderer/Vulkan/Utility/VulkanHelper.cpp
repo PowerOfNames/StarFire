@@ -225,6 +225,12 @@ namespace Aurora::VK::Helper {
 				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				break;
 			}
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			{
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
+				break;
+			}
 			default:
 			{
 				AURORA_WARN("Unsupported layout transition! Old layout: {0}, new layout: {1}", LayoutToString(oldLayout).c_str(), LayoutToString(newLayout).c_str());
@@ -262,6 +268,12 @@ namespace Aurora::VK::Helper {
 			{
 				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+				break;
+			}
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			{
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 				break;
 			}
 			//TODO: Transfer should use transfer queue and therefore should be handle differently with queue ownership transfer as well

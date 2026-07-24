@@ -31,7 +31,6 @@ namespace Aurora::VK::Creators {
 		imageCreateInfo.pNext = nullptr;
 		imageCreateInfo.flags = 0;
 		imageCreateInfo.format = format;
-		imageCreateInfo.arrayLayers = 1;
 		imageCreateInfo.extent = { width, height, 1 };
 		imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -106,6 +105,7 @@ namespace Aurora::VK::Creators {
 		return true;
 	}
 
+	// == Buffer Barriers ==
 	VkBufferMemoryBarrier2 EmitReleaseBarrier(VkBuffer buffer, 
 											  VkDeviceSize offset,
 											  VkDeviceSize size,
@@ -145,6 +145,87 @@ namespace Aurora::VK::Creators {
 		barrier.buffer = buffer;
 		barrier.offset = offset;
 		barrier.size = size;
+		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+
+		barrier.srcStageMask = srcStageMask;
+		barrier.srcAccessMask = 0;
+		barrier.dstStageMask = dstStageMask;
+		barrier.dstAccessMask = dstAccessMask;
+
+		return barrier;
+	}
+
+	// ========== Image Barriers ==========
+
+	VkImageMemoryBarrier2 EmitLayoutTransitionBarrier(VkImage image,
+												VkImageLayout oldLayout,
+												VkImageLayout newLayout,
+												VkImageSubresourceRange range,
+												VkPipelineStageFlags2 srcStageMask,
+												VkAccessFlags2 srcAccessMask,
+												VkPipelineStageFlags2 dstStageMask,
+												VkAccessFlags2 dstAccessMask)
+	{
+		VkImageMemoryBarrier2 barrier{};
+		barrier.pNext = nullptr;
+		barrier.image = image;
+		barrier.subresourceRange = range;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		barrier.srcStageMask = srcStageMask;
+		barrier.srcAccessMask = srcAccessMask;
+		barrier.dstStageMask = dstStageMask;
+		barrier.dstAccessMask = dstAccessMask;
+		return barrier;
+	}
+
+	VkImageMemoryBarrier2 EmitReleaseBarrier(VkImage image,
+											 VkImageLayout oldLayout,
+											 VkImageLayout newLayout,
+											 VkImageSubresourceRange range,
+											 uint32_t srcQueueFamilyIndex,
+											 uint32_t dstQueueFamilyIndex,
+											 VkPipelineStageFlags2 srcStageMask,
+											 VkAccessFlags2 srcAccessMask,
+											 VkPipelineStageFlags2 dstStageMask)
+	{		
+		VkImageMemoryBarrier2 barrier{};
+		barrier.pNext = nullptr;
+		barrier.image = image;
+		barrier.subresourceRange = range;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+
+		barrier.srcStageMask = srcStageMask;
+		barrier.srcAccessMask = srcAccessMask;
+		barrier.dstStageMask = dstStageMask;
+		barrier.dstAccessMask = 0;	
+
+		return barrier;
+	}
+
+	VkImageMemoryBarrier2 EmitAcquireBarrier(VkImage image,
+											 VkImageLayout oldLayout,
+											 VkImageLayout newLayout,
+											 VkImageSubresourceRange range,
+											 uint32_t srcQueueFamilyIndex,
+											 uint32_t dstQueueFamilyIndex,
+											 VkPipelineStageFlags2 srcStageMask,
+											 VkPipelineStageFlags2 dstStageMask,
+											 VkAccessFlags2 dstAccessMask)
+	{
+		VkImageMemoryBarrier2 barrier{};
+		barrier.pNext = nullptr;
+		barrier.image = image;
+		barrier.subresourceRange = range;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
 		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
 		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
 

@@ -50,7 +50,6 @@ namespace Aurora::VK {
 			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func, semaphore, value);
 		}
 
-		inline const uint8_t GetFramesInFlightCount() const { return m_FramesInFlight.size(); }
 
 		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
@@ -65,6 +64,8 @@ namespace Aurora::VK {
 		inline VulkanFrame& GetFrameData(uint8_t frameIdx) { return m_FramesInFlight[frameIdx]; }
 		inline const VulkanFrame& GetCurrentFrameData() const { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
 		inline VulkanFrame& GetCurrentFrameData() { return m_FramesInFlight[m_RendererStatistics.FramesInFlightIdx]; }
+		inline const uint32_t GetCurrentFrameInFlightIndex(){ return m_RendererStatistics.FramesInFlightIdx; }
+		inline const uint8_t GetFramesInFlightCount() const { return static_cast<uint8_t>(m_FramesInFlight.size()); }
 
 		TimelineSemaphore GetQueueSemaphoreSnapshot(QueueOwner owner);
 		uint32_t GetQueueFamilyIndexFromOwner(QueueOwner owner) const;
@@ -188,9 +189,9 @@ namespace Aurora::VK {
 
 		struct RendererStatistics
 		{
-			uint32_t FramesInFlightIdx = 0;
 			uint64_t TotalAttemptedFrames = 0;
 			uint64_t m_TotalFinishedFrames = 0;
+			uint8_t FramesInFlightIdx = 0;
 		};
 		RendererStatistics m_RendererStatistics{};
 	};

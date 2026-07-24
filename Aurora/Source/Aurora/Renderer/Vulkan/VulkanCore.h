@@ -169,6 +169,8 @@ namespace Aurora::VK {
 		VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;	//32 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now
 		VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;		//36 - might be extractable by context
 
+		ImageUsageFlags Usage = ImageUsageFlags::NONE;
+
 		uint32_t Width = 0;									//40 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes (renderpass should know sizes of all targets)
 		uint32_t Height = 0;								//44 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes
 		uint8_t MipLevels = 1;								//45 -> aligned to !!! 48 !!! bytes - should potentially be optional as well, but for simplicity we just store it here for now

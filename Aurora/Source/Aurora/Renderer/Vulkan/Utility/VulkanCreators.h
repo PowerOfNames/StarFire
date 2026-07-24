@@ -36,4 +36,34 @@ namespace Aurora::VK::Creators {
 													 VkPipelineStageFlags2 srcStageMask, 
 													 VkPipelineStageFlags2 dstStageMask, 
 													 VkAccessFlags2 dstAccessMask);
+
+	// ========== Images ==========
+	VkImageMemoryBarrier2 EmitLayoutTransitionBarrier(VkImage image,
+													  VkImageLayout oldLayout,
+													  VkImageLayout newLayout,
+													  VkImageSubresourceRange range,
+													  VkPipelineStageFlags2 srcStageMask,
+													  VkAccessFlags2 srcAccessMask,
+													  VkPipelineStageFlags2 dstStageMask,
+													  VkAccessFlags2 dstAccessMask);
+
+	VkImageMemoryBarrier2 EmitReleaseBarrier(VkImage image,
+											 VkImageLayout oldLayout,
+											 VkImageLayout newLayout,
+											 VkImageSubresourceRange range,
+											 uint32_t srcQueueFamilyIndex,
+											 uint32_t dstQueueFamilyIndex,
+											 VkPipelineStageFlags2 srcStageMask,
+											 VkAccessFlags2 srcAccessMask,
+											 VkPipelineStageFlags2 dstStageMask);
+	
+	VkImageMemoryBarrier2 EmitAcquireBarrier(VkImage image,
+											 VkImageLayout oldLayout,
+											 VkImageLayout newLayout,
+											 VkImageSubresourceRange range,
+											 uint32_t srcQueueFamilyIndex,
+											 uint32_t dstQueueFamilyIndex,
+											 VkPipelineStageFlags2 srcStageMask,
+											 VkPipelineStageFlags2 dstStageMask,
+											 VkAccessFlags2 dstAccessMask);
 }
