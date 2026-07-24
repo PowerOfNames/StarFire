@@ -46,7 +46,7 @@ namespace Aurora::VK {
 		void Init();
 		bool PrepareFrame(VulkanFrame& frame);
 		bool SwapImages(VulkanFrame& frame);
-		void OnResize(uint32_t width, uint32_t height);
+		void OnResize(uint32_t width, uint32_t height, bool force = false);
 		void Destroy();
 
 		inline const SwapchainSpecification& GetSpecification() const { return m_Specification; }

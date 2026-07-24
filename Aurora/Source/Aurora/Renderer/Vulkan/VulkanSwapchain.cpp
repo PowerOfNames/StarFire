@@ -114,13 +114,23 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		// EO, because this only happens if Present captured suboptimal but no resize event was triggered yet
+		// Check for resize and try
+		if (m_NeedsResize)
+		{
+			SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
+			VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, m_Extent.width, m_Extent.height);
+			if (extent.width == 0 || extent.height == 0)
+				return false;			
+			OnResize(extent.width, extent.height, true);
+		}
+
+		//Resize failed, try again next frame
 		if (m_NeedsResize)
 			return false;
 
+
 		AURORA_TRACE("Acquire next image {}", frame.FrameIndex);
 		vkWaitForFences(m_Specification.Device, 1, &frame.InFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(m_Specification.Device, 1, &frame.InFlightFence);
 
 		frame.InPresentation = false;
 
@@ -129,10 +139,8 @@ namespace Aurora::VK {
 		{
 			m_NeedsResize = true;
 			AURORA_WARN("Swapchain not optimal.");
-			return false;
 		}
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		else if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			m_NeedsResize = true;
 			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
@@ -142,6 +150,8 @@ namespace Aurora::VK {
 		{
 			AURORA_ASSERT(result == VK_SUCCESS, "Failed to acquire swap chain image!");
 		}
+		vkResetFences(m_Specification.Device, 1, &frame.InFlightFence);
+		
 		frame.TargetImage = m_Images[m_ImageIndex];
 		frame.TargetView = m_ImageViews[m_ImageIndex];
 		frame.Extent = m_Extent;
@@ -149,9 +159,6 @@ namespace Aurora::VK {
 
 		vkResetCommandBuffer(frame.CommandBuffer, 0);
 		AURORA_TRACE("Acquired image {}", frame.FrameIndex);
-
-		if (m_NeedsResize)
-			return false;
 
 		return true;
 	}
@@ -197,32 +204,32 @@ namespace Aurora::VK {
 		{
 			m_NeedsResize = true;
 			AURORA_WARN("Swapchain not optimal.");
-			return false;
 		}
-		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		else if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			m_NeedsResize = true;
 			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
 			return false;
 		}
-		AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");
+		else
+			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");		
 
 		AURORA_TRACE("Presented frame {}", frame.FrameIndex);
 		return true;
 	}
 
-	void VulkanSwapchain::OnResize(uint32_t width, uint32_t height)
+	void VulkanSwapchain::OnResize(uint32_t width, uint32_t height, bool force /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
 
-		if (m_Extent.width == width && m_Extent.height == height)
+		if (m_Extent.width == width && m_Extent.height == height && !force)
 		{
 			m_NeedsResize = false;
 			return;
 		}
 
-		AURORA_TRACE("Resizing swapchain to [{}|{}]", width, height);
+		AURORA_TRACE("Resizing swapchain to [{}|{}] (Forced: {})", width, height, force);
 		CleanupSwapchain();
 
 		if (!CreateSwapchain(width, height))
@@ -242,7 +249,7 @@ namespace Aurora::VK {
 			AURORA_TRACE("Failed to create(resize) swapchain framebuffers");
 			return;
 		}
-		AURORA_INFO("Resized swapchain to [{}|{}]", width, height);
+		AURORA_INFO("Resized swapchain to [{}|{}] (Forced: {})", width, height, force);
 
 		m_NeedsResize = false;
 	}
