@@ -6,6 +6,9 @@
 #include "Substrate/UtilityFunctions.h"
 
 #include <vector>
+#include <new>
+#include <type_traits>
+#include <cstddef>
 
 namespace Substrate {
 
@@ -64,6 +67,10 @@ namespace Substrate {
 	PoolAllocator<TBlockType, TResourceHandle, TSize>::PoolAllocator()
 		: m_TotalSize(TSize)
 	{
+		//guards every BlockType that is not 16 byte-aligned -> if this happens, allocator needs to be upgraded
+		static_assert(alignof(TBlockType) <= alignof(std::max_align_t), "PoolAllocator currently only supports default 16 byte alignment. Please upgrade implmentation for larger alignements.");
+		static_assert(std::is_trivially_destructible_v<TBlockType>,	"PoolAllocator slots are data-only: Free() does not run destructors.");
+
 		m_MemoryBlock = static_cast<TBlockType*>(malloc(TSize));
 		m_Handles.reserve(MAX_BLOCK_COUNT);
 		m_FreeHandles.reserve(MAX_BLOCK_COUNT);
@@ -83,6 +90,12 @@ namespace Substrate {
 		Reset();
 	}
 
+	/// <summary>
+	/// Reset does NOT call any destructors! Allocator is for data only.
+	/// </summary>
+	/// <typeparam name="TBlockType"></typeparam>
+	/// <typeparam name="TResourceHandle"></typeparam>
+	/// <typeparam name="TSize"></typeparam>
 	template<typename TBlockType, typename TResourceHandle, size_t TSize>
 		requires HandleTypeCheck<TResourceHandle>&& MustBePowerOFTwo<TSize>
 	void PoolAllocator<TBlockType, TResourceHandle, TSize>::Reset()
@@ -108,6 +121,9 @@ namespace Substrate {
 		// Get the next free handle
 		uint32_t idx = m_FreeHandles.back();
 		m_FreeHandles.pop_back();
+		//Calls constructor -> sets default values
+		new(m_MemoryBlock + idx) TBlockType{};		
+
 		m_CurrentAllocationCount++;
 		m_TotalAllocationCount++;
 		return m_Handles[idx].GetRaw();

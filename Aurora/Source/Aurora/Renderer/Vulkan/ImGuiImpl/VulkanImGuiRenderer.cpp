@@ -214,7 +214,8 @@ namespace Aurora::VK {
 
 		vkCmdEndRendering(cmd);
 
-
+		const Ref<VulkanSwapchain>& swapchain = GetRenderContext()->GetSwapchain();
+		VkFormat swapchainImageFormat = swapchain->GetImageFormat();
 		if (renderTarget.Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 		{
 			renderTarget.Layout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -222,13 +223,13 @@ namespace Aurora::VK {
 
 		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		{
-			frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, renderTarget.Format, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		}
 
 		VK::Helper::BlitImageToImage(frame.CommandBuffer, renderTarget.Image, renderTarget.Width, renderTarget.Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
 
 		renderTarget.Layout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, renderTarget.Format, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 
 	VulkanImageData& VulkanImGuiRenderer::GetRenderTarget(uint32_t frameIdx)
