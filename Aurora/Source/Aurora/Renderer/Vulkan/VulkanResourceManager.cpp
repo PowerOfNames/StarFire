@@ -4,6 +4,7 @@
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCreators.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 
 namespace Aurora::VK {
 	VulkanResourceManager::VulkanResourceManager(const Ref<VulkanContext>& vulkanContext)
@@ -47,7 +48,7 @@ namespace Aurora::VK {
 		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
 		stagingData->Size = size;
 		stagingData->Offset = 0;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(stagingData->Buffer), &(stagingData->Allocation), &(stagingData->AllocationInfo), static_cast<VkBufferUsageFlags>(BufferUsageFlags::TRANSFER_SRC), VMA_MEMORY_USAGE_CPU_TO_GPU, size);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(stagingData->Buffer), &(stagingData->Allocation), &(stagingData->AllocationInfo), Convert::ToVkBufferUsageFlags(BufferUsageFlags::TRANSFER_SRC), VMA_MEMORY_USAGE_CPU_TO_GPU, size);
 		if (!success)
 		{
 			AURORA_ERROR("Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle));
@@ -105,11 +106,11 @@ namespace Aurora::VK {
 		data->Width = imageSpecs.Width;
 		data->Height = imageSpecs.Height;
 		data->MipLevels = imageSpecs.MipLevels;
-		data->Format = static_cast<VkFormat>(imageSpecs.Format);
-		data->Tiling = static_cast<VkImageTiling>(imageSpecs.Tiling);
+		data->Format = Convert::ToVkFormat(imageSpecs.Format);
+		data->Tiling = Convert::ToVkImageTiling(imageSpecs.Tiling);
 		data->Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
 		data->Usage = imageSpecs.Usage | ImageUsageFlags::TRANSFER_SRC;
-		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, static_cast<VkImageUsageFlags>(data->Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
+		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, Convert::ToVkImageUsageFlags(data->Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
@@ -182,7 +183,7 @@ namespace Aurora::VK {
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		data->Size = bufferSpecs.Size;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
 
 		if (!success)
 		{
@@ -257,7 +258,7 @@ namespace Aurora::VK {
 		data->Size = bufferSpecs.Size;
 		data->Offset = 0;
 		data->Usage = bufferSpecs.Usage | BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
-		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(data->Usage), static_cast<VmaMemoryUsage>(bufferSpecs.MemUsage), data->Size))
+		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(data->Usage), Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage), data->Size))
 		{
 			AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
 			m_BufferAllocator.Free(handle);
@@ -328,7 +329,7 @@ namespace Aurora::VK {
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		data->Size = bufferSpecs.Size;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), static_cast<VkBufferUsageFlags>(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
 
 		if (!success)
 		{
