@@ -72,7 +72,7 @@ namespace Aurora::VK::Creators {
 		viewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		viewCreateInfo.subresourceRange.layerCount = 1;
 		viewCreateInfo.subresourceRange.baseMipLevel = 0;
-		viewCreateInfo.subresourceRange.levelCount = 1;
+		viewCreateInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 
 		AURORA_VK_CHECK(vkCreateImageView(device, &viewCreateInfo, allocationCbs, imageView), VK_SUCCESS, "Failed to create image view!");
 		return true;
@@ -106,7 +106,7 @@ namespace Aurora::VK::Creators {
 	}
 
 	// == Buffer Barriers ==
-	VkBufferMemoryBarrier2 EmitReleaseBarrier(VkBuffer buffer, 
+	VkBufferMemoryBarrier2 EmitReleaseBarrier(VkBuffer buffer,
 											  VkDeviceSize offset,
 											  VkDeviceSize size,
 											  uint32_t srcQueueFamilyIndex,
@@ -167,7 +167,7 @@ namespace Aurora::VK::Creators {
 												VkPipelineStageFlags2 dstStageMask,
 												VkAccessFlags2 dstAccessMask)
 	{
-		VkImageMemoryBarrier2 barrier{};
+		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 		barrier.pNext = nullptr;
 		barrier.image = image;
 		barrier.subresourceRange = range;
@@ -192,8 +192,8 @@ namespace Aurora::VK::Creators {
 											 VkPipelineStageFlags2 srcStageMask,
 											 VkAccessFlags2 srcAccessMask,
 											 VkPipelineStageFlags2 dstStageMask)
-	{		
-		VkImageMemoryBarrier2 barrier{};
+	{
+		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 		barrier.pNext = nullptr;
 		barrier.image = image;
 		barrier.subresourceRange = range;
@@ -205,7 +205,7 @@ namespace Aurora::VK::Creators {
 		barrier.srcStageMask = srcStageMask;
 		barrier.srcAccessMask = srcAccessMask;
 		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = 0;	
+		barrier.dstAccessMask = 0;
 
 		return barrier;
 	}
@@ -220,7 +220,7 @@ namespace Aurora::VK::Creators {
 											 VkPipelineStageFlags2 dstStageMask,
 											 VkAccessFlags2 dstAccessMask)
 	{
-		VkImageMemoryBarrier2 barrier{};
+		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 		barrier.pNext = nullptr;
 		barrier.image = image;
 		barrier.subresourceRange = range;

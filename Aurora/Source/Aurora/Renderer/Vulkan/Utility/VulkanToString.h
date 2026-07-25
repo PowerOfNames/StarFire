@@ -33,12 +33,15 @@ namespace Aurora::VK {
 		case VK_IMAGE_LAYOUT_UNDEFINED: return "Undefined";
 		case VK_IMAGE_LAYOUT_GENERAL: return "General";
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: return "Color Attachment Optimal";
+		case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL: return "Depth Attachment Optimal";
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return "Depth Stencil Attachment Optimal";
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: return "Depth Stencil Read Only Optimal";
+		case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL: return "Read Only Optimal";
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return "Shader Read Only Optimal";
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return "Transfer Src Optimal";
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return "Transfer Dst Optimal";
 		case VK_IMAGE_LAYOUT_PREINITIALIZED: return "Preinitialized";
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: return "Present Source";
 		default: return "Unknown Layout";
 		}
 	}

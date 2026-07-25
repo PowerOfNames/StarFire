@@ -124,7 +124,7 @@ namespace Aurora::VK::Helper {
 		for (const auto& availableMode : availableModes)
 		{
 			if (availableMode == preferred)
-				availableMode;
+				return availableMode;
 		}
 
 		return VK_PRESENT_MODE_FIFO_KHR;
@@ -146,9 +146,10 @@ namespace Aurora::VK::Helper {
 		return actualExtent;
 	}
 
-	void TransitionImageLayout(
+	VkImageLayout TransitionImageLayout(
 		VkCommandBuffer cmd, 
-		VkImage image, 
+		VkImage image,
+		VkFormat format,
 		VkImageLayout oldLayout, 
 		VkImageLayout newLayout, 
 		uint32_t baseMipLevel /*= 0*/, 
@@ -167,9 +168,12 @@ namespace Aurora::VK::Helper {
 		barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
 
-		if(newLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
+		if (newLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
 			newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)
+		{
 			newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			AURORA_WARN("Invalid target layout. Fallback to general.");
+		}
 
 		barrier.oldLayout = oldLayout;
 		barrier.newLayout = newLayout;
@@ -302,7 +306,7 @@ namespace Aurora::VK::Helper {
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		barrier.subresourceRange.aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.aspectMask = GetAspectFlagsFromFormat(format);
 		barrier.subresourceRange.baseMipLevel = baseMipLevel;
 		barrier.subresourceRange.levelCount = levelCount;
 		barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
@@ -315,6 +319,7 @@ namespace Aurora::VK::Helper {
 		dependencyInfo.pImageMemoryBarriers = &barrier;
 
 		vkCmdPipelineBarrier2(cmd, &dependencyInfo);
+		return newLayout;
 	}
 
 	void BlitImageToImage(

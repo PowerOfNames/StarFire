@@ -299,9 +299,11 @@ namespace Aurora::VK {
 				if(!CheckAndTransitImage(imageData, cmd, attachment.AttachmentInfo.imageLayout))
 					AURORA_ERROR("Image data of attachment '{}' nullptr", attachment.Name.c_str());
 				else
+				{
 					colorAttachments.push_back(attachment.AttachmentInfo);
-				if (attachment.CopyRequested)
-					copySources[attachment.Name] = imageData;
+					if (attachment.CopyRequested)
+						copySources[attachment.Name] = imageData;
+				}
 			}
 
 			VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
@@ -373,11 +375,11 @@ namespace Aurora::VK {
 
 		if (imageData->Layout != targetLayout)
 		{
-			Helper::TransitionImageLayout(cmd,
+			imageData->Layout = Helper::TransitionImageLayout(cmd,
 										  imageData->Image,
+										  imageData->Format,
 										  imageData->Layout,
 										  targetLayout);
-			imageData->Layout = targetLayout;
 		}
 		return true;
 	}

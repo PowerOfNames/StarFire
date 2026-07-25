@@ -195,7 +195,7 @@ namespace Sandbox {
 			Aurora::ImageHandle viewportImage = m_DefaultRenderGraph->GetCopyTarget(c_CopyColorTargetName);
 			uint64_t textureId = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
 
-			ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
 
 			ImGui::End();
 		}

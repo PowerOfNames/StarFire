@@ -20,9 +20,10 @@ namespace Aurora::VK::Helper {
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t framebufferWidth, uint32_t framebufferHeight);
 
 	// ========== Images ==========
-	void TransitionImageLayout(
+	VkImageLayout TransitionImageLayout(
 		VkCommandBuffer cmd, 
-		VkImage image, 
+		VkImage image,
+		VkFormat format,
 		VkImageLayout oldLayout, 
 		VkImageLayout newLayout, 
 		uint32_t baseMipLevel = 0, 

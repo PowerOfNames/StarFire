@@ -182,8 +182,7 @@ namespace Aurora::VK {
 		VkImageLayout renderingImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		if (renderTarget.Layout != renderingImageLayout)
 		{
-			Helper::TransitionImageLayout(cmd, renderTarget.Image, renderTarget.Layout, renderingImageLayout);
-			renderTarget.Layout = renderingImageLayout;
+			renderTarget.Layout = Helper::TransitionImageLayout(cmd, renderTarget.Image, renderTarget.Format, renderTarget.Layout, renderingImageLayout);
 		}
 
 		VkClearValue* clear = nullptr;
@@ -218,23 +217,18 @@ namespace Aurora::VK {
 
 		if (renderTarget.Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 		{
-			VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			renderTarget.Layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			renderTarget.Layout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		}
 
 		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		{
-			VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			frame.TargetLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, renderTarget.Format, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		}
 
 		VK::Helper::BlitImageToImage(frame.CommandBuffer, renderTarget.Image, renderTarget.Width, renderTarget.Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
 
-		VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		renderTarget.Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		frame.TargetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		renderTarget.Layout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		frame.TargetLayout = VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, renderTarget.Format, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 
 	VulkanImageData& VulkanImGuiRenderer::GetRenderTarget(uint32_t frameIdx)

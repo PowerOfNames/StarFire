@@ -75,9 +75,13 @@ namespace Aurora {
 	{
 		PROFILE_FUNCTION;
 
+		if (g_ResourceManager)
+			g_ResourceManager->Destroy();
+		g_ResourceManager = nullptr;
+
 		if (g_RenderContext)
 			g_RenderContext->Destroy();
-
+		g_RenderContext = nullptr;
 		return true;
 	}
 
