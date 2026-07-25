@@ -1,7 +1,6 @@
 #include "Aurora/Renderer/Shader.h"
 #include "Aurora/Utility/FileIO.h"
 #include "Aurora/AppSettings.h"
-#include "Aurora/Assets/ShaderProcessor.h"
 
 
 #include <fstream>

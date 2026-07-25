@@ -27,35 +27,27 @@ workspace "StarFire"
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
-	include "StarFire/vendor/GLFW"
-	include "StarFire/vendor/xxHash"	
+	include "Dependencies/GLFW"
+	include "Dependencies/ImGui"
 group ""
 
-filter {"StarFire/vendor/**.cpp"}
+filter {"files/Dependencies/**.cpp"}
 	warnings "Off"
 filter {}
 
-filter {"files/vendor/**.cpp"}
+filter {"files/Dependencies/**.cpp"}
 	enablepch "Off"
 filter{}
 
 if _OPTIONS["with-tests"] then
-group "Core"
-	include "Substrate"
-group ""
-group "Tests"
-    include "SubstrateTests"
-group ""
+include "Substrate"
+include "SubstrateTests"
 else
-group "Core"
 	include "StarFire"
 	include "Aurora"
 	include "Sandbox"
 	include "Nebula"
 	include "Substrate"
-group ""
-group "Tests"
-group ""
 end
 
 

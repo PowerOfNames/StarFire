@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Aurora/Core/Logging.h"
+#include "Substrate/RefPtr.h"
+#include "Aurora/Core/Defines.h"
+#include "Aurora/Profiling/Profiling.h"
 
 #ifdef AURORA_DEBUG_MODE
 #define AURORA_ASSERT_ENABLED
@@ -11,24 +14,3 @@
 #else
 #define AURORA_ASSERT(x, ...) do{}while(0)
 #endif
-
-#include <memory>
-
-namespace Aurora {
-
-	template<typename T>
-	using Scope = std::unique_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Scope<T> CreateScope(Args&& ... args)
-	{
-		return std::make_unique<T>(std::forward<Args>(args)...);
-	}
-
-	template<typename T>
-	using Ref = std::shared_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Ref<T> CreateRef(Args&& ... args)
-	{
-		return std::make_shared<T>(std::forward<Args>(args)...);
-	}
-}

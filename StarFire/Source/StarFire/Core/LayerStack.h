@@ -11,6 +11,8 @@ namespace StarFire {
 		LayerStack();
 		~LayerStack();
 
+		void Clear();
+
 		void PushLayer(Layer* layer);
 		void PopLayer(Layer* layer);
 

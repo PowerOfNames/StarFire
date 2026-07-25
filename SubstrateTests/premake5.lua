@@ -1,6 +1,6 @@
 project "SubstrateTests"
 
-filter {"configurations:Debug or Release"}
+filter {"configurations:Debug or Release or Profiling"}
 	kind "None"
 filter {"configurations:Tests"}
 	kind "ConsoleApp"
@@ -29,13 +29,11 @@ filter {"configurations:Tests"}
 	{
 		"Tests/",
 		"%{IncludeDir.Substrate}",
-		"%{SourceDir.Substrate}",
 		"%{IncludeDir.Catch2}"
 	}
 	
 	links
 	{	
-		"Substrate",
 		"Catch2",
 	}
 	

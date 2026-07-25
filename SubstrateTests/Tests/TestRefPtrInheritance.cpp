@@ -35,16 +35,6 @@ class DerivedB : public RefCountedBase
 };
 
 
-template<typename TRefCounted>
-using Ref = Substrate::RefPtr<TRefCounted>;
-
-template<typename TRefCounted, typename ... Args>
-constexpr Ref<TRefCounted> CreateRef(Args&& ... args)
-{
-	return Ref<TRefCounted>(new TRefCounted(std::forward<Args>(args)...));
-}
-
-
 TEST_CASE("RefPtr inheritance testing - As", "[RefPtrInheritance_As]")
 {	
 	Ref<RefCountedBase> basedDerivedA = CreateRef<DerivedA>();

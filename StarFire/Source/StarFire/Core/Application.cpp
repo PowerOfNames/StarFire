@@ -5,14 +5,10 @@
 #include "StarFire/Core/Timestep.h"
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
-
+#include "StarFire/ImGui/ImGuiLayer.h"
 
 #include <Aurora/Aurora.h>
-#include <Aurora/Assets/Assets.h>
 #include <Aurora/Logging/LogLevel.h>
-
-
-#include <thread>
 
 namespace StarFire {
 
@@ -62,30 +58,34 @@ namespace StarFire {
 				RefRegistry::Get()->Unregister(typeName);
 			});
 		
-		Aurora::RenderContextSpecification renderSpecs{};
-		renderSpecs.AppName = m_Specification.Name;
-		renderSpecs.AppVersion = { 1, 0, 0 };
-		renderSpecs.AuroraVersion = { 1, 0, 0 };
-		renderSpecs.InstanceSpecs.EnableDebugUtils = true;
-		renderSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
-		renderSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
-		renderSpecs.SurfaceSpecs.FramesPerFlight = 2;
-		renderSpecs.SurfaceSpecs.VSync = false;
-		renderSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
-		renderSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
-		renderSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
-		renderSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
-		renderSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
-		Aurora::InitializeRenderContext(renderSpecs);
+		Aurora::InitializationSpecification initSpecs{};
+		initSpecs.AppName = m_Specification.Name;
+		initSpecs.AppVersion = { 1, 0, 0 };
+		initSpecs.AuroraVersion = { 1, 0, 0 };
+		initSpecs.InstanceSpecs.EnableDebugUtils = true;
+		initSpecs.SurfaceSpecs.WSI = Aurora::WSIPlatformType::SURFACE_PLATFORM_GLFW;
+		initSpecs.SurfaceSpecs.WindowHandle = m_MainWindow->GetNativeWindow();
+		initSpecs.SurfaceSpecs.FramesPerFlight = 2;
+		initSpecs.SurfaceSpecs.VSync = false;
+		initSpecs.SurfaceSpecs.Width = m_MainWindow->GetWidth();
+		initSpecs.SurfaceSpecs.Height = m_MainWindow->GetHeight();
+		initSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
+		initSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
+		initSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
+		Aurora::Initialize(initSpecs);
 		
 		// ========== Register Resources ==========
 		auto& appSettings = Aurora::ChangeAppSettings();
 		appSettings.SetRootPath(std::filesystem::current_path());
 
-		//Aurora::ShaderAssetHandle testShaderHandle = Aurora::Assets::LoadShader("TestShader");
+		if (m_Specification.UseImGui)
+		{
+			m_ImGuiLayer = new ImGuiLayer();
+			PushOverlay(m_ImGuiLayer);
+		}
 
-		bool is = std::filesystem::path("blob.ext") == "blob.ext";
-		auto ext = std::filesystem::path("blob.frag.spv").extension();
+		//bool is = std::filesystem::path("blob.ext") == "blob.ext";
+		//auto ext = std::filesystem::path("blob.frag.spv").extension();
 
 		RefRegistry::Get()->PrintRegister();
 
@@ -96,11 +96,11 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
+		m_LayerStack.Clear();
 		Aurora::Shutdown();
 		m_MainWindow->Close();
 
 		RefRegistry::Get()->PrintRegister();
-		//LayerStack is cleaned automatically
 	}
 
 	void Application::PushOverlay(Layer* overlay)
@@ -134,21 +134,47 @@ namespace StarFire {
 		PROFILE_FUNCTION;
 		PROFILE_THREAD_NAME("Main Thread", 0);
 
-
 		SF_CORE_TRACE("Starting main loop...");
-
-		//temp
-		std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
+		//std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
+		Utils::Timer timer;
 		while (m_Running)
-		{			
-			PROFILE_SCOPE("Event polling loop");
-
-
+		{
+			PROFILE_SCOPE("Frame loop");
 			m_MainWindow->PollEvents();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
+			m_DeltaTimeInS = timer.Timestamp();
+			HandleUserInput();
 
-		appThread.join();
+			if (m_Minimized)
+				SF_CORE_INFO("Application minimized");
+
+
+			if (!Aurora::BeginFrame())
+				continue;
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(Timestep(m_DeltaTimeInS));
+			}
+
+			if (m_ImGuiLayer)
+				m_ImGuiLayer->BeginFrame();
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnGuiRender();
+			}
+
+			if (m_ImGuiLayer)
+				m_ImGuiLayer->EndFrame();
+
+			Aurora::EndFrame();
+			Aurora::SwapFrame();
+
+			PROFILE_FRAME_MARK;
+		}
+		SF_CORE_WARN("Leaving main loop!");
+
+		//appThread.join();
 		SF_CORE_TRACE("Ending main loop...");	
 	}
 
@@ -164,32 +190,32 @@ namespace StarFire {
 
 			m_DeltaTimeInS = timer.Timestamp();
 			HandleUserInput();
-			if (!m_Minimized)
-			{
-
-				if(!Aurora::BeginFrame())
-					continue;
-
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnUpdate(Timestep(m_DeltaTimeInS));
-				}
-				Aurora::EndFrame();
-
-				//Todo: add Aurora::BeginUiFrame
-				for (Layer* layer : m_LayerStack)
-				{
-					layer->OnGuiRender();
-				}
-				//Todo: add Aurora::EndUiFrame
-
-				//m_MainWindow->OnUpdate();
-				Aurora::SwapFrame();
-			}
-			else
-			{
+			if (m_Minimized)
 				SF_CORE_INFO("Application minimized");
+			
+
+			if(!Aurora::BeginFrame())
+				continue;
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(Timestep(m_DeltaTimeInS));
 			}
+
+			if(m_ImGuiLayer)
+				m_ImGuiLayer->BeginFrame();
+			
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnGuiRender();
+			}
+
+			if (m_ImGuiLayer)			
+				m_ImGuiLayer->EndFrame();
+
+			Aurora::EndFrame();
+			Aurora::SwapFrame();
+
 			PROFILE_FRAME_MARK;
 		}
 		SF_CORE_WARN("Leaving main loop!");
@@ -247,7 +273,8 @@ namespace StarFire {
 			return false;
 		}
 		m_Minimized = false;
-		SF_CORE_DEBUG("Window resize to to [{}|{}]", newWidth, newHeight);
+		
+		SF_CORE_DEBUG("Window resize to [{}|{}]", newWidth, newHeight);
 
 		return false;
 	}

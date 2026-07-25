@@ -1,19 +1,17 @@
 #pragma once
 #include "Aurora/Core/Core.h"
-#include "Aurora/Core/RefCounted.h"
-#include "Aurora/Renderer/AssetHandles.h"
-#include "Aurora/Renderer/VulkanCore.h"
+#include "Aurora/Renderer/Handles.h"
+#include "Substrate/RefCounted.h"
 
 
 #include <filesystem>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 namespace Aurora::VK {
 	
 
-	class Shader : public RefCounted<Shader>
+	class Shader : public Substrate::RefCounted
 	{
 	public:
 		Shader(std::string_view name, const std::filesystem::path& path);
@@ -21,15 +19,14 @@ namespace Aurora::VK {
 	
 		inline bool IsValid() const { return m_IsValid; }
 
-		inline const ShaderAssetHandle CreateHandle() { return ShaderAssetHandle(RenderID()); }
+		inline const ShaderHandle CreateHandle() { return ShaderHandle(/*RenderID()*/); }
 		static constexpr const char* StaticTypeName() { return "VulkanShader"; }
 	
 
-		static Ref<Shader> Create(std::string_view name, const std::filesystem::path& shaderPath);
-
+		static Ref<Shader> Create(std::string_view name, const std::filesystem::path& shaderPath);	
 	
 	private:
-		ShaderAssetHandle m_Handle;
+		ShaderHandle m_Handle;
 		//std::unordered_map<VkShaderStageFlagBits, ShaderModule> m_Modules;
 
 		std::string m_DebugName = "Shader";

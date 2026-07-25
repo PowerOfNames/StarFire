@@ -14,10 +14,11 @@ project "StarFire"
 	{
 		"Source/**.h",
 		"Source/**.cpp",
-		
-		"vendor/glm/glm/**.hpp",
-		"vendor/glm/glm/**.inl",
 	}
+	
+filter "files:**/ImGuiBuild.cpp"
+	enablepch "Off"
+filter{}
 	
 	defines
 	{
@@ -28,21 +29,23 @@ project "StarFire"
 	
 	includedirs
 	{
-		"Source",		
-		"%{IncludeDir.glm}",
+		"Source",
 		"%{IncludeDir.Aurora}",
 		"%{IncludeDir.Substrate}",
+		
+		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.glm}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.concurrentqueue}",
+		
+		"Dependencies/moodycamel",
 	}
 	
 	links
 	{
 		"Aurora",
-		"Substrate",
 		"GLFW",
-		"xxHash",
+		"ImGui",
 	}
 	
 	

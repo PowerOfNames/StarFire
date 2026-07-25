@@ -1,7 +1,7 @@
 #pragma once
-#define SST_USER_NAMESPACE StarFire
-#include "Substrate/BitField.h"
-#undef SST_USER_NAMESPACE
+#include "StarFire/Events/EventCategory.h"
+
+
 #include <string>
 #include <functional>
 
@@ -31,18 +31,7 @@ namespace StarFire {
 		MOUSE_BUTTON_RELEASED,
 		MOUSE_MOVE,
 		MOUSE_SCROLLED
-	};
-
-	enum class EventCategory : Substrate::BitField8
-	{
-		NONE = 0,
-		APPLICATION = BIT(0),
-		INPUT = BIT(1),
-		KEYBOARD = BIT(2),
-		MOUSE = BIT(3),
-		MOUSE_BUTTON = BIT(4)
-	};
-	SST_ENABLE_BIT_OPS(EventCategory);
+	};	
 	
 
 #define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::##type; }\

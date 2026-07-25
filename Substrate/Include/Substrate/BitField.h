@@ -39,15 +39,6 @@
 
 #include<type_traits>
 
-#if defined(SST_USER_NAMESPACE)
-#define USER_NAMESPACE_BEGIN namespace SST_USER_NAMESPACE {
-#define USER_NAMESPACE_END }
-#else
-#define USER_NAMESPACE_BEGIN
-#define USER_NAMESPACE_END
-#endif
-
-USER_NAMESPACE_BEGIN
 namespace Substrate {
 
 	using BitField8 = uint8_t;
@@ -57,16 +48,20 @@ namespace Substrate {
 
 	/// Utility macro to define bit values
 #define BIT(x) (1 << x)
+
 	/// Macro to enable bitwise operators for a specific enum class. This also imports the operators into the current namespace.		
 #define SST_ENABLE_BIT_OPS(Name)\
-	namespace Substrate { template<> struct enable_bitmask_operators<Name> { static constexpr bool enable = true; }; }\
-	using Substrate::operator|;\
-	using Substrate::operator&;\
-	using Substrate::operator^;\
-	using Substrate::operator~;\
+	template<> struct enable_bitmask_operators<Name> { static constexpr bool enable = true; };
+
+#define SST_MAKE_BIT_OPS_VISIBLE\
+	using Substrate::operator|;	\
+	using Substrate::operator&;	\
+	using Substrate::operator^;	\
+	using Substrate::operator~;	\
 	using Substrate::operator|=;\
 	using Substrate::operator&=;\
 	using Substrate::operator^=;
+	
 
 	//From https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html with adjustments (constexpr)
 
@@ -136,6 +131,4 @@ namespace Substrate {
 	using underlying = std::underlying_type_t<E>;
 	return (static_cast<underlying>(field) & static_cast<underlying>(flag)) == static_cast<underlying>(flag);
 	}
-
 }
-USER_NAMESPACE_END

@@ -10,9 +10,7 @@ project "Substrate"
 	
 	files
 	{
-		"Source/**.h",
-		"Source/**.cpp",
-		"Include/**.h",
+		"Include/**.h"
 	}
 	
 	defines
@@ -22,8 +20,7 @@ project "Substrate"
 	
 	includedirs
 	{
-		"Source",
-		"Include",
+		"Include"
 	}
 	
 	links

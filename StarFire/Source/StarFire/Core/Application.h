@@ -1,18 +1,22 @@
 #pragma once
-#include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Core/Core.h"
-#include "StarFire/Events/EventQueue.h"
 #include "StarFire/Core/LayerStack.h"
 #include "StarFire/Core/Window.h"
+#include "StarFire/Events/ApplicationEvent.h"
+#include "StarFire/Events/EventQueue.h"
 
 #include <string>
 #include <atomic>
 
 namespace StarFire {
+
 	struct ApplicationSpecification
 	{
 		std::string Name;
+		bool UseImGui = false;
 	};
+
+	class ImGuiLayer;
 
 	class Application
 	{
@@ -30,6 +34,7 @@ namespace StarFire {
 		//Call from the code to stop the update loop
 		void Close();
 
+		inline ImGuiLayer* GetImGuiLayer() const { return m_ImGuiLayer;	}
 
 		inline static Application* Get() { return s_Instance; }
 		inline ApplicationSpecification& GetSpecification() { return m_Specification; }
@@ -51,6 +56,7 @@ namespace StarFire {
 		Scope<Window> m_MainWindow = nullptr;
 		Scope<EventQueue> m_EventQueue = nullptr;
 
+		ImGuiLayer* m_ImGuiLayer = nullptr;
 
 		double m_DeltaTimeInS = 0.0;
 

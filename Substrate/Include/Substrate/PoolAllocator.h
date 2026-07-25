@@ -5,6 +5,8 @@
 #include "Substrate/Exceptions.h"
 #include "Substrate/UtilityFunctions.h"
 
+#include <vector>
+
 namespace Substrate {
 
 	template<size_t TSize>
@@ -18,15 +20,19 @@ namespace Substrate {
 	class PoolAllocator : public AllocatorBase
 	{
 	public:
-		static constexpr uint32_t MAX_BLOCK_COUNT = static_cast<uint32_t>(TSize / sizeof(TBlockType));
-		static constexpr uint8_t INDEX_BIT_COUNT = Utility::Log2Up(TSize / sizeof(TBlockType));
-		static constexpr uint8_t GENERATION_BIT_COUNT = (sizeof(TResourceHandle) * 8) - INDEX_BIT_COUNT;
+		static constexpr uint32_t MAX_BLOCK_COUNT = static_cast<uint32_t>(TSize / sizeof(TBlockType));		// Maximum number of blocks that can be allocated in the pool
+		static constexpr uint8_t INDEX_BIT_COUNT = Utility::Log2Up(TSize / sizeof(TBlockType));				// Number of bits needed to represent the maximum block count (e.g., 7 bits for 128 blocks)
+		static constexpr uint8_t GENERATION_BIT_COUNT = (sizeof(TResourceHandle) * 8) - INDEX_BIT_COUNT;	// Remaining bits for generation count (e.g., 25 bits for a 32-bit handle with 7 bits for index) 
+																											// -> 25 bits for generation allows for 33,554,432 generations before handle reuse becomes unsafe
 
 		PoolAllocator();
 		~PoolAllocator();
 
+		void Reset();
+
 		TResourceHandle Allocate();
 		TBlockType* GetPointerFromHandle(TResourceHandle handle);
+		bool IsHandleValid(TResourceHandle handle);
 		void Free(TResourceHandle handle);
 
 		const std::vector<uint32_t>& GetFreeHandleIndices() const { return m_FreeHandles; }
@@ -74,6 +80,13 @@ namespace Substrate {
 		requires HandleTypeCheck<TResourceHandle> && MustBePowerOFTwo<TSize>
 	PoolAllocator<TBlockType, TResourceHandle, TSize>::~PoolAllocator()
 	{
+		Reset();
+	}
+
+	template<typename TBlockType, typename TResourceHandle, size_t TSize>
+		requires HandleTypeCheck<TResourceHandle>&& MustBePowerOFTwo<TSize>
+	void PoolAllocator<TBlockType, TResourceHandle, TSize>::Reset()
+	{
 		if (!m_MemoryBlock)
 			return;
 
@@ -101,16 +114,27 @@ namespace Substrate {
 	}
 
 	template<typename TBlockType, typename TResourceHandle, size_t TSize>
+		requires HandleTypeCheck<TResourceHandle>&& MustBePowerOFTwo<TSize>
+	bool PoolAllocator<TBlockType, TResourceHandle, TSize>::IsHandleValid(TResourceHandle resourceHandle)
+	{
+		InternalHandle handle = InternalHandle::FromRawType(resourceHandle);
+		InternalHandle& internal = m_Handles[handle.Index()];
+		if (!internal.Equals(handle))
+			return false;
+		return true;
+	}
+
+	template<typename TBlockType, typename TResourceHandle, size_t TSize>
 		requires HandleTypeCheck<TResourceHandle> && MustBePowerOFTwo<TSize>
 	TBlockType* PoolAllocator<TBlockType, TResourceHandle, TSize>::GetPointerFromHandle(TResourceHandle resourceHandle)
 	{
 		// Validate handle
 		InternalHandle handle = InternalHandle::FromRawType(resourceHandle);
 		InternalHandle& internal = m_Handles[handle.Index()];
-		if (!internal.Equals(handle))
+		if (!IsHandleValid(resourceHandle))
 			return nullptr; // Invalid handle or handle was already freed
 
-		TBlockType* blockPtr = m_MemoryBlock + (sizeof(TBlockType) * internal.Index());
+		TBlockType* blockPtr = m_MemoryBlock + internal.Index();
 		return blockPtr;
 	}
 

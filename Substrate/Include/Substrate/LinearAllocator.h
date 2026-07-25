@@ -3,6 +3,7 @@
 #include "Substrate/Defines.h"
 #include "Substrate/Exceptions.h"
 #include "Substrate/UtilityFunctions.h"
+#include "Substrate/ArrayView.h"
 
 #include <cstdlib>
 #include <sstream>
@@ -10,43 +11,16 @@
 namespace Substrate {
 
 
-	template<typename TBlockType, size_t TSize>
+	template<typename TBlockType>
 	class LinearAllocator : public AllocatorBase
 	{
-	public:
-		static constexpr uint32_t MAX_BLOCK_COUNT = static_cast<uint32_t>(TSize / sizeof(TBlockType));
-		
-		LinearAllocator();
+	public:		
+		LinearAllocator(size_t totalSize);
 		~LinearAllocator();
 
-		TBlockType* Allocate(uint32_t count = 1);	
-		struct ArrayView
-		{
-			TBlockType* Data;
-			size_t Count;
+		TBlockType* Allocate(uint32_t count = 1);
 
-			TBlockType& operator[](size_t index)
-			{
-				if (index > Count)
-				{
-					std::ostringstream oss;
-					oss << "Index " << index << " out of scope (" << Count << ")";
-					throw ArrayIndexOutOfBoundsException(oss.str().c_str());
-				}
-				return Data[index];
-			}
-			const TBlockType& operator[](size_t index) const
-			{
-				if (index > Count)
-				{
-					std::ostringstream oss;
-					oss << "Index " << index << " out of scope (" << Count << ")";
-					throw ArrayIndexOutOfBoundsException(oss.str().c_str());
-				}
-				return Data[index];
-			}
-		};
-		ArrayView AllocateArray(uint32_t count)
+		ArrayView<TBlockType> AllocateArray(uint32_t count)
 		{
 			TBlockType* data = Allocate(count);
 			if (!data)
@@ -57,7 +31,7 @@ namespace Substrate {
 
 #ifdef SUBSTRATE_DETAILS_ENABLED
 		inline size_t GetUsedMemory()				const override { return static_cast<size_t>(m_CurrentPtr - m_MemoryBlock); }
-		inline size_t GetMaxAllocationCount()		const override { return MAX_BLOCK_COUNT; }
+		inline size_t GetMaxAllocationCount()		const override { return static_cast<uint32_t>(m_TotalSize / sizeof(TBlockType)); }
 		inline size_t GetTotalMemory()				const override { return m_TotalSize; }
 		inline size_t GetTotalAllocationCount()		const override { return m_TotalAllocationCount; }
 		inline size_t GetCurrentAllocationCount()	const override { return m_CurrentAllocationCount; }
@@ -75,16 +49,16 @@ namespace Substrate {
 #endif
 	};
 
-	template<typename TBlockType, size_t TSize>
-	LinearAllocator<TBlockType, TSize>::LinearAllocator()
-		: m_TotalSize(TSize)
+	template<typename TBlockType>
+	LinearAllocator<TBlockType>::LinearAllocator(size_t totalSize)
+		: m_TotalSize(totalSize)
 	{
-		m_MemoryBlock = static_cast<TBlockType*>(malloc(TSize));
+		m_MemoryBlock = static_cast<TBlockType*>(malloc(totalSize));
 		m_CurrentPtr = m_MemoryBlock;
 	}
 
-	template<typename TBlockType, size_t TSize>
-	LinearAllocator<TBlockType, TSize>::~LinearAllocator()
+	template<typename TBlockType>
+	LinearAllocator<TBlockType>::~LinearAllocator()
 	{
 		if (!m_MemoryBlock)
 			return;
@@ -100,8 +74,8 @@ namespace Substrate {
 #endif
 	}
 
-	template<typename TBlockType, size_t TSize>
-	TBlockType* LinearAllocator<TBlockType, TSize>::Allocate(uint32_t count)
+	template<typename TBlockType>
+	TBlockType* LinearAllocator<TBlockType>::Allocate(uint32_t count)
 	{
 		static constexpr size_t size = sizeof(TBlockType);
 		size_t total = count * size;
@@ -119,8 +93,8 @@ namespace Substrate {
 		return allocatedMemory;
 	}
 
-	template<typename TBlockType, size_t TSize>
-	void LinearAllocator<TBlockType, TSize>::Reset()
+	template<typename TBlockType>
+	void LinearAllocator<TBlockType>::Reset()
 	{
 		m_CurrentPtr = m_MemoryBlock;
 

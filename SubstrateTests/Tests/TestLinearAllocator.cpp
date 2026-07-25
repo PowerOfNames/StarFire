@@ -17,14 +17,13 @@ constexpr size_t TestStructSize = 12;
 constexpr size_t AllocatorSize = 1024;
 constexpr size_t MaxAllocations = AllocatorSize / TestStructSize; // 1024 / 12 == 85 | 3.333
 
-using Allocator = Substrate::LinearAllocator<TestStruct, AllocatorSize>;
-using Allocator16 = Substrate::LinearAllocator<TestStruct, 16>;
+using Allocator = Substrate::LinearAllocator<TestStruct>;
 
 TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 {
 	SECTION("Creation")
 	{
-		Allocator allocator;
+		Allocator allocator(AllocatorSize);
 		REQUIRE(allocator.GetTotalMemory() == AllocatorSize);
 		REQUIRE(allocator.GetUsedMemory() == 0);
 		REQUIRE(allocator.GetMaxAllocationCount() == MaxAllocations);
@@ -35,7 +34,7 @@ TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 
 	SECTION("Allocation")
 	{
-		Allocator allocator;
+		Allocator allocator(AllocatorSize);
 		TestStruct* ptr = allocator.Allocate();
 		REQUIRE(allocator.GetUsedMemory() == 12);
 		REQUIRE(allocator.GetCurrentAllocationCount() == 1);
@@ -44,7 +43,7 @@ TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 
 	SECTION("Array allocation+access check")
 	{
-		Allocator allocator;
+		Allocator allocator(AllocatorSize);
 		auto structs = allocator.AllocateArray(2);
 		REQUIRE(allocator.GetUsedMemory() == 2 * TestStructSize);
 		REQUIRE(allocator.GetCurrentAllocationCount() == 2);
@@ -54,14 +53,14 @@ TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 
 	SECTION("Allocator full")
 	{
-		Allocator16 allocator;
+		Allocator allocator(16);
 		TestStruct* ptr1 = allocator.Allocate();
 		REQUIRE(allocator.Allocate() == nullptr);
 	}
 
 	SECTION("Array allocation too large")
 	{
-		Allocator16 allocator;
+		Allocator allocator(16);
 		auto structs = allocator.AllocateArray(2);
 		REQUIRE(structs.Data == nullptr);
 		REQUIRE(structs.Count == 0);
@@ -69,7 +68,7 @@ TEST_CASE("Linear Allocator", "[Allocator][Linear]")
 
 	SECTION("Allocator reset.")
 	{
-		Allocator allocator;
+		Allocator allocator(AllocatorSize);
 		TestStruct* ptr1 = allocator.Allocate();
 		REQUIRE(allocator.GetUsedMemory() == TestStructSize);
 		REQUIRE(allocator.GetCurrentAllocationCount() == 1);

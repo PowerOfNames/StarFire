@@ -25,13 +25,13 @@ project "Nebula"
 		"%{IncludeDir.Substrate}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.ImGui}",	
 	}
 	
 	links
 	{
 		"StarFire",
 		"Aurora",
-		"Substrate",
 	}
 	
 	

@@ -20,13 +20,14 @@ project "Sandbox"
 		"%{IncludeDir.Substrate}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.ImGui}",
 	}
 	
 	links
 	{
-		"StarFire",
+		"StarFire",	
 		"Aurora",
-		"Substrate"
+		--"ImGui",
 	}
 	
 	
