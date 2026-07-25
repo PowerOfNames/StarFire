@@ -1,6 +1,7 @@
 # binaries
 **/bin/
 **/bin-int/
+**/obj/
 
 # VS
 .vs/
@@ -12,6 +13,9 @@
 # Resources
 **.spv
 **/Cache/
+
+# ImGui runtime layout state (drifts on every run)
+**/imgui.ini
 
 # Claude Code / local dev tooling
 .claude/
