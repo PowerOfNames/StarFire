@@ -182,16 +182,17 @@ TEST_CASE("Convert: format to aspect mask", "[convert][aspect]")
 }
 
 
-// Aurora::Format::DEPTH24_STENCIL8 maps to VK_FORMAT_D24_UNORM_S8_UINT, which
-// GetAspectFlagsFromFormat does not handle - it hits the default branch and
-// returns COLOR for a depth-stencil image. Every other Aurora Format
-// enumerator is covered, so this is the one public format that misbehaves.
-// Tagged !mayfail: the expectation below is correct, the implementation is
-// not, and fixing implementation is out of scope for the restructure.
-TEST_CASE("Convert: DEPTH24_STENCIL8 should yield depth+stencil", "[convert][aspect][!mayfail]")
+// Regression guard over the whole public Format enum, so adding an enumerator
+// without extending the aspect switch fails here rather than silently
+// producing a wrong barrier. DEPTH24_STENCIL8 is why this exists: it maps to
+// VK_FORMAT_D24_UNORM_S8_UINT, which the switch originally missed, so it fell
+// to the default branch and reported COLOR for a depth-stencil image.
+TEST_CASE("Convert: every public Format yields a sensible aspect", "[convert][aspect]")
 {
-	const VkFormat vkFormat = Cv::ToVkFormat(Format::DEPTH24_STENCIL8);
-	CHECK(Cv::GetAspectFlagsFromFormat(vkFormat) == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
+	CHECK(Cv::GetAspectFlagsFromFormat(Cv::ToVkFormat(Format::RGBA8_UNORM)) == VK_IMAGE_ASPECT_COLOR_BIT);
+	CHECK(Cv::GetAspectFlagsFromFormat(Cv::ToVkFormat(Format::RGBA8_SRGB)) == VK_IMAGE_ASPECT_COLOR_BIT);
+	CHECK(Cv::GetAspectFlagsFromFormat(Cv::ToVkFormat(Format::DEPTH32_SFLOAT)) == VK_IMAGE_ASPECT_DEPTH_BIT);
+	CHECK(Cv::GetAspectFlagsFromFormat(Cv::ToVkFormat(Format::DEPTH24_STENCIL8)) == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
 }
 
 
