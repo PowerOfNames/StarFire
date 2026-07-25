@@ -1,7 +1,7 @@
 #include "Aurora/Core/Core.h"
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
-#include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanQueries.h"
 #include "Shaders/ShaderByteCodes.h"
 
 namespace Aurora::VK {
@@ -117,8 +117,8 @@ namespace Aurora::VK {
 		// Check for resize and try
 		if (m_NeedsResize)
 		{
-			SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
-			VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, m_Extent.width, m_Extent.height);
+			SwapchainSupportDetails details = Queries::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
+			VkExtent2D extent = Queries::ChooseSwapExtent(details.Capabilities, m_Extent.width, m_Extent.height);
 			if (extent.width == 0 || extent.height == 0)
 				return false;			
 			OnResize(extent.width, extent.height, true);
@@ -259,12 +259,12 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 
-		SwapchainSupportDetails details = Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
+		SwapchainSupportDetails details = Queries::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface);
 
-		//VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
-		VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
-		VkPresentModeKHR presentMode = Helper::ChooseSwapPresentMode(details.PresentModes, VK_PRESENT_MODE_MAILBOX_KHR);
-		VkExtent2D extent = Helper::ChooseSwapExtent(details.Capabilities, width, height);
+		//VkSurfaceFormatKHR surfaceFormat = Queries::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
+		VkSurfaceFormatKHR surfaceFormat = Queries::ChooseSwapSurfaceFormat(details.Formats, VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
+		VkPresentModeKHR presentMode = Queries::ChooseSwapPresentMode(details.PresentModes, VK_PRESENT_MODE_MAILBOX_KHR);
+		VkExtent2D extent = Queries::ChooseSwapExtent(details.Capabilities, width, height);
 
 		uint32_t imageCount = details.Capabilities.minImageCount;
 		if (details.Capabilities.maxImageCount > 0 && imageCount > details.Capabilities.maxImageCount)
@@ -283,7 +283,7 @@ namespace Aurora::VK {
 		swapInfo.imageArrayLayers = 1; // for multi target rendering like VR, other 3D applications
 		swapInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-		QueueFamilyIndices indices = Helper::FindQueueFamilies(m_Specification.PhysicalDevice, m_Specification.Surface);
+		QueueFamilyIndices indices = Queries::FindQueueFamilies(m_Specification.PhysicalDevice, m_Specification.Surface);
 		if (indices.SamePresentGraphics)
 		{
 			swapInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;

@@ -2,12 +2,11 @@
 #include "Aurora/Core/Logging.h"
 
 #include "Aurora/Profiling/Profiling.h"
-#include "Aurora/Renderer/Vulkan/VulkanCore.h"
-#include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 
 namespace Aurora::VK::Creators {
 
-#pragma region Images
+	// ========== Images ==========
 	bool CreateImage(VmaAllocator allocator, VkImage* image, VmaAllocation* allocation, VkFormat format, VkImageUsageFlags usageFlags, VkImageTiling tiling, uint32_t width, uint32_t height, uint32_t mipLevels/* = 1*/)
 	{
 		PROFILE_FUNCTION;
@@ -68,7 +67,7 @@ namespace Aurora::VK::Creators {
 			VK_COMPONENT_SWIZZLE_IDENTITY,
 			VK_COMPONENT_SWIZZLE_IDENTITY
 		};
-		viewCreateInfo.subresourceRange.aspectMask = Helper::GetAspectFlagsFromFormat(format);
+		viewCreateInfo.subresourceRange.aspectMask = Convert::GetAspectFlagsFromFormat(format);
 		viewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		viewCreateInfo.subresourceRange.layerCount = 1;
 		viewCreateInfo.subresourceRange.baseMipLevel = 0;
@@ -77,8 +76,8 @@ namespace Aurora::VK::Creators {
 		AURORA_VK_CHECK(vkCreateImageView(device, &viewCreateInfo, allocationCbs, imageView), VK_SUCCESS, "Failed to create image view!");
 		return true;
 	}
-#pragma endregion Images
 
+	// ========== Buffers ==========
 	bool CreateBuffer(VmaAllocator allocator, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocInfo, VkBufferUsageFlags usageFlags, VmaMemoryUsage memUsage, size_t size)
 	{
 		PROFILE_FUNCTION;
@@ -104,137 +103,4 @@ namespace Aurora::VK::Creators {
 		AURORA_VK_CHECK(result, VK_SUCCESS, "Failed to create buffer!");
 		return true;
 	}
-
-	// == Buffer Barriers ==
-	VkBufferMemoryBarrier2 EmitReleaseBarrier(VkBuffer buffer,
-											  VkDeviceSize offset,
-											  VkDeviceSize size,
-											  uint32_t srcQueueFamilyIndex,
-											  uint32_t dstQueueFamilyIndex,
-											  VkPipelineStageFlags2 srcStageMask,
-											  VkAccessFlags2 srcAccessMask,
-											  VkPipelineStageFlags2 dstStageMask)
-	{
-		VkBufferMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
-		barrier.pNext = nullptr;
-		barrier.buffer = buffer;
-		barrier.offset = offset;
-		barrier.size = size;
-		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
-		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-
-		barrier.srcStageMask = srcStageMask;
-		barrier.srcAccessMask = srcAccessMask;
-		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = 0;
-
-		return barrier;
-	}
-
-	VkBufferMemoryBarrier2 EmitAcquireBarrier(VkBuffer buffer,
-											  VkDeviceSize offset,
-											  VkDeviceSize size,
-											  uint32_t srcQueueFamilyIndex,
-											  uint32_t dstQueueFamilyIndex,
-											  VkPipelineStageFlags2 srcStageMask,
-											  VkPipelineStageFlags2 dstStageMask,
-											  VkAccessFlags2 dstAccessMask)
-	{
-		VkBufferMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
-		barrier.pNext = nullptr;
-		barrier.buffer = buffer;
-		barrier.offset = offset;
-		barrier.size = size;
-		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
-		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-
-		barrier.srcStageMask = srcStageMask;
-		barrier.srcAccessMask = 0;
-		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = dstAccessMask;
-
-		return barrier;
-	}
-
-	// ========== Image Barriers ==========
-
-	VkImageMemoryBarrier2 EmitLayoutTransitionBarrier(VkImage image,
-												VkImageLayout oldLayout,
-												VkImageLayout newLayout,
-												VkImageSubresourceRange range,
-												VkPipelineStageFlags2 srcStageMask,
-												VkAccessFlags2 srcAccessMask,
-												VkPipelineStageFlags2 dstStageMask,
-												VkAccessFlags2 dstAccessMask)
-	{
-		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-		barrier.pNext = nullptr;
-		barrier.image = image;
-		barrier.subresourceRange = range;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-		barrier.srcStageMask = srcStageMask;
-		barrier.srcAccessMask = srcAccessMask;
-		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = dstAccessMask;
-		return barrier;
-	}
-
-	VkImageMemoryBarrier2 EmitReleaseBarrier(VkImage image,
-											 VkImageLayout oldLayout,
-											 VkImageLayout newLayout,
-											 VkImageSubresourceRange range,
-											 uint32_t srcQueueFamilyIndex,
-											 uint32_t dstQueueFamilyIndex,
-											 VkPipelineStageFlags2 srcStageMask,
-											 VkAccessFlags2 srcAccessMask,
-											 VkPipelineStageFlags2 dstStageMask)
-	{
-		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-		barrier.pNext = nullptr;
-		barrier.image = image;
-		barrier.subresourceRange = range;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
-		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-
-		barrier.srcStageMask = srcStageMask;
-		barrier.srcAccessMask = srcAccessMask;
-		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = 0;
-
-		return barrier;
-	}
-
-	VkImageMemoryBarrier2 EmitAcquireBarrier(VkImage image,
-											 VkImageLayout oldLayout,
-											 VkImageLayout newLayout,
-											 VkImageSubresourceRange range,
-											 uint32_t srcQueueFamilyIndex,
-											 uint32_t dstQueueFamilyIndex,
-											 VkPipelineStageFlags2 srcStageMask,
-											 VkPipelineStageFlags2 dstStageMask,
-											 VkAccessFlags2 dstAccessMask)
-	{
-		VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-		barrier.pNext = nullptr;
-		barrier.image = image;
-		barrier.subresourceRange = range;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
-		barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-
-		barrier.srcStageMask = srcStageMask;
-		barrier.srcAccessMask = 0;
-		barrier.dstStageMask = dstStageMask;
-		barrier.dstAccessMask = dstAccessMask;
-
-		return barrier;
-	}
-
 }

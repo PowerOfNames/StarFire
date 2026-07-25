@@ -1,11 +1,33 @@
 #pragma once
+
+// ============================================================================
+//  Utility placement rule - first match wins:
+//    1. takes a VkCommandBuffer?              -> VulkanCommands
+//    2. creates/destroys a Vk/VMA object?     -> VulkanCreators
+//    3. interrogates a VkPhysicalDevice
+//       or VkSurfaceKHR?                      -> VulkanQueries   (this file)
+//    4. otherwise, pure function of enums
+//       and PODs                              -> VulkanConvert
+//       ...returning a string for logging?    -> VulkanToString
+//
+//  This file: interrogating the physical device and surface, and selecting
+//  from what they report. Startup-time work - these run while building the
+//  device and the swapchain, not per frame.
+//
+//  If a bucket passes ~300 lines, split it by resource (Image/Buffer),
+//  never by adding a table of contents.
+// ============================================================================
+
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 
-namespace Aurora::VK::Helper {
+#include <vector>
 
+namespace Aurora::VK::Queries {
 
+	// ========== Device ==========
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice phDevice, VkSurfaceKHR surface);
 
+	// ========== Swapchain ==========
 	const SwapchainSupportDetails GetSwapSupportDetails(VkPhysicalDevice phDevice, VkSurfaceKHR surface);
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat, VkColorSpaceKHR preferredColorSpace);
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availableModes, VkPresentModeKHR preferred);
@@ -18,42 +40,4 @@ namespace Aurora::VK::Helper {
 	/// <param name="framebufferHeight">In pixels e.g. from glfwGetFramebufferSize</param>
 	/// <returns></returns>
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t framebufferWidth, uint32_t framebufferHeight);
-
-	// ========== Images ==========
-	VkImageLayout TransitionImageLayout(
-		VkCommandBuffer cmd, 
-		VkImage image,
-		VkFormat format,
-		VkImageLayout oldLayout, 
-		VkImageLayout newLayout, 
-		uint32_t baseMipLevel = 0, 
-		uint32_t levelCount = VK_REMAINING_MIP_LEVELS, 
-		uint32_t baseArrayLayer = 0, 
-		uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS
-	);
-
-	void BlitImageToImage(
-		VkCommandBuffer cmd,
-		VkImage srcImage,
-		uint32_t srcWidth,
-		uint32_t srcHeight,
-		VkImage dstImage,
-		uint32_t dstWidth,
-		uint32_t dstHeight,
-		uint32_t mipLevels = 1,
-		uint32_t baseArrayLayer = 0,
-		uint32_t layerCount = 1
-	);
-
-	VkImageAspectFlags GetAspectFlagsFromFormat(VkFormat format);
-
-	// ========== Buffers ==========
-	void CopyBufferToBuffer(
-		VkDevice device,
-		const void* data,
-		VkBuffer dstBuffer,
-		VmaAllocation dstAllocation,
-		size_t dstOffset,
-		size_t size
-	);
 }
