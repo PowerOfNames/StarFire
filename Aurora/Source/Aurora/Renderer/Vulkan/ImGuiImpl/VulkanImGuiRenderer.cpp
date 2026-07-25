@@ -117,13 +117,14 @@ namespace Aurora::VK {
 			imageData.Format = m_ImageFormat;
 			imageData.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			imageData.Tiling = VK_IMAGE_TILING_OPTIMAL;
-			Creators::CreateImage(allocator, &(imageData.Image), &(imageData.Allocation), imageData.Format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, imageData.Tiling, width, height, imageData.MipLevels);
+			imageData.Usage = ImageUsageFlags::COLOR_ATTACHMENT | ImageUsageFlags::TRANSFER_SRC;
+			Creators::CreateImage(allocator, imageData, VMA_MEMORY_USAGE_GPU_ONLY);
 
 			const std::string iString = std::to_string(i);
 			const std::string imageName = "ImGui_Image_" + iString;
 			AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_IMAGE, (uint64_t)imageData.Image, imageName);
 
-			Creators::CreateImageView(device, allocCbs, &(imageData.ImageView), imageData.Image, imageData.Format);
+			Creators::CreateImageView(device, allocCbs, imageData);
 			const std::string imageViewName = "ImGui_ImageView_" + iString;
 			AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)imageData.ImageView, imageViewName);
 			i++;

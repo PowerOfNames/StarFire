@@ -19,6 +19,7 @@
 // ============================================================================
 
 #include "Aurora/Core/Logging.h"
+#include "Aurora/Renderer/Image.h"
 #include "Aurora/Renderer/Types.h"
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanToString.h"
@@ -172,6 +173,34 @@ namespace Aurora::VK::Convert {
 		if ((usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::TRANSFER_SRC || (usage & ImageUsageFlags::TRANSFER_DST) == ImageUsageFlags::TRANSFER_DST)
 			accessFlags |= VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		return accessFlags;
+	}
+
+	// ========== Specification -> runtime data ==========
+
+	/// <summary>
+	/// Translates the public ImageSpecification into the backend's runtime
+	/// struct. Creates nothing - the Vulkan object fields (Image, ImageView,
+	/// Allocation) are left null for a Creators:: call to fill in.
+	/// </summary>
+	/// <remarks>
+	/// ImageSpecification::Name is not represented in VulkanImageData; the
+	/// caller uses it for debug names. ImageSpecification::MemUsage is not
+	/// represented either and is currently dropped.
+	/// </remarks>
+	[[nodiscard]] inline VulkanImageData MakeImageData(const ImageSpecification& spec)
+	{
+		VulkanImageData data{};
+		data.Width = spec.Width;
+		data.Height = spec.Height;
+		data.MipLevels = spec.MipLevels;
+		data.Format = ToVkFormat(spec.Format);
+		data.Tiling = ToVkImageTiling(spec.Tiling);
+		data.Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
+		// TRANSFER_SRC is force-added to every image as a placeholder until the
+		// ImageUsage composite enum lands. Carried over verbatim from
+		// VulkanResourceManager::CreateImage.
+		data.Usage = spec.Usage | ImageUsageFlags::TRANSFER_SRC;
+		return data;
 	}
 
 	// ========== Format -> aspect ==========

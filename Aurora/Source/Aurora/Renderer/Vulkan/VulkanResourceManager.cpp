@@ -103,14 +103,10 @@ namespace Aurora::VK {
 		}		
 
 		VulkanImageData* data = m_ImageAllocator.GetPointerFromHandle(handle);
-		data->Width = imageSpecs.Width;
-		data->Height = imageSpecs.Height;
-		data->MipLevels = imageSpecs.MipLevels;
-		data->Format = Convert::ToVkFormat(imageSpecs.Format);
-		data->Tiling = Convert::ToVkImageTiling(imageSpecs.Tiling);
-		data->Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
-		data->Usage = imageSpecs.Usage | ImageUsageFlags::TRANSFER_SRC;
-		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), &(data->Image), &(data->Allocation), data->Format, Convert::ToVkImageUsageFlags(data->Usage), data->Tiling, imageSpecs.Width, imageSpecs.Height, imageSpecs.MipLevels);
+		*data = Convert::MakeImageData(imageSpecs);
+		// TODO: imageSpecs.MemUsage is dropped here; GPU_ONLY matches the value
+		//       Creators::CreateImage used to hardcode internally.
+		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), *data, VMA_MEMORY_USAGE_GPU_ONLY);
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
@@ -119,7 +115,7 @@ namespace Aurora::VK {
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_IMAGE, (uint64_t)(data->Image), imageSpecs.Name.c_str());
 
-		success &= Creators::CreateImageView(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetAllocationCallbacks(), &(data->ImageView), data->Image, data->Format);
+		success &= Creators::CreateImageView(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetAllocationCallbacks(), *data);
 
 		if (!success)
 		{

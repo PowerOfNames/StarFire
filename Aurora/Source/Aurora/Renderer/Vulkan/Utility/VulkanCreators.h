@@ -24,8 +24,19 @@
 namespace Aurora::VK::Creators {
 
 	// ========== Images ==========
-	bool CreateImage(VmaAllocator allocator, VkImage* image, VmaAllocation* allocation, VkFormat format, VkImageUsageFlags usageFlags, VkImageTiling tiling, uint32_t width, uint32_t height, uint32_t mipLevels = 1);
-	bool CreateImageView(VkDevice device, const VkAllocationCallbacks* allocationCbs, VkImageView* imageView, VkImage image, VkFormat format);
+
+	/// <summary>
+	/// Creates the VkImage and its allocation from the description already in
+	/// <paramref name="data"/>. Reads Format, Usage, Tiling, Width, Height and
+	/// MipLevels; writes Image and Allocation.
+	/// </summary>
+	bool CreateImage(VmaAllocator allocator, VulkanImageData& data, VmaMemoryUsage memUsage);
+
+	/// <summary>
+	/// Creates the VkImageView for an image already created by CreateImage.
+	/// Reads Image and Format; writes ImageView.
+	/// </summary>
+	bool CreateImageView(VkDevice device, const VkAllocationCallbacks* allocationCbs, VulkanImageData& data);
 
 	// ========== Buffers ==========
 	bool CreateBuffer(VmaAllocator allocator,
