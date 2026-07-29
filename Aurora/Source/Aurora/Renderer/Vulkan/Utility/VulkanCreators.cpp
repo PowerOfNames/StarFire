@@ -40,7 +40,6 @@ namespace Aurora::VK::Creators {
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = memUsage;
-		allocCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VkResult result = vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &data.Image, &data.Allocation, nullptr);
 		AURORA_VK_CHECK(result, VK_SUCCESS, "Failed to create image!");
 
@@ -75,12 +74,12 @@ namespace Aurora::VK::Creators {
 	}
 
 	// ========== Buffers ==========
-	bool CreateBuffer(VmaAllocator allocator, VkBuffer* buffer, VmaAllocation* allocation, VmaAllocationInfo* allocInfo, VkBufferUsageFlags usageFlags, VmaMemoryUsage memUsage, size_t size)
+	bool CreateBuffer(VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage)
 	{
 		PROFILE_FUNCTION;
 
 
-		if (size == 0)
+		if (data.Size == 0)
 		{
 			AURORA_WARN("Unable to create a buffer with size 0");
 			return false;
@@ -89,14 +88,13 @@ namespace Aurora::VK::Creators {
 		VkBufferCreateInfo bufferCreateInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		bufferCreateInfo.pNext = nullptr;
 		bufferCreateInfo.flags = 0;
-		bufferCreateInfo.size = size;
-		bufferCreateInfo.usage = usageFlags;
+		bufferCreateInfo.size = data.Size;
+		bufferCreateInfo.usage = Convert::ToVkBufferUsageFlags(data.Usage);
 		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = memUsage;
-		allocCreateInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		VkResult result = vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, buffer, allocation, allocInfo);
+		VkResult result = vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &data.Buffer, &data.Allocation, &data.AllocationInfo);
 		AURORA_VK_CHECK(result, VK_SUCCESS, "Failed to create buffer!");
 		return true;
 	}

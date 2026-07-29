@@ -45,10 +45,12 @@ namespace Aurora::VK {
 			return;
 		}
 
+		BufferSpecification stagingSpecs{};
+		stagingSpecs.Size = size;
+		stagingSpecs.Usage = BufferUsageFlags::TRANSFER_SRC;
 		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
-		stagingData->Size = size;
-		stagingData->Offset = 0;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(stagingData->Buffer), &(stagingData->Allocation), &(stagingData->AllocationInfo), Convert::ToVkBufferUsageFlags(BufferUsageFlags::TRANSFER_SRC), VMA_MEMORY_USAGE_CPU_TO_GPU, size);
+		*stagingData = Convert::MakeBufferData(stagingSpecs);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU);
 		if (!success)
 		{
 			AURORA_ERROR("Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle));
@@ -57,11 +59,6 @@ namespace Aurora::VK {
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingData->Buffer), "StagingBuffer");
 
-		//Queue family owner is initially unknown. It will be owned by the first user, which will bei either transfer or graphics (decicion is taken
-		// later during the actual upload call based on differen metrics)
-		stagingData->LastOwner = QueueOwner::UNKNOWN;
-		stagingData->CurrentOwner = QueueOwner::UNKNOWN;
-		stagingData->NextOwner = QueueOwner::UNKNOWN;
 		void* mappedData = nullptr;
 		vmaMapMemory(m_VulkanContext->GetVmaAllocator(), stagingData->Allocation, &mappedData);
 		if (!mappedData)
@@ -104,9 +101,7 @@ namespace Aurora::VK {
 
 		VulkanImageData* data = m_ImageAllocator.GetPointerFromHandle(handle);
 		*data = Convert::MakeImageData(imageSpecs);
-		// TODO: imageSpecs.MemUsage is dropped here; GPU_ONLY matches the value
-		//       Creators::CreateImage used to hardcode internally.
-		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), *data, VMA_MEMORY_USAGE_GPU_ONLY);
+		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(imageSpecs.MemUsage));
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
@@ -178,8 +173,8 @@ namespace Aurora::VK {
 		}
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
-		data->Size = bufferSpecs.Size;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
+		*data = Convert::MakeBufferData(bufferSpecs);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage));
 
 		if (!success)
 		{
@@ -251,19 +246,15 @@ namespace Aurora::VK {
 		}
 
 		VulkanBufferData* data = GetBufferData(handle);
-		data->Size = bufferSpecs.Size;
-		data->Offset = 0;
-		data->Usage = bufferSpecs.Usage | BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
-		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(data->Usage), Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage), data->Size))
+		*data = Convert::MakeBufferData(bufferSpecs);
+		data->Usage |= BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
+		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
 		{
 			AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
 			m_BufferAllocator.Free(handle);
 			return VertexBufferHandle::INVALID_HANDLE;
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), "StaticVertexBuffer");
-		data->LastOwner = QueueOwner::UNKNOWN;
-		data->CurrentOwner = QueueOwner::UNKNOWN;
-		data->NextOwner = QueueOwner::UNKNOWN;
 
 		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownershitp to transfer queue 
 		// and then upload the data via a staging buffer and then copy the staging content into data
@@ -324,8 +315,8 @@ namespace Aurora::VK {
 		}
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
-		data->Size = bufferSpecs.Size;
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), &(data->Buffer), &(data->Allocation), &(data->AllocationInfo), Convert::ToVkBufferUsageFlags(bufferSpecs.Usage), VMA_MEMORY_USAGE_GPU_ONLY, bufferSpecs.Size);
+		*data = Convert::MakeBufferData(bufferSpecs);
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage));
 
 		if (!success)
 		{

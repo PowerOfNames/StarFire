@@ -20,6 +20,7 @@
 
 #include "Aurora/Core/Logging.h"
 #include "Aurora/Renderer/Image.h"
+#include "Aurora/Renderer/Buffer.h"
 #include "Aurora/Renderer/Types.h"
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanToString.h"
@@ -182,11 +183,6 @@ namespace Aurora::VK::Convert {
 	/// struct. Creates nothing - the Vulkan object fields (Image, ImageView,
 	/// Allocation) are left null for a Creators:: call to fill in.
 	/// </summary>
-	/// <remarks>
-	/// ImageSpecification::Name is not represented in VulkanImageData; the
-	/// caller uses it for debug names. ImageSpecification::MemUsage is not
-	/// represented either and is currently dropped.
-	/// </remarks>
 	[[nodiscard]] inline VulkanImageData MakeImageData(const ImageSpecification& spec)
 	{
 		VulkanImageData data{};
@@ -200,6 +196,19 @@ namespace Aurora::VK::Convert {
 		// ImageUsage composite enum lands. Carried over verbatim from
 		// VulkanResourceManager::CreateImage.
 		data.Usage = spec.Usage | ImageUsageFlags::TRANSFER_SRC;
+		return data;
+	}
+
+	/// <summary>
+	/// Translates the public BufferSpecification into the backend's runtime
+	/// struct. Creates nothing - the Vulkan object fields (Buffer, Allocation)
+	/// are left null for a Creators:: call to fill in.
+	/// </summary>
+	[[nodiscard]] inline VulkanBufferData MakeBufferData(const BufferSpecification& spec)
+	{
+		VulkanBufferData data{};
+		data.Size = spec.Size;
+		data.Usage = spec.Usage;
 		return data;
 	}
 

@@ -256,3 +256,71 @@ TEST_CASE("Convert: MakeImageData translates a specification", "[convert][image]
 		// Nothing in the produced struct reflects the change.
 	}
 }
+
+
+TEST_CASE("Convert: MakeBufferData translates a specification", "[convert][buffer]")
+{
+	BufferSpecification spec;
+	spec.Name = "TestBuffer";
+	spec.Size = 4096;
+	spec.Usage = BufferUsageFlags::VERTEX_BUFFER | BufferUsageFlags::STORAGE_BUFFER;
+	spec.MemUsage = MemoryUsage::GPU_ONLY;
+
+	const VK::VulkanBufferData data = Cv::MakeBufferData(spec);
+
+	SECTION("size carries over")
+	{
+		CHECK(data.Size == 4096u);
+	}
+
+	SECTION("usage carries over verbatim - nothing is force-added")
+	{
+		// Unlike MakeImageData, which force-adds TRANSFER_SRC, the buffer
+		// path passes the requested usage through untouched. Callers that
+		// need extra flags (the bindless vertex buffer) OR them in themselves.
+		CHECK(data.Usage == spec.Usage);
+		CHECK((data.Usage & BufferUsageFlags::TRANSFER_SRC) == BufferUsageFlags::NONE);
+		CHECK((data.Usage & BufferUsageFlags::TRANSFER_DST) == BufferUsageFlags::NONE);
+	}
+
+	SECTION("offset starts at zero")
+	{
+		CHECK(data.Offset == 0u);
+	}
+
+	SECTION("it creates nothing - the Vulkan object fields stay null")
+	{
+		CHECK(data.Buffer == VK_NULL_HANDLE);
+		CHECK(data.Allocation == VK_NULL_HANDLE);
+		CHECK(data.AllocationInfo.size == 0u);
+		CHECK(data.AllocationInfo.pMappedData == nullptr);
+	}
+
+	SECTION("queue ownership starts unknown rather than uninitialised")
+	{
+		// VulkanResourceManager relies on these defaults instead of assigning
+		// them by hand after every CreateBuffer call.
+		CHECK(data.LastOwner == VK::QueueOwner::UNKNOWN);
+		CHECK(data.CurrentOwner == VK::QueueOwner::UNKNOWN);
+		CHECK(data.NextOwner == VK::QueueOwner::UNKNOWN);
+	}
+
+	SECTION("a freshly translated buffer is ready")
+	{
+		CHECK(data.IsReady);
+	}
+
+	SECTION("Name and MemUsage are not represented in VulkanBufferData")
+	{
+		// Name is consumed at debug-naming time by the caller; MemUsage is
+		// passed to Creators::CreateBuffer separately. Neither reaches the struct.
+		BufferSpecification other = spec;
+		other.Name = "DifferentName";
+		other.MemUsage = MemoryUsage::CPU_TO_GPU;
+		const VK::VulkanBufferData otherData = Cv::MakeBufferData(other);
+
+		CHECK(otherData.Size == data.Size);
+		CHECK(otherData.Usage == data.Usage);
+		// Nothing in the produced struct reflects either change.
+	}
+}
