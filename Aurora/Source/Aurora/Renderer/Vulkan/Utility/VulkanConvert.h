@@ -191,11 +191,8 @@ namespace Aurora::VK::Convert {
 		data.MipLevels = spec.MipLevels;
 		data.Format = ToVkFormat(spec.Format);
 		data.Tiling = ToVkImageTiling(spec.Tiling);
-		data.Layout = VK_IMAGE_LAYOUT_UNDEFINED; // Default layout, can be transitioned later
-		// TRANSFER_SRC is force-added to every image as a placeholder until the
-		// ImageUsage composite enum lands. Carried over verbatim from
-		// VulkanResourceManager::CreateImage.
-		data.Usage = spec.Usage | ImageUsageFlags::TRANSFER_SRC;
+		data.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		data.Usage = spec.Usage;
 		return data;
 	}
 

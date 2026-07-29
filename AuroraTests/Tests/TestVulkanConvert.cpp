@@ -224,11 +224,15 @@ TEST_CASE("Convert: MakeImageData translates a specification", "[convert][image]
 		CHECK(data.Layout == VK_IMAGE_LAYOUT_UNDEFINED);
 	}
 
-	SECTION("TRANSFER_SRC is force-added on top of the requested usage")
+	SECTION("usage carries over verbatim - nothing is force-added")
 	{
-		CHECK((data.Usage & ImageUsageFlags::COLOR_ATTACHMENT) == ImageUsageFlags::COLOR_ATTACHMENT);
-		CHECK((data.Usage & ImageUsageFlags::SAMPLED) == ImageUsageFlags::SAMPLED);
-		CHECK((data.Usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::TRANSFER_SRC);
+		// The specification is taken at face value. Callers that need a
+		// transfer flag for a later blit or copy request it themselves; the
+		// planned ImageUsage composite enum will hide those transfer specifics
+		// from users again, but not by force-adding them here.
+		CHECK(data.Usage == spec.Usage);
+		CHECK((data.Usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::NONE);
+		CHECK((data.Usage & ImageUsageFlags::TRANSFER_DST) == ImageUsageFlags::NONE);
 	}
 
 	SECTION("it creates nothing - the Vulkan object fields stay null")
@@ -245,15 +249,19 @@ TEST_CASE("Convert: MakeImageData translates a specification", "[convert][image]
 		CHECK(data.NextOwner == VK::QueueOwner::UNKNOWN);
 	}
 
-	SECTION("MemUsage is not represented in VulkanImageData and is dropped")
+	SECTION("Name and MemUsage are not represented in VulkanImageData")
 	{
+		// Name is consumed at debug-naming time by the caller; MemUsage is
+		// passed to Creators::CreateImage separately. Neither reaches the struct.
 		ImageSpecification other = spec;
+		other.Name = "DifferentName";
 		other.MemUsage = MemoryUsage::CPU_TO_GPU;
 		const VK::VulkanImageData otherData = Cv::MakeImageData(other);
 
 		CHECK(otherData.Format == data.Format);
 		CHECK(otherData.Width == data.Width);
-		// Nothing in the produced struct reflects the change.
+		CHECK(otherData.Usage == data.Usage);
+		// Nothing in the produced struct reflects either change.
 	}
 }
 
@@ -275,9 +283,9 @@ TEST_CASE("Convert: MakeBufferData translates a specification", "[convert][buffe
 
 	SECTION("usage carries over verbatim - nothing is force-added")
 	{
-		// Unlike MakeImageData, which force-adds TRANSFER_SRC, the buffer
-		// path passes the requested usage through untouched. Callers that
-		// need extra flags (the bindless vertex buffer) OR them in themselves.
+		// Same contract as MakeImageData: the specification is taken at face
+		// value. Callers that need extra flags - the bindless vertex buffer
+		// wants TRANSFER_DST and SHADER_DEVICE_ADDRESS - OR them in themselves.
 		CHECK(data.Usage == spec.Usage);
 		CHECK((data.Usage & BufferUsageFlags::TRANSFER_SRC) == BufferUsageFlags::NONE);
 		CHECK((data.Usage & BufferUsageFlags::TRANSFER_DST) == BufferUsageFlags::NONE);
