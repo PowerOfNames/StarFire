@@ -1,5 +1,22 @@
 #pragma once
 
+// ============================================================================
+//  Utility placement rule - first match wins:
+//    1. takes a VkCommandBuffer?              -> VulkanCommands
+//    2. creates/destroys a Vk/VMA object?     -> VulkanCreators
+//    3. interrogates a VkPhysicalDevice
+//       or VkSurfaceKHR?                      -> VulkanQueries
+//    4. otherwise, pure function of enums
+//       and PODs                              -> VulkanConvert
+//       ...returning a string for logging?    -> VulkanToString  (this file)
+//
+//  This file: diagnostics only. Everything here exists to be read by a human
+//  in a log line. Nothing in the engine may branch on these strings.
+//
+//  If a bucket passes ~300 lines, split it by resource (Image/Buffer),
+//  never by adding a table of contents.
+// ============================================================================
+
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 
 #include <string>
@@ -33,12 +50,15 @@ namespace Aurora::VK {
 		case VK_IMAGE_LAYOUT_UNDEFINED: return "Undefined";
 		case VK_IMAGE_LAYOUT_GENERAL: return "General";
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: return "Color Attachment Optimal";
+		case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL: return "Depth Attachment Optimal";
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return "Depth Stencil Attachment Optimal";
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: return "Depth Stencil Read Only Optimal";
+		case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL: return "Read Only Optimal";
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return "Shader Read Only Optimal";
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return "Transfer Src Optimal";
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return "Transfer Dst Optimal";
 		case VK_IMAGE_LAYOUT_PREINITIALIZED: return "Preinitialized";
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: return "Present Source";
 		default: return "Unknown Layout";
 		}
 	}
@@ -79,5 +99,16 @@ namespace Aurora::VK {
 		return result.substr(0, result.size() - 3); // Remove the trailing " | "
 	}
 
-
+	inline constexpr std::string QueueOwnerToString(QueueOwner owner)
+	{
+		switch (owner)
+		{
+			case QueueOwner::UNKNOWN: return "QUEUE_OWNER_UNKNOWN";
+			case QueueOwner::GRAPHICS: return "QUEUE_OWNER_GRAPHICS";
+			case QueueOwner::PRESENT: return "QUEUE_OWNER_PRESENT";
+			case QueueOwner::COMPUTE: return "QUEUE_OWNER_COMPUTE";
+			case QueueOwner::TRANSFER: return "QUEUE_OWNER_TRANSFER";
+			default: return "INVALID_QUEUE_OWNER";
+		}
+	}
 }

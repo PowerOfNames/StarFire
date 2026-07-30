@@ -6,6 +6,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/Vulkan/VulkanContext.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCreators.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
 
 
 #include <imgui.h>
@@ -116,13 +117,14 @@ namespace Aurora::VK {
 			imageData.Format = m_ImageFormat;
 			imageData.Layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			imageData.Tiling = VK_IMAGE_TILING_OPTIMAL;
-			Creators::CreateImage(allocator, &(imageData.Image), &(imageData.Allocation), imageData.Format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, imageData.Tiling, width, height, imageData.MipLevels);
+			imageData.Usage = ImageUsageFlags::COLOR_ATTACHMENT | ImageUsageFlags::TRANSFER_SRC;
+			Creators::CreateImage(allocator, imageData, VMA_MEMORY_USAGE_GPU_ONLY);
 
 			const std::string iString = std::to_string(i);
 			const std::string imageName = "ImGui_Image_" + iString;
 			AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_IMAGE, (uint64_t)imageData.Image, imageName);
 
-			Creators::CreateImageView(device, allocCbs, &(imageData.ImageView), imageData.Image, imageData.Format);
+			Creators::CreateImageView(device, allocCbs, imageData);
 			const std::string imageViewName = "ImGui_ImageView_" + iString;
 			AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)imageData.ImageView, imageViewName);
 			i++;
@@ -182,8 +184,7 @@ namespace Aurora::VK {
 		VkImageLayout renderingImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		if (renderTarget.Layout != renderingImageLayout)
 		{
-			Helper::TransitionImageLayout(cmd, renderTarget.Image, renderTarget.Layout, renderingImageLayout);
-			renderTarget.Layout = renderingImageLayout;
+			renderTarget.Layout = Commands::TransitionImageLayout(cmd, renderTarget.Image, renderTarget.Format, renderTarget.Layout, renderingImageLayout);
 		}
 
 		VkClearValue* clear = nullptr;
@@ -215,26 +216,22 @@ namespace Aurora::VK {
 
 		vkCmdEndRendering(cmd);
 
-
+		const Ref<VulkanSwapchain>& swapchain = GetRenderContext()->GetSwapchain();
+		VkFormat swapchainImageFormat = swapchain->GetImageFormat();
 		if (renderTarget.Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 		{
-			VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			renderTarget.Layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			renderTarget.Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		}
 
 		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		{
-			VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			frame.TargetLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		}
 
-		VK::Helper::BlitImageToImage(frame.CommandBuffer, renderTarget.Image, renderTarget.Width, renderTarget.Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
+		VK::Commands::BlitImageToImage(frame.CommandBuffer, renderTarget.Image, renderTarget.Width, renderTarget.Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
 
-		VK::Helper::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		renderTarget.Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VK::Helper::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		frame.TargetLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		renderTarget.Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 
 	VulkanImageData& VulkanImGuiRenderer::GetRenderTarget(uint32_t frameIdx)

@@ -106,19 +106,8 @@ namespace Aurora::VK {
 		MAX_QUEUE_OWNERS
 	};
 
-	inline static constexpr std::string QueueOwnerToString(QueueOwner owner)
-	{
-		switch (owner)
-		{
-			case QueueOwner::UNKNOWN: return "QUEUE_OWNER_UNKNOWN";
-			case QueueOwner::GRAPHICS: return "QUEUE_OWNER_GRAPHICS";
-			case QueueOwner::PRESENT: return "QUEUE_OWNER_PRESENT";
-			case QueueOwner::COMPUTE: return "QUEUE_OWNER_COMPUTE";
-			case QueueOwner::TRANSFER: return "QUEUE_OWNER_TRANSFER";
-			default: return "INVALID_QUEUE_OWNER";
-		}
-	}
-
+	// QueueOwnerToString lives in Utility/VulkanToString.h with the other
+	// diagnostic formatters.
 
 	struct DeviceRequirements
 	{

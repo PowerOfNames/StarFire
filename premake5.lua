@@ -3,7 +3,7 @@ include "Dependencies.lua"
 
 newoption {
     trigger = "with-tests",
-    description = "Include SubstrateTests project"
+    description = "Include SubstrateTests and AuroraTests projects"
 }
 
 workspace "StarFire"
@@ -41,7 +41,10 @@ filter{}
 
 if _OPTIONS["with-tests"] then
 include "Substrate"
+-- SubstrateTests must come before AuroraTests: it is what pulls in the shared
+-- Catch2 project, which AuroraTests links against.
 include "SubstrateTests"
+include "AuroraTests"
 else
 	include "StarFire"
 	include "Aurora"

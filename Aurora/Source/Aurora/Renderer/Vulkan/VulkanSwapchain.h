@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
-#include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanQueries.h"
 
 #include <vector>
 
@@ -56,7 +56,7 @@ namespace Aurora::VK {
 		inline uint32_t GetImageCount() const { return static_cast<uint32_t>(m_Images.size()); }
 		inline VkFormat GetImageFormat() const { return m_ImageFormat; }
 		inline VkExtent2D GetExtent() const { return m_Extent; }
-		inline const SwapchainSupportDetails GetSupportDetails() const { return Helper::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface); }
+		inline const SwapchainSupportDetails GetSupportDetails() const { return Queries::GetSwapSupportDetails(m_Specification.PhysicalDevice, m_Specification.Surface); }
 
 		static Ref<VulkanSwapchain> Create(const SwapchainSpecification& spec);
 

@@ -6,7 +6,7 @@
 
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
-#include "Aurora/Renderer/Vulkan/Utility/VulkanHelper.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanQueries.h"
 
 #include "Substrate/RefCounted.h"
 
@@ -76,7 +76,7 @@ namespace Aurora::VK {
 		inline const PhysicalDeviceLimits& GetPhysicalDeviceLimits() const { return m_PhDeviceLimits; }
 		inline VkDevice GetLogicalDevice() const { return m_Device; }
 		inline const QueueFamilies& GetQueueFamilies() const { return m_QueueFamilies; }
-		inline const QueueFamilyIndices GetQueueFamilyIndices() const { return Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface); }
+		inline const QueueFamilyIndices GetQueueFamilyIndices() const { return Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface); }
 		inline const VmaAllocator& GetVmaAllocator() const { return m_VmAllocator; }
 		inline const VkApplicationInfo& GetApplicationInfo() const { return m_AppInfo; }
 		inline const VkAllocationCallbacks* GetAllocationCallbacks() const { return m_AllocationCallbacks; }

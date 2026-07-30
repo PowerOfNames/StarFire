@@ -1,69 +1,43 @@
 #pragma once
 
+// ============================================================================
+//  Utility placement rule - first match wins:
+//    1. takes a VkCommandBuffer?              -> VulkanCommands
+//    2. creates/destroys a Vk/VMA object?     -> VulkanCreators  (this file)
+//    3. interrogates a VkPhysicalDevice
+//       or VkSurfaceKHR?                      -> VulkanQueries
+//    4. otherwise, pure function of enums
+//       and PODs                              -> VulkanConvert
+//       ...returning a string for logging?    -> VulkanToString
+//
+//  This file: functions that bring a Vulkan or VMA object into existence.
+//  If it does not call a vk*Create* / vma*Create* entry point, it does not
+//  belong here.
+//
+//  If a bucket passes ~300 lines, split it by resource (Image/Buffer),
+//  never by adding a table of contents.
+// ============================================================================
+
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 
 
 namespace Aurora::VK::Creators {
-	
 
 	// ========== Images ==========
-	bool CreateImage(VmaAllocator allocator, VkImage* image, VmaAllocation* allocation, VkFormat format, VkImageUsageFlags usageFlags, VkImageTiling tiling, uint32_t width, uint32_t height, uint32_t mipLevels = 1);
-	bool CreateImageView(VkDevice device, const VkAllocationCallbacks* allocationCbs, VkImageView* imageView, VkImage image, VkFormat format);
+
+	/// <summary>
+	/// Creates the VkImage and its allocation from the description already in
+	/// <paramref name="data"/>. Reads Format, Usage, Tiling, Width, Height and
+	/// MipLevels; writes Image and Allocation.
+	/// </summary>
+	bool CreateImage(VmaAllocator allocator, VulkanImageData& data, VmaMemoryUsage memUsage);
+
+	/// <summary>
+	/// Creates the VkImageView for an image already created by CreateImage.
+	/// Reads Image and Format; writes ImageView.
+	/// </summary>
+	bool CreateImageView(VkDevice device, const VkAllocationCallbacks* allocationCbs, VulkanImageData& data);
 
 	// ========== Buffers ==========
-	bool CreateBuffer(VmaAllocator allocator, 
-							 VkBuffer* buffer, 
-							 VmaAllocation* allocation,
-							 VmaAllocationInfo* allocationInfo, 
-							 VkBufferUsageFlags usageFlags, 
-							 VmaMemoryUsage memUsage, 
-							 size_t size);
-	
-	VkBufferMemoryBarrier2 EmitReleaseBarrier(VkBuffer buffer, 
-													 VkDeviceSize offset, 
-													 VkDeviceSize size, 
-													 uint32_t srcQueueFamilyIndex, 
-													 uint32_t dstQueueFamilyIndex, 
-													 VkPipelineStageFlags2 srcStageMask, 
-													 VkAccessFlags2 srcAccessMask, 
-													 VkPipelineStageFlags2 dstStageMask);
-
-	VkBufferMemoryBarrier2 EmitAcquireBarrier(VkBuffer buffer, 
-													 VkDeviceSize offset, 
-													 VkDeviceSize size, 
-													 uint32_t srcQueueFamilyIndex, 
-													 uint32_t dstQueueFamilyIndex, 
-													 VkPipelineStageFlags2 srcStageMask, 
-													 VkPipelineStageFlags2 dstStageMask, 
-													 VkAccessFlags2 dstAccessMask);
-
-	// ========== Images ==========
-	VkImageMemoryBarrier2 EmitLayoutTransitionBarrier(VkImage image,
-													  VkImageLayout oldLayout,
-													  VkImageLayout newLayout,
-													  VkImageSubresourceRange range,
-													  VkPipelineStageFlags2 srcStageMask,
-													  VkAccessFlags2 srcAccessMask,
-													  VkPipelineStageFlags2 dstStageMask,
-													  VkAccessFlags2 dstAccessMask);
-
-	VkImageMemoryBarrier2 EmitReleaseBarrier(VkImage image,
-											 VkImageLayout oldLayout,
-											 VkImageLayout newLayout,
-											 VkImageSubresourceRange range,
-											 uint32_t srcQueueFamilyIndex,
-											 uint32_t dstQueueFamilyIndex,
-											 VkPipelineStageFlags2 srcStageMask,
-											 VkAccessFlags2 srcAccessMask,
-											 VkPipelineStageFlags2 dstStageMask);
-	
-	VkImageMemoryBarrier2 EmitAcquireBarrier(VkImage image,
-											 VkImageLayout oldLayout,
-											 VkImageLayout newLayout,
-											 VkImageSubresourceRange range,
-											 uint32_t srcQueueFamilyIndex,
-											 uint32_t dstQueueFamilyIndex,
-											 VkPipelineStageFlags2 srcStageMask,
-											 VkPipelineStageFlags2 dstStageMask,
-											 VkAccessFlags2 dstAccessMask);
+	bool CreateBuffer(VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage);
 }

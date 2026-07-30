@@ -4,7 +4,8 @@
 #include "AuroraInternal.h"
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanToString.h"
-#include "Aurora/Renderer/Vulkan/Utility/AuroraToVulkan.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
 #include "Aurora/Renderer/Vulkan/VulkanSubmissionScheduler.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCreators.h"
 
@@ -388,7 +389,7 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 
-		QueueFamilyIndices indices = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface);
+		QueueFamilyIndices indices = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface);
 		uint8_t uniqueQueueFamilies = indices.UniqueFamilyIndices();
 		AURORA_INFO("Picked physical device queue families");
 		AURORA_INFO("==========================================================");
@@ -555,7 +556,7 @@ namespace Aurora::VK {
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
 
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_MainGraphicsCmdPool), VK_SUCCESS, "Failed to create graphics command pool.");
 		if (m_MainGraphicsCmdPool == VK_NULL_HANDLE)
@@ -579,7 +580,7 @@ namespace Aurora::VK {
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Transfer;
+		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Transfer;
 
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_TransferCmdPool), VK_SUCCESS, "Failed to create transfer command pool.");
 		if (m_TransferCmdPool == VK_NULL_HANDLE)
@@ -623,7 +624,7 @@ namespace Aurora::VK {
 			});
 
 		// ===== Graphics queue structures =====
-		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_GraphicsTransferCmdPool), VK_SUCCESS, "Failed to create graphics transfer command pool.");
 		if (m_GraphicsTransferCmdPool == VK_NULL_HANDLE)
 			return false;
@@ -653,7 +654,7 @@ namespace Aurora::VK {
 			});
 
 		// ===== Compute queue structures =====
-		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Compute;
+		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Compute;
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_ComputeTransferCmdPool), VK_SUCCESS, "Failed to create compute transfer command pool.");
 		if (m_ComputeTransferCmdPool == VK_NULL_HANDLE)
 			return false;
@@ -692,7 +693,7 @@ namespace Aurora::VK {
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = Helper::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
 
 		VkCommandBufferAllocateInfo cmdAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		cmdAllocInfo.pNext = nullptr;
@@ -921,9 +922,9 @@ namespace Aurora::VK {
 				barrier.srcQueueFamilyIndex = srcQIndex;
 				barrier.dstQueueFamilyIndex = dstQIndex;
 
-				barrier.srcStageMask = GetStageFromBufferUsage(lastUsage, queue);
-				barrier.srcAccessMask = GetAccessFromBufferUsage(lastUsage);
-				barrier.dstStageMask = GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC);
+				barrier.srcStageMask = Convert::GetStageFromBufferUsage(lastUsage, queue);
+				barrier.srcAccessMask = Convert::GetAccessFromBufferUsage(lastUsage);
+				barrier.dstStageMask = Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC);
 				barrier.dstAccessMask = 0; // always				
 
 				//TODO: refactor this out by first collecting all barriers + batching them together 
@@ -966,9 +967,9 @@ namespace Aurora::VK {
 				barrier.srcQueueFamilyIndex = srcQIndex;
 				barrier.dstQueueFamilyIndex = dstQIndex;
 
-				barrier.srcStageMask = GetStageFromBufferUsage(lastUsage);
-				barrier.srcAccessMask = GetAccessFromBufferUsage(lastUsage);
-				barrier.dstStageMask = GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST);
+				barrier.srcStageMask = Convert::GetStageFromBufferUsage(lastUsage);
+				barrier.srcAccessMask = Convert::GetAccessFromBufferUsage(lastUsage);
+				barrier.dstStageMask = Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST);
 				barrier.dstAccessMask = 0; // always
 
 				VkDependencyInfo dependency{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
@@ -1018,28 +1019,28 @@ namespace Aurora::VK {
 			VkBufferMemoryBarrier2 acquireBarriers[2];
 			uint32_t acquireBarrierCount = 0;
 			if (srcNeedsAcquire)
-				acquireBarriers[acquireBarrierCount++] = Creators::EmitAcquireBarrier(srcBuffer,
+				acquireBarriers[acquireBarrierCount++] = Commands::EmitAcquireBarrier(srcBuffer,
 					srcOffset,
 					size,
 					srcCurQueueIndex,
 					copyQueueIndex,
 //TODO: usage will change depending on the queue that does the copy -> we will later implement a metrix (buffer size or queue workload) to decide which queue should do the copy,
 // and then we will set the usage accordingly
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
-					GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_SRC));
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
+					Convert::GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_SRC));
 
 			if (dstNeedsAcquire)
-				acquireBarriers[acquireBarrierCount++] = Creators::EmitAcquireBarrier(dstBuffer,
+				acquireBarriers[acquireBarrierCount++] = Commands::EmitAcquireBarrier(dstBuffer,
 					dstOffset,
 					size,
 					dstCurQueueIndex,
 					copyQueueIndex,
 //TODO: usage will change depending on the queue that does the copy -> we will later implement a metrix (buffer size or queue workload) to decide which queue should do the copy,
 // and then we will set the usage accordingly
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
-					GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_DST));
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
+					Convert::GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_DST));
 
 			if (acquireBarrierCount > 0)
 			{
@@ -1070,16 +1071,16 @@ namespace Aurora::VK {
 
 			if (dstNeedsRelease)
 			{
-				VkBufferMemoryBarrier2 releaseBarrier = Creators::EmitReleaseBarrier(dstBuffer,
+				VkBufferMemoryBarrier2 releaseBarrier = Commands::EmitReleaseBarrier(dstBuffer,
 					dstOffset,
 					size,
 					copyQueueIndex,
 					dstTarQueueIndex,
 //TODO: usage will change depending on the queue that does the copy -> we will later implement a metrix (buffer size or queue workload) to decide which queue should do the copy,
 // and then we will set the usage accordingly
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
-					GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST));
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
+					Convert::GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_DST),
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST));
 				VkDependencyInfo dependency{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
 				dependency.pNext = nullptr;
 				dependency.bufferMemoryBarrierCount = 1;
@@ -1119,14 +1120,14 @@ namespace Aurora::VK {
 				queue = op.NextDstOwner
 			](VkCommandBuffer cmd) {
 				//acquire barrier
-				VkBufferMemoryBarrier2 acquireBarrier = Creators::EmitAcquireBarrier(buffer,
+				VkBufferMemoryBarrier2 acquireBarrier = Commands::EmitAcquireBarrier(buffer,
 					offset,
 					size,
 					srcQIndex,
 					dstQIndex,
-					GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
-					GetStageFromBufferUsage(lastUsage),
-					GetAccessFromBufferUsage(lastUsage));
+					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
+					Convert::GetStageFromBufferUsage(lastUsage),
+					Convert::GetAccessFromBufferUsage(lastUsage));
 
 				VkDependencyInfo dependency{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
 				dependency.pNext = nullptr;
@@ -1360,14 +1361,14 @@ namespace Aurora::VK {
 
 		int score = 0;
 
-		QueueFamilyIndices indices = Helper::FindQueueFamilies(phDevice, m_Surface);
+		QueueFamilyIndices indices = Queries::FindQueueFamilies(phDevice, m_Surface);
 		if (!indices.IsComplete())
 			return 0;
 
 		if (!CheckRequiredDeviceExtensionSupport(phDevice, deviceRequirements))
 			return 0;
 
-		auto swapchainSupportDetails = Helper::GetSwapSupportDetails(phDevice, m_Surface);
+		auto swapchainSupportDetails = Queries::GetSwapSupportDetails(phDevice, m_Surface);
 		if (!swapchainSupportDetails.Formats.empty() && !swapchainSupportDetails.PresentModes.empty() && swapchainSupportDetails.Capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 		{
 			//TODO: handle more detailed selection here (look for specific format etc)

@@ -22,8 +22,8 @@ namespace Aurora::VK {
 		{
 			RenderPassAttachment attachment{};
 			attachment.Name = colorAttachmentSpec.Name;
-			attachment.Index = m_ColorAttachments.size();
-			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = m_ColorAttachments.size();
+			attachment.Index = static_cast<uint32_t>(m_ColorAttachments.size());
+			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = static_cast<uint32_t>(m_ColorAttachments.size());
 			for (uint8_t i = 0; i < framesInFLight; i++)
 			{
 				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec.ImageSpecs));

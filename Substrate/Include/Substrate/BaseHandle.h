@@ -80,7 +80,8 @@ namespace Substrate {
 		constexpr bool IsValid()
 		{
 			//If the handle's index bits are all set to 1, the handle is invalid.
-			if ((m_Handle & GetIndexMask()) & INVALID_HANDLE)
+			constexpr THandleType indexMask = GetIndexMask();
+			if ((m_Handle & indexMask) == indexMask)
 				return false;
 
 			//If the generation mask is 0, the handle is always valid.

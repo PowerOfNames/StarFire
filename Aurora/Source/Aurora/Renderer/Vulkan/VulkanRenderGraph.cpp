@@ -1,6 +1,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanRenderGraph.h"
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Core/Core.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
 
 #include "Aurora/Aurora.h"
 #include "AuroraInternal.h"
@@ -299,9 +300,11 @@ namespace Aurora::VK {
 				if(!CheckAndTransitImage(imageData, cmd, attachment.AttachmentInfo.imageLayout))
 					AURORA_ERROR("Image data of attachment '{}' nullptr", attachment.Name.c_str());
 				else
+				{
 					colorAttachments.push_back(attachment.AttachmentInfo);
-				if (attachment.CopyRequested)
-					copySources[attachment.Name] = imageData;
+					if (attachment.CopyRequested)
+						copySources[attachment.Name] = imageData;
+				}
 			}
 
 			VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
@@ -358,7 +361,7 @@ namespace Aurora::VK {
 				CheckAndTransitImage(dst, cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				VulkanImageData* src = copySources.at(copy.AttachmentName);
 				CheckAndTransitImage(src, cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-				Helper::BlitImageToImage(cmd, src->Image, src->Width, src->Height, dst->Image, src->Width, src->Height);
+				Commands::BlitImageToImage(cmd, src->Image, src->Width, src->Height, dst->Image, src->Width, src->Height);
 				CheckAndTransitImage(dst, cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 		}
@@ -373,11 +376,11 @@ namespace Aurora::VK {
 
 		if (imageData->Layout != targetLayout)
 		{
-			Helper::TransitionImageLayout(cmd,
+			imageData->Layout = Commands::TransitionImageLayout(cmd,
 										  imageData->Image,
+										  imageData->Format,
 										  imageData->Layout,
 										  targetLayout);
-			imageData->Layout = targetLayout;
 		}
 		return true;
 	}
