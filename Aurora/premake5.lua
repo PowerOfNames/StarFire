@@ -77,11 +77,6 @@ filter{}
 		runtime "Debug"
 		symbols "on"
 		
-		links
-		{
-			"%{Library.shaderc_debug}"
-		}
-		
 	filter "configurations:Release"
 		defines
 		{
@@ -91,10 +86,6 @@ filter{}
 		runtime "Release"
 		optimize "on"
 		
-		links
-		{
-			"%{Library.shaderc_release}"
-		}
 		
 	filter "configurations:Profiling"
 		runtime "Release"
