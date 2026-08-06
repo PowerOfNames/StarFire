@@ -77,7 +77,7 @@ namespace Aurora::VK {
 		compiledCopy.CopySourcesPerFif.reserve(foundAttachments.size());
 		compiledCopy.CopyTargetsPerFif.reserve(foundAttachments.size());
 
-		for (size_t i = 0; i < foundAttachments.size(); i++)		
+		for (size_t i = 0; i < foundAttachments.size(); i++)
 			compiledCopy.CopySourcesPerFif.push_back(foundAttachments[i]->Handle);
 
 		Ref<VulkanResourceManager> resourceManager = GetResourceManager();

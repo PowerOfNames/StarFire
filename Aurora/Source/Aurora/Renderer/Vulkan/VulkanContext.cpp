@@ -119,8 +119,18 @@ namespace Aurora::VK {
 		AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
 
 		m_Renderer->Destroy();
-		m_MainDeletionQueue.Flush(m_Device);
+		for (uint8_t fif = 0; fif < static_cast<uint8_t>(m_FramesInFlight.size()); fif++)
+			FlushFrameDeletionQueue(fif);
 		m_FramesInFlight.clear();
+		m_MainDeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
+
+
+		m_ComputeTransferCmdBuffer = VK_NULL_HANDLE;
+		m_TransferCmdBuffer = VK_NULL_HANDLE;
+		m_GraphicsTransferCmdBuffer = VK_NULL_HANDLE;
+
+		m_VmAllocator = VK_NULL_HANDLE;
+		m_PhysicalDevice = VK_NULL_HANDLE;
 
 		AURORA_INFO("Destroyed all vulkan context objects.");
 	}
@@ -130,19 +140,23 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		//Cleanup old frame
-		FlushFrameDeletionQueue(m_RendererStatistics.FramesInFlightIdx);
 		
 		//Prepare next frame
 		IncrementFramesInFlightIdx();
+
 
 		AURORA_TRACE("Beginning frame {}", m_RendererStatistics.FramesInFlightIdx);
 		VulkanFrame& frame = GetCurrentFrameData();
 		if (!m_Swapchain->PrepareFrame(frame))
 			return false;
+		
+		//Cleanup frame -> this should definitely be done now.
+		FlushFrameDeletionQueue(m_RendererStatistics.FramesInFlightIdx);
 
 		PollPendingResourceUploads();
 		FlushDeferredSubmissionOps();
+
+		//TODO: do semaphore stamping here and submit to the frame deletion queue, such that it is guaranteed to be executed after the frame has been submitted to the GPU and finished executing.
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		cmdInfo.pNext = nullptr;
@@ -183,7 +197,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_Swapchain->SwapImages(GetCurrentFrameData()))
+		if (m_Swapchain->SwapImages(GetCurrentFrameData(), m_GraphicsSubmitSemaphore))
 			m_RendererStatistics.m_TotalFinishedFrames++;
 	}
 
@@ -273,10 +287,10 @@ namespace Aurora::VK {
 		}
 		AURORA_TRACE("Created VkInstance.");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&instance = m_Instance](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyInstance(m_Instance, m_AllocationCallbacks);
-				m_Instance = VK_NULL_HANDLE;
+				vkDestroyInstance(instance, allocCbs);
+				instance = VK_NULL_HANDLE;
 			});
 
 #if AURORA_VK_VALIDATION_ENABLED
@@ -314,10 +328,10 @@ namespace Aurora::VK {
 			return false;
 		}
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([instance = m_Instance, &surface = m_Surface](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroySurfaceKHR(m_Instance, m_Surface, m_AllocationCallbacks);
-				m_Surface = VK_NULL_HANDLE;
+				vkDestroySurfaceKHR(instance, surface, allocCbs);
+				surface = VK_NULL_HANDLE;
 			});
 
 		AURORA_TRACE("Created vulkan surface.");
@@ -508,10 +522,10 @@ namespace Aurora::VK {
 		m_QueueOwnerQueues[QueueOwner::COMPUTE] = m_QueueFamilies.Compute;
 		m_QueueOwnerQueues[QueueOwner::TRANSFER] = m_QueueFamilies.Transfer;
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&device = m_Device](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyDevice(m_Device, m_AllocationCallbacks);
-				m_Device = VK_NULL_HANDLE;
+				vkDestroyDevice(device, allocCbs);
+				device = VK_NULL_HANDLE;
 			});
 
 		AURORA_TRACE("Created vulkan logical device and gathered queues");
@@ -540,10 +554,9 @@ namespace Aurora::VK {
 		if (m_VmAllocator == VK_NULL_HANDLE)
 			return false;
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([](VkDevice, VmaAllocator allocator, const VkAllocationCallbacks*)
 			{
-				vmaDestroyAllocator(m_VmAllocator);
-				m_VmAllocator = VK_NULL_HANDLE;
+				vmaDestroyAllocator(allocator);
 			});
 
 		return true;
@@ -563,10 +576,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_MainGraphicsCmdPool, "GraphicsCommandPool");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&pool = m_MainGraphicsCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyCommandPool(m_Device, m_MainGraphicsCmdPool, m_AllocationCallbacks);
-				m_MainGraphicsCmdPool = VK_NULL_HANDLE;
+				vkDestroyCommandPool(device, pool, allocCbs);
+				pool = VK_NULL_HANDLE;
 			});
 
 		return true;
@@ -587,10 +600,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "TransferCommandPool");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&pool = m_TransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyCommandPool(m_Device, m_TransferCmdPool, m_AllocationCallbacks);
-				m_TransferCmdPool = VK_NULL_HANDLE;
+				vkDestroyCommandPool(device, pool, allocCbs);
+				pool = VK_NULL_HANDLE;
 			});
 
 		VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -617,10 +630,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_TransferSubmitSemaphore.Semaphore, "TransferSubmitSemaphore");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&semaphore = m_TransferSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroySemaphore(m_Device, m_TransferSubmitSemaphore.Semaphore, m_AllocationCallbacks);
-				m_TransferSubmitSemaphore = {};
+				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+				semaphore = {};
 			});
 
 		// ===== Graphics queue structures =====
@@ -630,10 +643,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "GraphicsTransferCommandPool");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&pool = m_GraphicsTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyCommandPool(m_Device, m_GraphicsTransferCmdPool, m_AllocationCallbacks);
-				m_GraphicsTransferCmdPool = VK_NULL_HANDLE;
+				vkDestroyCommandPool(device, pool, allocCbs);
+				pool = VK_NULL_HANDLE;
 			});
 
 		allocInfo.commandPool = m_GraphicsTransferCmdPool;
@@ -647,10 +660,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_GraphicsSubmitSemaphore.Semaphore, "GraphicsSubmitSemaphore");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&semaphore = m_GraphicsSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroySemaphore(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_AllocationCallbacks);
-				m_GraphicsSubmitSemaphore = {};
+				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+				semaphore = {};
 			});
 
 		// ===== Compute queue structures =====
@@ -660,10 +673,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_ComputeTransferCmdPool, "ComputeTransferCommandPool");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&pool = m_ComputeTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyCommandPool(m_Device, m_ComputeTransferCmdPool, m_AllocationCallbacks);
-				m_ComputeTransferCmdPool = VK_NULL_HANDLE;
+				vkDestroyCommandPool(device, pool, allocCbs);
+				pool = VK_NULL_HANDLE;
 			});
 
 		allocInfo.commandPool = m_ComputeTransferCmdPool;
@@ -677,10 +690,10 @@ namespace Aurora::VK {
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ComputeSubmitSemaphore.Semaphore, "ComputeSubmitSemaphore");
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([&semaphore = m_ComputeSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroySemaphore(m_Device, m_ComputeSubmitSemaphore.Semaphore, m_AllocationCallbacks);
-				m_ComputeSubmitSemaphore = {};
+				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+				semaphore = {};
 			});
 
 		return true;
@@ -718,10 +731,9 @@ namespace Aurora::VK {
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)fif.CommandPool, poolName.c_str());
 
-				SubmitToMainDeletionQueue([this, &pool = fif.CommandPool]()
+				SubmitToMainDeletionQueue([pool = fif.CommandPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 					{
-						vkDestroyCommandPool(m_Device, pool, m_AllocationCallbacks);
-						pool = VK_NULL_HANDLE;
+						vkDestroyCommandPool(device, pool, allocCbs);
 					});
 			}
 
@@ -743,10 +755,9 @@ namespace Aurora::VK {
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_FENCE, (uint64_t)fif.InFlightFence, inFlightName.c_str());
 
-				SubmitToMainDeletionQueue([this, &fence = fif.InFlightFence]()
+				SubmitToMainDeletionQueue([fence = fif.InFlightFence](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 					{
-						vkDestroyFence(m_Device, fence, m_AllocationCallbacks);
-						fence = VK_NULL_HANDLE;
+						vkDestroyFence(device, fence, allocCbs);
 					});
 			}
 			i++;
@@ -786,7 +797,7 @@ namespace Aurora::VK {
 		}
 
 
-		SubmitToMainDeletionQueue([this]()
+		SubmitToMainDeletionQueue([this](VkDevice, VmaAllocator, const VkAllocationCallbacks*)
 		{
 			m_Swapchain->Destroy();
 			m_Swapchain = nullptr;
@@ -808,7 +819,7 @@ namespace Aurora::VK {
 			return;
 		}
 
-		m_FramesInFlight[frameIdx].DeletionQueue.Flush(m_Device);
+		m_FramesInFlight[frameIdx].DeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
 	}
 
 	void VulkanContext::AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle)
@@ -1276,7 +1287,8 @@ namespace Aurora::VK {
 
 	TimelineSemaphore VulkanContext::GetQueueSemaphoreSnapshot(QueueOwner owner)
 	{
-		if (owner == QueueOwner::UNKNOWN)
+		if (owner == QueueOwner::UNKNOWN ||
+			owner == QueueOwner::PRESENT)
 			return {};
 		return GetSubmissionSemaFromQueueOwner(owner);
 	}
@@ -1520,10 +1532,10 @@ namespace Aurora::VK {
 
 		AURORA_VK_CHECK(Debug::CreateDebugUtilsMessengerEXT(instance, &createInfo, m_AllocationCallbacks, &m_DebugMessenger), VK_SUCCESS, "Failed to create debug messenger.");
 
-		SubmitToMainDeletionQueue([instance, this]()
+		SubmitToMainDeletionQueue([instance, &messager = m_DebugMessenger](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				Debug::DestroyDebugUtilsMessengerEXT(instance, m_DebugMessenger, m_AllocationCallbacks);
-				m_DebugMessenger = VK_NULL_HANDLE;
+				Debug::DestroyDebugUtilsMessengerEXT(instance, messager, allocCbs);
+				messager = VK_NULL_HANDLE;
 			});
 	}
 

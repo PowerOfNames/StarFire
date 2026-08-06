@@ -13,6 +13,8 @@
 
 namespace Aurora::VK {
 
+	inline constexpr VkPipelineStageFlags2 SWAPCHAIN_WAIT_STAGE = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
 	struct VulkanFrame
 	{
 		// We create one pool per frame, such that we later can record command buffers for multiple frames in parallel if needed. We can optimize this later if needed (e.g. one pool per thread, or one pool for transient buffers and one for long-lived buffers)
@@ -104,6 +106,13 @@ namespace Aurora::VK {
 		COMPUTE,
 		TRANSFER,
 		MAX_QUEUE_OWNERS
+	};
+
+	struct ResourceSubmissionWaits
+	{
+		uint64_t Graphics = 0;
+		uint64_t Compute = 0;
+		uint64_t Transfer = 0;
 	};
 
 	// QueueOwnerToString lives in Utility/VulkanToString.h with the other

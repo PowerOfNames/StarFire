@@ -45,7 +45,7 @@ namespace Aurora::VK {
 
 		void Init();
 		bool PrepareFrame(VulkanFrame& frame);
-		bool SwapImages(VulkanFrame& frame);
+		bool SwapImages(VulkanFrame& frame, TimelineSemaphore& graphicsSemaphore);
 		void OnResize(uint32_t width, uint32_t height, bool force = false);
 		void Destroy();
 

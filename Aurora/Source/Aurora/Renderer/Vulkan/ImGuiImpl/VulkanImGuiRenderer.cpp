@@ -106,8 +106,8 @@ namespace Aurora::VK {
 		VkDevice device = renderContext->GetLogicalDevice();
 		VmaAllocator allocator = renderContext->GetVmaAllocator();
 		const VkAllocationCallbacks* allocCbs = renderContext->GetAllocationCallbacks();
-		AURORA_VK_CHECK(vkDeviceWaitIdle(device), VK_SUCCESS, "Failed to wait for device idle!");
 
+		//TODO: weave into per-frame deletion queue
 		uint32_t i = 0;
 		for (VulkanImageData& imageData : m_RenderTargets)
 		{
@@ -140,33 +140,42 @@ namespace Aurora::VK {
 
 		Ref<VulkanContext> renderContext = GetRenderContext();
 		VkDevice device = renderContext->GetLogicalDevice();
-		
+		const VkAllocationCallbacks* allocCbs = renderContext->GetAllocationCallbacks();
+		AURORA_VK_CHECK(vkDeviceWaitIdle(device), VK_SUCCESS, "Failed to wait for device idle!");
+
+
 		//TODO: make sure all textures get destroyed before
 		for (auto& [imageHandle, textureID] : m_TextureIDMap)
 		{
 			ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)textureID);
 		}
 		m_TextureIDMap.clear();
-		vkDestroySampler(device, m_TextureSampler, renderContext->GetAllocationCallbacks());
-		
-		AURORA_VK_CHECK(vkDeviceWaitIdle(device), VK_SUCCESS, "ImGuiRenderer::Shutdown: Failed to wait for device idle!");
-		ImGui_ImplVulkan_Shutdown();
 
-		for (VulkanImageData& imageData : m_RenderTargets)
+		vkDestroySampler(device, m_TextureSampler, allocCbs);
+		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(device, m_DescriptorPool, allocCbs);
+
+		for (size_t fif = 0; fif < m_RenderTargets.size(); fif++)
 		{
-			vkDestroyImageView(device, imageData.ImageView, renderContext->GetAllocationCallbacks());
-			vkDestroyImage(device, imageData.Image, renderContext->GetAllocationCallbacks());
-			vmaFreeMemory(renderContext->GetVmaAllocator(), imageData.Allocation);
+			VulkanImageData& imageData = m_RenderTargets[fif];
+			renderContext->SubmitToFrameDeletionQueue(
+			[
+				imageView = imageData.ImageView,
+				image = imageData.Image,
+				allocation = imageData.Allocation
+			](VkDevice device, VmaAllocator allocator, const VkAllocationCallbacks* allocCbs)
+			{
+				vkDestroyImageView(device, imageView, allocCbs);
+				vkDestroyImage(device, image, allocCbs);
+				vmaFreeMemory(allocator, allocation);
+			}, static_cast<uint8_t>(fif));
 		}
 		m_RenderTargets.clear();
-
-		vkDestroyDescriptorPool(device, m_DescriptorPool, renderContext->GetAllocationCallbacks());
 	}
 
 	void VulkanImGuiRenderer::BeginFrame()
 	{
 		PROFILE_FUNCTION;
-
 
 		ImGui_ImplVulkan_NewFrame();
 	}
@@ -225,15 +234,15 @@ namespace Aurora::VK {
 
 		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		{
-			frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, true);
 		}
 
 		VK::Commands::BlitImageToImage(frame.CommandBuffer, renderTarget.Image, renderTarget.Width, renderTarget.Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
 
 		renderTarget.Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTarget.Image, renderTarget.Format, renderTarget.Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true);
 	}
-
+	
 	VulkanImageData& VulkanImGuiRenderer::GetRenderTarget(uint32_t frameIdx)
 	{
 		PROFILE_FUNCTION;

@@ -16,6 +16,7 @@ namespace Aurora::VK::Commands {
 		VkFormat format,
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout,
+		bool targetSwapchain /*= false*/,
 		uint32_t baseMipLevel /*= 0*/,
 		uint32_t levelCount /*= VK_REMAINING_MIP_LEVELS*/,
 		uint32_t baseArrayLayer /*= 0*/,
@@ -46,7 +47,7 @@ namespace Aurora::VK::Commands {
 		{
 			case VK_IMAGE_LAYOUT_UNDEFINED:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+				barrier.srcStageMask = targetSwapchain ? SWAPCHAIN_WAIT_STAGE : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 				barrier.srcAccessMask = 0;
 				break;
 			}

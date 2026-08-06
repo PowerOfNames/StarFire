@@ -24,7 +24,7 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		m_ImageAllocator.Reset();
-		m_BufferAllocator.Reset();		
+		m_BufferAllocator.Reset();
 	}
 
 	void VulkanResourceManager::UploadBufferData(BufferHandle handle, const void* data, size_t size)
@@ -79,7 +79,7 @@ namespace Aurora::VK {
 	ImageHandle VulkanResourceManager::CreateImage(const ImageSpecification& imageSpecs)
 	{
 		PROFILE_FUNCTION;
-			
+
 		if (imageSpecs.Width == 0 || imageSpecs.Height == 0)
 		{
 			AURORA_ERROR("RendererMemoryManager::CreateImage: Image width and height cannot be 0. Returning invalid handle.");
@@ -97,7 +97,7 @@ namespace Aurora::VK {
 		{
 			AURORA_ERROR("RendererMemoryManager::CreateImage: Failed to allocate image handle. Maximum number of images reached.");
 			return ImageHandle::INVALID_HANDLE;
-		}		
+		}
 
 		VulkanImageData* data = m_ImageAllocator.GetPointerFromHandle(handle);
 		*data = Convert::MakeImageData(imageSpecs);
@@ -134,8 +134,17 @@ namespace Aurora::VK {
 			AURORA_ERROR("Failed to retrieve image data pointer during destruction. Leaking memory might happen");
 			return;
 		}
-		vkDestroyImageView(m_VulkanContext->GetLogicalDevice(), data->ImageView, m_VulkanContext->GetAllocationCallbacks());
-		vmaDestroyImage(m_VulkanContext->GetVmaAllocator(), data->Image, data->Allocation);
+
+		m_VulkanContext->SubmitToFrameDeletionQueue(
+			[
+				imageView = data->ImageView,
+				image = data->Image,
+				allocation = data->Allocation
+			] (VkDevice device, VmaAllocator allocator, const VkAllocationCallbacks* allocCbs)
+			{
+				vkDestroyImageView(device, imageView, allocCbs);
+				vmaDestroyImage(allocator, image, allocation);
+			});
 
 		m_ImageAllocator.Free(handle);
 	}
@@ -153,7 +162,7 @@ namespace Aurora::VK {
 
 		return m_ImageAllocator.GetPointerFromHandle(handle);
 	}
-	
+
 	// ========== Buffer ==========
 	BufferHandle VulkanResourceManager::CreateBuffer(const BufferSpecification& bufferSpecs)
 	{
@@ -198,18 +207,20 @@ namespace Aurora::VK {
 			return;
 		}
 
-		// CAUTION: this currently only works for Submission only resources. As soon as a resource is used by the GPU during frames, which do currently not use the submission semaphores (queuSemaphors)
+		// CAUTION: this currently only works for Submission only resources. As soon as a resource is used by the GPU during frames, which do currently not use the submission semaphores (queueSemaphors)
 		//			this is not true anymore.
-		TimelineSemaphore semaphoreSnapshot = m_VulkanContext->GetQueueSemaphoreSnapshot(data->CurrentOwner);
+		ResourceSubmissionWaits waitValues;
+		waitValues.Graphics = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::GRAPHICS).Value;
+		waitValues.Compute = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::COMPUTE).Value;
+		waitValues.Transfer = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::TRANSFER).Value;
 		m_VulkanContext->SubmitToFrameDeletionQueue(
 			[
-				vmaAllocator = m_VulkanContext->GetVmaAllocator(), 
-				buffer = data->Buffer, 
+				buffer = data->Buffer,
 				allocation = data->Allocation
-			]()
+			](VkDevice, VmaAllocator allocator, const VkAllocationCallbacks*)
 		{
-			vmaDestroyBuffer(vmaAllocator, buffer, allocation);
-		}, semaphoreSnapshot.Semaphore, semaphoreSnapshot.Value);
+			vmaDestroyBuffer(allocator, buffer, allocation);
+		}, waitValues);
 
 		m_BufferAllocator.Free(handle);
 	}
@@ -263,7 +274,7 @@ namespace Aurora::VK {
 			data->IsReady = false; // mark buffer as not ready until the upload is finished
 			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
 		}
-		
+
 
 		return handle;
 	}

@@ -163,25 +163,57 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	bool VulkanSwapchain::SwapImages(VulkanFrame& frame)
+	bool VulkanSwapchain::SwapImages(VulkanFrame& frame, TimelineSemaphore& graphicsSemaphore)
 	{
 		PROFILE_FUNCTION;
 
+		
+		VkCommandBufferSubmitInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+		cmdInfo.pNext = nullptr;
+		cmdInfo.commandBuffer = frame.CommandBuffer;
+		cmdInfo.deviceMask = 0;
+
+		VkSemaphoreSubmitInfo waitSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+		waitSemaphoreInfo.pNext = nullptr;
+		waitSemaphoreInfo.semaphore = m_ImageAvailableSemaphores[frame.FrameIndex];
+		waitSemaphoreInfo.stageMask = SWAPCHAIN_WAIT_STAGE; //As long as we blit into the swapchian, this should be enough
+		waitSemaphoreInfo.deviceIndex = 0;
+		
+		VkSemaphoreSubmitInfo waitGraphicsSubmitInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+		waitGraphicsSubmitInfo.pNext = nullptr;
+		waitGraphicsSubmitInfo.semaphore = graphicsSemaphore.Semaphore;
+		waitGraphicsSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		waitGraphicsSubmitInfo.deviceIndex = 0;
+		waitGraphicsSubmitInfo.value = graphicsSemaphore.Value;
+
+		VkSemaphoreSubmitInfo signalSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+		signalSemaphoreInfo.pNext = nullptr;
+		signalSemaphoreInfo.semaphore = m_ImageRenderFinishedSemaphores[m_ImageIndex];
+		signalSemaphoreInfo.stageMask = SWAPCHAIN_WAIT_STAGE; //As long as we blit into the swapchian, this should be enough
+		signalSemaphoreInfo.deviceIndex = 0;
+
+		VkSemaphoreSubmitInfo signalGraphicsSubmitInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+		signalGraphicsSubmitInfo.pNext = nullptr;
+		signalGraphicsSubmitInfo.semaphore = graphicsSemaphore.Semaphore;
+		signalGraphicsSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		signalGraphicsSubmitInfo.deviceIndex = 0;
+		signalGraphicsSubmitInfo.value = ++graphicsSemaphore.Value;
+
+		std::vector<VkSemaphoreSubmitInfo> waitSubmitInfos = { waitSemaphoreInfo, waitGraphicsSubmitInfo };
+		std::vector<VkSemaphoreSubmitInfo> signalSubmitInfos = { signalSemaphoreInfo, signalGraphicsSubmitInfo };
+
 		// ===== Submission =====
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+		VkSubmitInfo2 submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
 		submitInfo.pNext = nullptr;
+		submitInfo.commandBufferInfoCount = 1;
+		submitInfo.pCommandBufferInfos = &cmdInfo;
 
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &frame.CommandBuffer;
+		submitInfo.waitSemaphoreInfoCount = static_cast<uint32_t>(waitSubmitInfos.size());
+		submitInfo.pWaitSemaphoreInfos = waitSubmitInfos.data();
 
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &m_ImageAvailableSemaphores[frame.FrameIndex]; //wait until image is available to render/draw to
-		submitInfo.pWaitDstStageMask = waitStages;
-
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &m_ImageRenderFinishedSemaphores[m_ImageIndex]; //signal when drawing is finished and ready to be presented
-		AURORA_VK_CHECK(vkQueueSubmit(m_Specification.GraphicsQueue, 1, &submitInfo, frame.InFlightFence), VK_SUCCESS, "Failed to submit draw render buffer!");
+		submitInfo.signalSemaphoreInfoCount = static_cast<uint32_t>(signalSubmitInfos.size());
+		submitInfo.pSignalSemaphoreInfos = signalSubmitInfos.data();
+		AURORA_VK_CHECK(vkQueueSubmit2(m_Specification.GraphicsQueue, 1, &submitInfo, frame.InFlightFence), VK_SUCCESS, "Failed to submit draw render buffer!");
 
 		frame.InPresentation = true;
 

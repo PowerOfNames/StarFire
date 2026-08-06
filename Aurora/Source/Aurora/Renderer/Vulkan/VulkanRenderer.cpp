@@ -30,21 +30,23 @@ namespace Aurora::VK {
 		AURORA_INFO("Destroying VulkanRenderer...");
 		Ref<VulkanContext> context = GetRenderContext();
 
-		VkDevice device = context->GetLogicalDevice();
-		const PhysicalDeviceLimits& limits = context->GetPhysicalDeviceLimits();
-		const VkAllocationCallbacks* allocCallbacks = context->GetAllocationCallbacks();
-
-		vkDestroyDescriptorPool(device, m_BindlessDescriptorPool, allocCallbacks);
+		context->SubmitToMainDeletionQueue(
+			[
+				bindlessDescPool = m_BindlessDescriptorPool,
+				bindlessDescSetLayout = m_BindlessDescriptorSetLayout,
+				bindlessGraphicsPipLayout = m_BindlessGraphicsPipelineLayout,
+				bindlessGraphicsPip = m_BindlessGraphicsPipeline
+			] (VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+			{
+				vkDestroyDescriptorPool(device, bindlessDescPool, allocCbs);
+				vkDestroyDescriptorSetLayout(device, bindlessDescSetLayout, allocCbs);
+				vkDestroyPipeline(device, bindlessGraphicsPip, allocCbs);
+				vkDestroyPipelineLayout(device, bindlessGraphicsPipLayout, allocCbs);
+			});
 		m_BindlessDescriptorPool = VK_NULL_HANDLE;
-
-		vkDestroyDescriptorSetLayout(device, m_BindlessDescriptorSetLayout, allocCallbacks);
 		m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-
-		vkDestroyPipelineLayout(device, m_BindlessGraphicsPipelineLayout, allocCallbacks);
-		m_BindlessGraphicsPipelineLayout = VK_NULL_HANDLE;
-
-		vkDestroyPipeline(device, m_BindlessGraphicsPipeline, allocCallbacks);
 		m_BindlessGraphicsPipeline = VK_NULL_HANDLE;
+		m_BindlessGraphicsPipelineLayout = VK_NULL_HANDLE;
 	}
 
 
