@@ -51,20 +51,13 @@ namespace Aurora::VK {
 		}
 		inline void SubmitToFrameDeletionQueue(DeletionFunction func)
 		{
-			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func);
+			GetCurrentFrameData().DeletionQueue.SubmitWaitingDeletion(func);
 		}
-		inline void SubmitToFrameDeletionQueue(DeletionFunction func, uint8_t fif, ResourceSubmissionWaits waitValues)
-		{
-			GetFrameData(fif).DeletionQueue.SubmitDeletion(func, waitValues);
-		}
-		inline void SubmitToFrameDeletionQueue(DeletionFunction func, ResourceSubmissionWaits waitValues)
-		{
-			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func, waitValues);
-		}
-
 
 		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
+
+
 
 		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
 		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
@@ -135,9 +128,10 @@ namespace Aurora::VK {
 		// == Frame management ==
 		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle);
 		void FlushFrameDeletionQueue(uint8_t frameIdx);
+		void StampFrameDeletionQueueWaitValues(uint8_t frameIdx);
 		void PollPendingResourceUploads();
 		void IncrementFramesInFlightIdx();		
-		
+
 		
 		//keep scoring up-to-date later (#76)
 		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;

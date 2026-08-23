@@ -97,7 +97,7 @@ namespace Aurora::VK::Convert {
 	inline constexpr VkPipelineStageFlags2 GetStageFromBufferUsage(BufferUsageFlags usage, QueueOwner queue = QueueOwner::UNKNOWN)
 	{
 		if (queue == QueueOwner::TRANSFER)
-			return VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			return VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 
 		if (queue == QueueOwner::COMPUTE)
 			return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -114,7 +114,7 @@ namespace Aurora::VK::Convert {
 		if ((usage & BufferUsageFlags::INDIRECT_BUFFER) == BufferUsageFlags::INDIRECT_BUFFER)
 			stageFlags |= VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
 		if ((usage & BufferUsageFlags::TRANSFER_SRC) == BufferUsageFlags::TRANSFER_SRC || (usage & BufferUsageFlags::TRANSFER_DST) == BufferUsageFlags::TRANSFER_DST)
-			stageFlags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			stageFlags |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 		return stageFlags;
 	}
 
@@ -141,7 +141,7 @@ namespace Aurora::VK::Convert {
 	inline constexpr VkPipelineStageFlags2 GetStageFromImageUsage(ImageUsageFlags usage, QueueOwner queue = QueueOwner::UNKNOWN)
 	{
 		if (queue == QueueOwner::TRANSFER)
-			return VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			return VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 
 		if (queue == QueueOwner::COMPUTE)
 			return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -156,7 +156,7 @@ namespace Aurora::VK::Convert {
 		if ((usage & ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT) == ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
 			stageFlags |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
 		if ((usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::TRANSFER_SRC || (usage & ImageUsageFlags::TRANSFER_DST) == ImageUsageFlags::TRANSFER_DST)
-			stageFlags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			stageFlags |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 		return stageFlags;
 	}
 

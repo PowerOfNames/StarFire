@@ -13,7 +13,7 @@
 
 namespace Aurora::VK {
 
-	inline constexpr VkPipelineStageFlags2 SWAPCHAIN_WAIT_STAGE = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+	inline constexpr VkPipelineStageFlags2 SWAPCHAIN_WAIT_STAGE = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 
 	struct VulkanFrame
 	{
@@ -108,13 +108,6 @@ namespace Aurora::VK {
 		MAX_QUEUE_OWNERS
 	};
 
-	struct ResourceSubmissionWaits
-	{
-		uint64_t Graphics = 0;
-		uint64_t Compute = 0;
-		uint64_t Transfer = 0;
-	};
-
 	// QueueOwnerToString lives in Utility/VulkanToString.h with the other
 	// diagnostic formatters.
 
@@ -150,11 +143,24 @@ namespace Aurora::VK {
 
 	struct VulkanBufferCopyOp : public SubmissionOp
 	{
-		BufferHandle Src;
-		BufferHandle Dst;
-		bool DestroySrc;
+		VkBuffer SrcBuffer;
+		VkBuffer DstBuffer;
+		VkDeviceSize Size;
+		VkDeviceSize SrcOffset;
+		VkDeviceSize DstOffset;
 
-		QueueOwner NextDstOwner;
+		BufferUsageFlags SrcUsage;
+		BufferUsageFlags DstUsage;
+
+		//We only keep these for housekeeping. If the Handle gets destroyed while this submission is still pending, we will just early out. It is a valid state
+		BufferHandle SrcHandle;
+		BufferHandle DstHandle;
+
+		QueueOwner SrcCurrentOwner;
+		QueueOwner DstCurrentOwner;
+		QueueOwner DstNextOwner;
+
+		bool DestroySrc;
 	};
 
 

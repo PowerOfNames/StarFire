@@ -206,13 +206,7 @@ namespace Aurora::VK {
 			AURORA_ERROR("Failed to retrieve buffer data pointer during destruction. Leaking memory might happen");
 			return;
 		}
-
-		// CAUTION: this currently only works for Submission only resources. As soon as a resource is used by the GPU during frames, which do currently not use the submission semaphores (queueSemaphors)
-		//			this is not true anymore.
-		ResourceSubmissionWaits waitValues;
-		waitValues.Graphics = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::GRAPHICS).Value;
-		waitValues.Compute = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::COMPUTE).Value;
-		waitValues.Transfer = m_VulkanContext->GetQueueSemaphoreSnapshot(QueueOwner::TRANSFER).Value;
+		
 		m_VulkanContext->SubmitToFrameDeletionQueue(
 			[
 				buffer = data->Buffer,
@@ -220,7 +214,7 @@ namespace Aurora::VK {
 			](VkDevice, VmaAllocator allocator, const VkAllocationCallbacks*)
 		{
 			vmaDestroyBuffer(allocator, buffer, allocation);
-		}, waitValues);
+		});
 
 		m_BufferAllocator.Free(handle);
 	}

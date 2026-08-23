@@ -84,13 +84,13 @@ namespace Aurora::VK::Commands {
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 				break;
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				break;
 			}
@@ -148,13 +148,13 @@ namespace Aurora::VK::Commands {
 			//TODO: Transfer should use transfer queue and therefore should be handle differently with queue ownership transfer as well
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 			{
-				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 				break;
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			{
-				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				break;
 			}
