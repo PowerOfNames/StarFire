@@ -57,6 +57,7 @@ namespace Substrate {
 		RefPtr<TDerived> CreateRefFromThis()
 		{
 			static_assert(std::derived_from<TDerived, RefCounted>, "TDerived must be derived from RefCounted");
+			AddRef();
 			return RefPtr<TDerived>(static_cast<TDerived*>(this));
 		}
 
