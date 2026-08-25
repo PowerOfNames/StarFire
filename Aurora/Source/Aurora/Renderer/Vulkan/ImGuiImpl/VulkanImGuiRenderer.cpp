@@ -94,7 +94,7 @@ namespace Aurora::VK {
 		initInfo.CheckVkResultFn = CheckVkResult;
 		ImGui_ImplVulkan_Init(&initInfo);
 
-		m_RenderTargets.resize(initInfo.ImageCount);
+		m_RenderTargets.resize(renderContext->GetFramesInFlightCount());
 		OnWindowResize(swapchain->GetExtent().width, swapchain->GetExtent().height);
 	}
 
