@@ -122,9 +122,11 @@ namespace Aurora::VK {
 		{
 			StampFrameDeletionQueueWaitValues(fif);
 			FlushFrameDeletionQueue(fif);
+			AURORA_TRACE("Flushed frame deletion queue ({}). Entries left: {}", fif, m_FramesInFlight[fif].DeletionQueue.GetEntryCount());
 		}
 		m_FramesInFlight.clear();
 		m_MainDeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
+		AURORA_TRACE("Flushed main deletion queue. Entries left: {}", m_MainDeletionQueue.GetEntryCount());
 
 
 		m_ComputeTransferCmdBuffer = VK_NULL_HANDLE;
@@ -147,7 +149,6 @@ namespace Aurora::VK {
 		IncrementFramesInFlightIdx();
 
 
-		AURORA_TRACE("Beginning frame {}", m_RendererStatistics.FramesInFlightIdx);
 		VulkanFrame& frame = GetCurrentFrameData();
 		if (!m_Swapchain->PrepareFrame(frame))
 			return false;

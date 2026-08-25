@@ -11,8 +11,6 @@
 #include <atomic>
 #include <string>
 
-#define ENABLE_TRACE 0
-
 namespace Aurora {
 
 	// ========== Settings ==========

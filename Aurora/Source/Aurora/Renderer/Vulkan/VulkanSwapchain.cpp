@@ -129,7 +129,6 @@ namespace Aurora::VK {
 			return false;
 
 
-		AURORA_TRACE("Acquire next image {}", frame.FrameIndex);
 		vkWaitForFences(m_Specification.Device, 1, &frame.InFlightFence, VK_TRUE, UINT64_MAX);
 
 		frame.InPresentation = false;
@@ -158,7 +157,6 @@ namespace Aurora::VK {
 		frame.TargetLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		vkResetCommandBuffer(frame.CommandBuffer, 0);
-		AURORA_TRACE("Acquired image {}", frame.FrameIndex);
 
 		return true;
 	}
@@ -246,7 +244,6 @@ namespace Aurora::VK {
 		else
 			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");		
 
-		AURORA_TRACE("Presented frame {}", frame.FrameIndex);
 		return true;
 	}
 

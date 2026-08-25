@@ -46,8 +46,17 @@ namespace Aurora {
 // ERROR	: (Red)		Used for broken code paths / results
 // CRITICAL	: (Marked)	Used for big NONOs -> should never be hit
 
+// Trace is the one level that is switchable inside a Debug build - it is the high-volume one.
+// The default lives here, next to the only code that reads it: Logging.h is reached through Core.h /
+// VulkanDebug.h by translation units that never include Aurora/Aurora.h, so a definition in a header
+// they do not see would evaluate to 0 and silently disable trace in most of the engine.
+// Override by defining ENABLE_TRACE before this header, or as a compiler define.
+#ifndef ENABLE_TRACE
+#define ENABLE_TRACE 1
+#endif
+
 #if defined(AURORA_DEBUG_MODE)
-#if defined(ENABLE_TRACE)
+#if ENABLE_TRACE == 1
 #define AURORA_TRACE(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_TRACE, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #else
 #define AURORA_TRACE(fmt, ...)		do{} while(false)
@@ -58,11 +67,7 @@ namespace Aurora {
 #define AURORA_ERROR(fmt, ...)		Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_ERROR, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #define AURORA_CRITICAL(fmt, ...)	Aurora::Log::CombineCallbackArgs(Aurora::LogLevel::LOG_LEVEL_CRITICAL, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 #elif defined(AURORA_RELEASE_MODE) || defined(AURORA_PROFILING_MODE)
-#if defined(ENABLE_TRACE)
 #define AURORA_TRACE(fmt, ...)		do{} while(false)
-#else
-#define AURORA_TRACE(fmt, ...)		do{} while(false)
-#endif
 #define AURORA_DEBUG(fmt, ...)		do{} while(false)
 #define AURORA_INFO(fmt, ...)		do{} while(false)
 #define AURORA_WARN(fmt, ...)		do{} while(false)

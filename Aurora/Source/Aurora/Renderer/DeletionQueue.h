@@ -105,6 +105,11 @@ namespace Aurora::VK {
 			}
 			DeletionEntries = std::move(stillPending);
 		}
+
+		uint64_t GetEntryCount()
+		{
+			return DeletionEntries.size() + UnstampedEntries.size();
+		}
 	};
 
 }
