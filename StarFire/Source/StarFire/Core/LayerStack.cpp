@@ -17,8 +17,10 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
-		for (Layer* layer : m_Layers)
+		//With this, we clear the layers in LIFO order, starting with the overlays
+		while(!m_Layers.empty())
 		{
+			Layer* layer = m_Layers.back();
 			PopLayer(layer);
 			delete layer;
 		}

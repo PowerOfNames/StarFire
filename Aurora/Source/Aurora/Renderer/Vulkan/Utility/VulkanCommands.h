@@ -35,6 +35,7 @@ namespace Aurora::VK::Commands {
 		VkFormat format,
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout,
+		bool targetSwapchain = false,
 		uint32_t baseMipLevel = 0,
 		uint32_t levelCount = VK_REMAINING_MIP_LEVELS,
 		uint32_t baseArrayLayer = 0,

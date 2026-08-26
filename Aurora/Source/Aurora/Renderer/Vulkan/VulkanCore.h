@@ -13,6 +13,8 @@
 
 namespace Aurora::VK {
 
+	inline constexpr VkPipelineStageFlags2 SWAPCHAIN_WAIT_STAGE = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+
 	struct VulkanFrame
 	{
 		// We create one pool per frame, such that we later can record command buffers for multiple frames in parallel if needed. We can optimize this later if needed (e.g. one pool per thread, or one pool for transient buffers and one for long-lived buffers)
@@ -141,11 +143,24 @@ namespace Aurora::VK {
 
 	struct VulkanBufferCopyOp : public SubmissionOp
 	{
-		BufferHandle Src;
-		BufferHandle Dst;
-		bool DestroySrc;
+		VkBuffer SrcBuffer;
+		VkBuffer DstBuffer;
+		VkDeviceSize Size;
+		VkDeviceSize SrcOffset;
+		VkDeviceSize DstOffset;
 
-		QueueOwner NextDstOwner;
+		BufferUsageFlags SrcUsage;
+		BufferUsageFlags DstUsage;
+
+		//We only keep these for housekeeping. If the Handle gets destroyed while this submission is still pending, we will just early out. It is a valid state
+		BufferHandle SrcHandle;
+		BufferHandle DstHandle;
+
+		QueueOwner SrcCurrentOwner;
+		QueueOwner DstCurrentOwner;
+		QueueOwner DstNextOwner;
+
+		bool DestroySrc;
 	};
 
 

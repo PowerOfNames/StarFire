@@ -1,6 +1,9 @@
 #include "Aurora/Renderer/Vulkan/VulkanSubmissionScheduler.h"
 #include "Aurora/Core/Core.h"
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
+#include "AuroraInternal.h"
+#include "Aurora/Renderer/Vulkan/VulkanResourceManager.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 
 namespace Aurora::VK {
 	VulkanSubmissionScheduler::VulkanSubmissionScheduler(const Ref<VulkanContext>& context)
@@ -18,14 +21,47 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 
+		Ref<VulkanResourceManager> res = GetResourceManager();
+		VulkanBufferData* srcData = res->GetBufferData(src);
+		if (!srcData)
+		{
+			AURORA_ERROR("Invalid src buffer handle!");
+			return *this;
+		}
+		VulkanBufferData* dstData = res->GetBufferData(dst);
+		if (!dstData)
+		{
+			AURORA_ERROR("Invalid dst buffer handle");
+			return *this;
+		}
+
+		if (dstData->Size < srcData->Size)
+		{
+			AURORA_ERROR("Dst data too small for src");
+			return *this;
+		}
+
 		VulkanBufferCopyOp op;
 		op.Type = SubmissionOpType::COPY_BUFFER;
-		op.Src = src;
-		op.Dst = dst;
-		op.DestroySrc = destroySrc;
-		op.NextDstOwner = nextOwner;
+		op.SrcBuffer = srcData->Buffer;
+		op.DstBuffer = dstData->Buffer;
+		op.Size = srcData->Size;
+		op.SrcOffset = srcData->Offset;
+		op.DstOffset = dstData->Offset;
 
-		m_DeferredCopyBufferToBufferSubmissions.push_back(op);
+		op.SrcUsage = srcData->Usage;
+		op.DstUsage = dstData->Usage;
+
+		op.SrcHandle = src;
+		op.DstHandle = dst;
+
+		op.SrcCurrentOwner = srcData->CurrentOwner;
+		op.DstCurrentOwner = dstData->CurrentOwner;
+		op.DstNextOwner = nextOwner;
+
+		op.DestroySrc = destroySrc;
+
+		m_DeferredCopyBufferToBufferSubmissions.push_back(std::move(op));
 
 		return *this;
 	}

@@ -16,6 +16,7 @@ namespace Aurora::VK::Commands {
 		VkFormat format,
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout,
+		bool targetSwapchain /*= false*/,
 		uint32_t baseMipLevel /*= 0*/,
 		uint32_t levelCount /*= VK_REMAINING_MIP_LEVELS*/,
 		uint32_t baseArrayLayer /*= 0*/,
@@ -46,7 +47,7 @@ namespace Aurora::VK::Commands {
 		{
 			case VK_IMAGE_LAYOUT_UNDEFINED:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+				barrier.srcStageMask = targetSwapchain ? SWAPCHAIN_WAIT_STAGE : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 				barrier.srcAccessMask = 0;
 				break;
 			}
@@ -83,13 +84,13 @@ namespace Aurora::VK::Commands {
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 				break;
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			{
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				break;
 			}
@@ -147,13 +148,13 @@ namespace Aurora::VK::Commands {
 			//TODO: Transfer should use transfer queue and therefore should be handle differently with queue ownership transfer as well
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 			{
-				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
 				break;
 			}
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			{
-				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
 				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 				break;
 			}

@@ -36,23 +36,28 @@ namespace Aurora::VK {
 		void Resize(uint32_t width, uint32_t height);
 		void Destroy();
 
-		inline void SubmitToMainDeletionQueue(std::function<void()> func)
+		inline void SubmitToMainDeletionQueue(DeletionFunction func)
 		{
 			m_MainDeletionQueue.SubmitDeletion(func);
 		}
 		inline void FlushMainDeletionQueue()
 		{
-			m_MainDeletionQueue.Flush(m_Device);
+			m_MainDeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
 		}
 
-		inline void SubmitToFrameDeletionQueue(std::function<void()> func, VkSemaphore semaphore = VK_NULL_HANDLE, uint64_t value = 0)
+		inline void SubmitToFrameDeletionQueue(DeletionFunction func, uint8_t fif)
 		{
-			GetCurrentFrameData().DeletionQueue.SubmitDeletion(func, semaphore, value);
+			GetFrameData(fif).DeletionQueue.SubmitDeletion(func);
 		}
-
+		inline void SubmitToFrameDeletionQueue(DeletionFunction func)
+		{
+			GetCurrentFrameData().DeletionQueue.SubmitWaitingDeletion(func);
+		}
 
 		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
+
+
 
 		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
 		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
@@ -123,9 +128,10 @@ namespace Aurora::VK {
 		// == Frame management ==
 		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle);
 		void FlushFrameDeletionQueue(uint8_t frameIdx);
+		void StampFrameDeletionQueueWaitValues(uint8_t frameIdx);
 		void PollPendingResourceUploads();
 		void IncrementFramesInFlightIdx();		
-		
+
 		
 		//keep scoring up-to-date later (#76)
 		int EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const;
