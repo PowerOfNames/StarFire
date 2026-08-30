@@ -71,14 +71,6 @@ namespace Aurora::VK {
 			vkDestroyFramebuffer(m_Specification.Device, framebuffer, m_Specification.AllocationCallbacks);
 		m_Framebuffers.clear();
 
-		for (auto sema : m_ImageAvailableSemaphores)
-			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
-		m_ImageAvailableSemaphores.clear();
-
-		for (auto sema : m_ImageRenderFinishedSemaphores)
-			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
-		m_ImageRenderFinishedSemaphores.clear();
-
 		for (auto imageView : m_ImageViews)
 			vkDestroyImageView(m_Specification.Device, imageView, m_Specification.AllocationCallbacks);
 		m_ImageViews.clear();
@@ -96,6 +88,14 @@ namespace Aurora::VK {
 		vkDeviceWaitIdle(m_Specification.Device);
 
 		CleanupSwapchain();
+
+		for (auto sema : m_ImageAvailableSemaphores)
+			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
+		m_ImageAvailableSemaphores.clear();
+
+		for (auto sema : m_ImageRenderFinishedSemaphores)
+			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
+		m_ImageRenderFinishedSemaphores.clear();
 
 		vkDestroyPipeline(m_Specification.Device, m_FallbackPipeline, m_Specification.AllocationCallbacks);
 		m_FallbackPipeline = VK_NULL_HANDLE;

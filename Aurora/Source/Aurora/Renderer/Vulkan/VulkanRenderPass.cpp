@@ -15,33 +15,6 @@ namespace Aurora::VK {
 		: m_Specification(specs)
 	{
 		PROFILE_FUNCTION;
-
-		uint8_t framesInFLight = GetRenderContext()->GetFramesInFlightCount();
-
-		for (const auto& colorAttachmentSpec : m_Specification.ColorAttachments)
-		{
-			RenderPassAttachment attachment{};
-			attachment.Name = colorAttachmentSpec.Name;
-			attachment.Index = static_cast<uint32_t>(m_ColorAttachments.size());
-			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = static_cast<uint32_t>(m_ColorAttachments.size());
-			for (uint8_t i = 0; i < framesInFLight; i++)
-			{
-				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec.ImageSpecs));
-			}
-			attachment.ClearColor = colorAttachmentSpec.ClearColor;
-			m_ColorAttachments.push_back(std::move(attachment));
-		}
-
-		if (m_Specification.DepthAttachment.ImageSpecs.Format != Format::UNKNOWN)
-		{
-			m_DepthAttachment.Name = m_Specification.DepthAttachment.Name;
-			m_DepthAttachment.Index = 0; // Depth attachment is always at slot 0
-			for (uint8_t i = 0; i < framesInFLight; i++)
-			{
-				m_DepthAttachment.ImageHandlesPerFiF.push_back(CreateAttachment(m_Specification.DepthAttachment.ImageSpecs));
-			}
-			m_HasDepthAttachment = true;
-		}
 	}
 
 	void VulkanRenderPass::Destroy()
@@ -49,6 +22,15 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		AURORA_INFO("Destroying renderPass '{}'...", m_Specification.Name.c_str());
+		ClearAttachments();
+		m_Compiled = false;
+		m_HasDepthAttachment = false;
+	}
+
+	void VulkanRenderPass::ClearAttachments()
+	{
+		PROFILE_FUNCTION;
+
 		for (auto& colorAttachment : m_ColorAttachments)
 		{
 			for (const auto& handle : colorAttachment.ImageHandlesPerFiF)
@@ -62,11 +44,69 @@ namespace Aurora::VK {
 		if (m_HasDepthAttachment)
 		{
 			for (const auto& handle : m_DepthAttachment.ImageHandlesPerFiF)
-			{
 				DestroyImage(handle);
+			m_DepthAttachment.ImageHandlesPerFiF.clear();
+			m_HasDepthAttachment = false;
+		}
+	}
+
+	void VulkanRenderPass::Compile()
+	{
+		PROFILE_FUNCTION;
+		// Nothing to do here for Vulkan, as we are using dynamic rendering
+
+		if(m_Compiled)
+			ClearAttachments();
+
+		uint8_t framesInFLight = GetRenderContext()->GetFramesInFlightCount();
+
+		for (const auto& colorAttachmentSpec : m_Specification.ColorAttachments)
+		{
+			RenderPassAttachment attachment{};
+			attachment.Name = colorAttachmentSpec.Name;
+			attachment.Index = static_cast<uint32_t>(m_ColorAttachments.size());
+			attachment.ClearColor = colorAttachmentSpec.ClearColor;			
+			for (uint8_t i = 0; i < framesInFLight; i++)			
+				attachment.ImageHandlesPerFiF.push_back(CreateAttachment(colorAttachmentSpec.ImageSpecs));
+			
+			m_ColorAttachmentIndices[colorAttachmentSpec.Name] = static_cast<uint32_t>(m_ColorAttachments.size());
+			m_ColorAttachments.push_back(std::move(attachment));
+		}
+
+		if (m_Specification.DepthAttachment.ImageSpecs.Format != Format::UNKNOWN)
+		{
+			m_DepthAttachment.Name = m_Specification.DepthAttachment.Name;
+			m_DepthAttachment.Index = 0; // Depth attachment is always at slot 0
+			m_HasDepthAttachment = true;
+			for (uint8_t i = 0; i < framesInFLight; i++)		
+				m_DepthAttachment.ImageHandlesPerFiF.push_back(CreateAttachment(m_Specification.DepthAttachment.ImageSpecs));		
+		}
+
+		m_Compiled = true;
+	}
+
+	void VulkanRenderPass::OnResize(uint32_t width, uint32_t height)
+	{
+		PROFILE_FUNCTION;
+		if (width == m_Specification.RenderArea.x && height == m_Specification.RenderArea.y)
+			return;
+
+		m_Specification.RenderArea.x = width;
+		m_Specification.RenderArea.y = height;
+		
+		for (auto& colorAttachment : m_Specification.ColorAttachments)
+		{
+			if (colorAttachment.ImageSpecs.AllowResize)
+			{
+				colorAttachment.ImageSpecs.Width = width;
+				colorAttachment.ImageSpecs.Height = height;
 			}
 		}
-		m_DepthAttachment.ImageHandlesPerFiF.clear();
+		if (m_Specification.DepthAttachment.ImageSpecs.Format != Format::UNKNOWN && m_Specification.DepthAttachment.ImageSpecs.AllowResize)
+		{
+			m_Specification.DepthAttachment.ImageSpecs.Width = width;
+			m_Specification.DepthAttachment.ImageSpecs.Height = height;
+		}		
 	}
 
 	ImageHandle VulkanRenderPass::CreateAttachment(const ImageSpecification& attachmentSpecs)
@@ -76,7 +116,7 @@ namespace Aurora::VK {
 		ImageHandle handle = CreateImage(attachmentSpecs);
 		if (handle == ImageHandle::INVALID_HANDLE)
 		{
-			AURORA_ERROR("Failed to create image for render pass attachment!");
+			AURORA_ERROR("Failed to create image for render pass attachment {}!", attachmentSpecs.Name);
 			return ImageHandle::INVALID_HANDLE;
 		}
 		return handle;

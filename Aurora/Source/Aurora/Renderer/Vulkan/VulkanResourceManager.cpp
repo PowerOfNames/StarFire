@@ -115,10 +115,14 @@ namespace Aurora::VK {
 		if (!success)
 		{
 			AURORA_ERROR("RendererMemoryManager.CreateImage: Failed to create image or image view for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
+			
+			Ref<VulkanContext> context = m_VulkanContext;
+			vmaDestroyImage(context->GetVmaAllocator(), data->Image, data->Allocation);
+
 			m_ImageAllocator.Free(handle);
 			return ImageHandle::INVALID_HANDLE;
 		}
-		std::string imageViewName = imageSpecs.Name + "_ImageView";
+		std::string imageViewName = imageSpecs.Name + "_View";
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)(data->ImageView), imageViewName.c_str());
 
 		return handle;

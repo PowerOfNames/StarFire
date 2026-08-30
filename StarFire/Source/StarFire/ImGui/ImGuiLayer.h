@@ -26,7 +26,7 @@ namespace StarFire {
 		const Ref<Aurora::ImGuiRenderer> GetImGuiRenderer() const { return m_ImGuiRenderer;	}
 
 	private:
-		bool OnWindowResize(WindowResizeEvent& e);
+		bool OnFramebufferResize(FramebufferResizeEvent& e);
 
 	private:
 		bool m_BlockEvents = true;

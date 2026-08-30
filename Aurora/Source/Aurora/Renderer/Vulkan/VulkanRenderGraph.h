@@ -29,7 +29,7 @@ namespace Aurora::VK {
 	{
 		std::string Name;
 		//one per frame in flight
-		std::vector<CompiledPassSlot> Slots;
+		std::vector<CompiledPassSlot> FiFSlots;
 		VkRect2D RenderArea{};
 		bool HasDepthAttachment = false;
 	};
@@ -49,6 +49,7 @@ namespace Aurora::VK {
 		virtual ~VulkanRenderGraph() = default;
 
 		virtual void Destroy() override;
+		virtual void OnResize(uint32_t width, uint32_t height) override;
 
 		virtual void AddRenderPass(const Ref<RenderPass>& renderPass) override;
 		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo) override;
@@ -62,16 +63,27 @@ namespace Aurora::VK {
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
 
 	private:
+		void ClearCompilations();
+		void CompileCopyRequest(std::string_view request);
 		bool CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout);
 		const std::vector<CompiledAttachment*> FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName);
 
+#if defined(AURORA_DEBUG_MODE)
+		bool ValidateCompiledGraph();
+#endif
+
 	private:
 		RenderGraphSpecification m_Specification;
+		uint32_t m_Width = 0;
+		uint32_t m_Height = 0;
+		bool m_NeedsResize = false;
+		bool m_Compiled = false;
 
 		std::vector<Ref<RenderPass>> m_RenderPasses;
+		std::unordered_map<std::string, AttachmentCopyRequest> m_CopyRequests;
+
 		//Matched passes with copy requests
 		std::unordered_map<std::string, CompiledAttachmentCopy> m_CompiledCopies;
-
 		std::vector<CompiledPass> m_CompiledPasses;
 	};
 }

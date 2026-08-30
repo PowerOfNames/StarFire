@@ -12,8 +12,10 @@ namespace Aurora::VK {
 	public:
 		VulkanRenderPass(const RenderPassSpecification& specs);
 		virtual ~VulkanRenderPass() = default;
-
+		void Compile() override;
 		void Destroy() override;
+
+		void OnResize(uint32_t width, uint32_t height) override;
 
 		const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const override;
 		const std::vector<RenderPassAttachment>& GetColorAttachments() const override {	return m_ColorAttachments; }
@@ -28,9 +30,10 @@ namespace Aurora::VK {
 
 	private:
 		ImageHandle CreateAttachment(const ImageSpecification& attachmentSpecs);
-
+		void ClearAttachments();
 	private:
 		RenderPassSpecification m_Specification;
+		bool m_Compiled = false;
 
 		std::unordered_map<std::string, uint32_t> m_ColorAttachmentIndices;
 		std::vector<RenderPassAttachment> m_ColorAttachments;

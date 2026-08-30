@@ -20,10 +20,14 @@ namespace Sandbox {
 		virtual void OnEvent(StarFire::Event& e) override;
 
 	private:
-		void Test();
+		virtual bool OnFramebufferResize(StarFire::FramebufferResizeEvent& e);
 
 	private:
 		bool m_OpenDemoWindow = true;
+
+		uint32_t m_FramebufferWidth = 0;
+		uint32_t m_FramebufferHeight = 0;
+		bool m_FramebufferResized = false;
 
 		Ref<Aurora::RenderGraph> m_DefaultRenderGraph;
 		Ref<Aurora::RenderPass> m_TrianglePass;
@@ -33,12 +37,13 @@ namespace Sandbox {
 		struct ViewportPanel
 		{
 			glm::vec2 Bounds[2];
-			uint32_t Width;
-			uint32_t Height;
+			float Width = 0.0f;
+			float Height = 0.0f;
 			bool IsFocused = false;
 			bool IsHovered = false;
 		};
 		ViewportPanel m_ViewportPanel;
+		bool m_ViewportResized = false;
 
 		Aurora::VertexBufferHandle m_TriangleVertexBufferHandle;
 		Aurora::IndexBufferHandle m_TriangleIndexBufferHandle;

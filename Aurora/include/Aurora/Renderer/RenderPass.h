@@ -41,11 +41,31 @@ namespace Aurora {
 		uint32_t Index = 0;
 	};
 
+	// Lifecycle contract — the RenderGraph drives the pass.
+	//
+	// A RenderPass holds a specification and owns its attachment images. It cannot render on its own:
+	// recording and execution live entirely in the RenderGraph. So the graph is the sole driver:
+	//
+	//   1. A pass belongs to at exactly one graph. After RenderGraph::AddRenderPass, the graph owns its
+	//      compilation, its extent and its teardown.
+	//   2. Do not call Compile(), OnResize() or Destroy() on a pass a graph holds — call the graph's
+	//      equivalent instead. The graph caches image views and the render area when it compiles;
+	//      resizing a pass behind its back leaves those pointing at destroyed objects. Debug builds warn.
+	//   3. Add every pass before RenderGraph::Compile().
+	//   4. Release your Ref after RenderGraph::Destroy(). Destroy() clears the attachment containers, so
+	//      a surviving Ref can only be used to read out of bounds.
+	//
+	// Create() allocates no GPU memory; Compile() does. A pass that is created and never added to a graph
+	// therefore owns nothing and needs no teardown.
 	class RenderPass : public Substrate::RefCounted
 	{
 	public:
 		virtual ~RenderPass() = default;
+		virtual void Compile() = 0;
 		virtual void Destroy() = 0;
+
+
+		virtual void OnResize(uint32_t width, uint32_t height) = 0;
 
 		virtual const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const = 0;
 		virtual const std::vector<RenderPassAttachment>& GetColorAttachments() const = 0;
