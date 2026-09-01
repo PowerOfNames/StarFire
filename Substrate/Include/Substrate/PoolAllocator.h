@@ -38,7 +38,7 @@ namespace Substrate {
 		bool IsHandleValid(TResourceHandle handle);
 		void Free(TResourceHandle handle);
 
-		const std::vector<uint32_t>& GetFreeHandleIndices() const { return m_FreeHandles; }
+		const uint32_t GetFreeHandleCount() const { return m_FreeCount; }
 		using InternalHandle = DefineHandle<GENERATION_BIT_COUNT, INDEX_BIT_COUNT, TResourceHandle>;
 		const std::vector<InternalHandle>& GetHandles() const { return m_Handles; }
 
@@ -48,6 +48,7 @@ namespace Substrate {
 		inline size_t GetUsedMemory()				const override { return m_CurrentAllocationCount * sizeof(TBlockType); }
 		inline size_t GetCurrentAllocationCount()	const override { return m_CurrentAllocationCount; }
 		inline size_t GetTotalAllocationCount()		const override { return m_TotalAllocationCount; }
+		inline size_t GetMaxedGenerationCount()		const override { return m_MaxedGenerationCount; }
 		inline size_t GetResetCount()				const override { return 0; }
 #endif
 	private:
@@ -59,6 +60,10 @@ namespace Substrate {
 		size_t m_TotalAllocationCount = 0;
 		std::vector<InternalHandle> m_Handles;
 		std::vector<uint32_t> m_FreeHandles;
+		uint32_t m_FreeHead = 0;
+		uint32_t m_FreeTail = 0;
+		uint32_t m_FreeCount = 0;
+		uint32_t m_MaxedGenerationCount = 0;
 	};
 
 
@@ -75,11 +80,15 @@ namespace Substrate {
 		m_Handles.reserve(MAX_BLOCK_COUNT);
 		m_FreeHandles.reserve(MAX_BLOCK_COUNT);
 
+		m_FreeCount = MAX_BLOCK_COUNT;
+		m_FreeHead = 0;
+		m_FreeTail = 0;
+
 		// Initialize handles in reverse order for better cache locality
 		for (uint32_t i = 0; i < MAX_BLOCK_COUNT; i++)
 		{
 			m_Handles.push_back(InternalHandle(i));
-			m_FreeHandles.push_back(MAX_BLOCK_COUNT-1-i);
+			m_FreeHandles.push_back(i);
 		}
 	}
 
@@ -108,6 +117,10 @@ namespace Substrate {
 		m_TotalSize = 0;
 		m_Handles.clear();
 		m_FreeHandles.clear();
+		m_FreeHead = 0;
+		m_FreeTail = 0;
+		//Currently blocks further usage of the Allocator
+		m_FreeCount = 0;
 	}
 
 	template<typename TBlockType, typename TResourceHandle, size_t TSize>
@@ -115,17 +128,18 @@ namespace Substrate {
 	TResourceHandle PoolAllocator<TBlockType, TResourceHandle, TSize>::Allocate()
 	{
 		// Check if there are free handles
-		if(m_FreeHandles.size() == 0)
+		if(m_FreeCount == 0)
 			throw AllocatorOutOfMemoryException("Pool allocator out of memory");
 
 		// Get the next free handle
-		uint32_t idx = m_FreeHandles.back();
-		m_FreeHandles.pop_back();
+		uint32_t idx = m_FreeHandles[m_FreeHead];
+		m_FreeHead = (m_FreeHead + 1) % MAX_BLOCK_COUNT;
 		//Calls constructor -> sets default values
 		new(m_MemoryBlock + idx) TBlockType{};		
 
 		m_CurrentAllocationCount++;
 		m_TotalAllocationCount++;
+		m_FreeCount--;
 		return m_Handles[idx].GetRaw();
 	}
 
@@ -135,9 +149,9 @@ namespace Substrate {
 	{
 		InternalHandle handle = InternalHandle::FromRawType(resourceHandle);
 		InternalHandle& internal = m_Handles[handle.Index()];
-		if (!internal.Equals(handle))
-			return false;
-		return true;
+		if (internal.IsValid() && internal.Equals(handle))
+			return true;
+		return false;
 	}
 
 	template<typename TBlockType, typename TResourceHandle, size_t TSize>
@@ -161,16 +175,21 @@ namespace Substrate {
 		// Validate handle
 		InternalHandle handle = InternalHandle::FromRawType(resourceHandle);
 		InternalHandle& internal = m_Handles[handle.Index()];
-		if (!internal.Equals(handle))
+		if (!internal.Equals(handle) || !internal.IsValid())
 			return; // Invalid handle or handle was already freed
 
 		internal = internal.IncrementGeneration();
 
 		// Check if generation is maxed out
-		if(!internal.IsValid())
+		if (!internal.IsValid())
+		{
+			m_MaxedGenerationCount++;
 			return; // Cannot free handle anymore
+		}
 
-		m_FreeHandles.push_back(internal.Index());
+		m_FreeHandles[m_FreeTail] = internal.Index();
+		m_FreeCount++;
+		m_FreeTail = (m_FreeTail + 1) % MAX_BLOCK_COUNT;
 
 		// Decrease allocation count only if handle was put back into the free list
 		m_CurrentAllocationCount--;

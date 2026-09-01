@@ -25,6 +25,7 @@ namespace Substrate {
 		inline size_t GetTotalMemory()				const override { return m_TotalSize; }
 		inline size_t GetTotalAllocationCount()		const override { return m_TotalAllocationCount; }
 		inline size_t GetCurrentAllocationCount()	const override { return m_CurrentAllocationCount; }
+		inline size_t GetMaxedGenerationCount()		const override { return 0; }
 		inline size_t GetResetCount()				const override { return m_ResetCount; }
 #endif
 	private:

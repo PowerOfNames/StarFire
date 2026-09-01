@@ -52,6 +52,8 @@ namespace Substrate {
 	class BaseHandle
 	{
 	public:
+		static_assert(GenerationMask != static_cast<THandleType>(~static_cast<THandleType>(0)), "GenerationMask cannot be all 1s");
+
 		constexpr BaseHandle() : m_Handle(0) {};
 		constexpr BaseHandle(THandleType index) : m_Handle(index) 
 		{
@@ -76,23 +78,14 @@ namespace Substrate {
 		}
 
 
-		/// <returns>Only true if the generation is not equal to the generation mask. Except when there are no generation bits, which is always a valid generation. Returns false if index == indexMask</returns>
+		/// <returns>Only true if the generation is not equal to the generation mask. This also covers GenerationMask = 0 -> the only invalid handle IS INVALID_HANDLE -> Index maxed out.
+		/// Or, generationBits maxed and index maxed, which is invalid because generation is maxed out.</returns>
 		constexpr bool IsValid()
 		{
-			//If the handle's index bits are all set to 1, the handle is invalid.
-			constexpr THandleType indexMask = GetIndexMask();
-			if ((m_Handle & indexMask) == indexMask)
-				return false;
-
-			//If the generation mask is 0, the handle is always valid.
-			if(GenerationMask == 0)
+			if constexpr(GenerationMask == 0)
 				return true;
-
-			//We return false if the generation mask is all bits set, because that means there is no valid index possible.
-			if (GenerationMask == static_cast<THandleType>((~static_cast<THandleType>(0))))
-				return false;
-
-			return  (m_Handle & GenerationMask) != GenerationMask;
+			else
+				return (m_Handle & GenerationMask) != GenerationMask;
 		}
 
 		/// <returns>This is only true if the generations are equal AND the index! </returns>

@@ -75,13 +75,11 @@ TEST_CASE("AllocationHandle Generation creation and validation", "[AllocationHan
 		REQUIRE(handle.IsValid() == true);
 	}
 
-	SECTION("Max value mask")
-	{
-		using TestHandle16_16_0 = Substrate::DefineHandle<16, 0, uint16_t>;
-		TestHandle16_16_0 handle = TestHandle16_16_0(0);
-		REQUIRE(handle.GetGenerationMask() == 0xFFFF);
-		REQUIRE(handle.IsValid() == false);
-	}
+	// "Max value mask" (DefineHandle<16, 0, uint16_t>) was removed on 2026-09-01.
+	// An all-ones generation mask leaves zero index bits, so the handle can address
+	// nothing and every instance read as invalid. That is now a static_assert in
+	// BaseHandle -- the instantiation itself is ill-formed, so there is no object
+	// left to assert against from here. Do not re-add it; it will not compile.
 
 	SECTION("Overflow protection")
 	{
@@ -139,13 +137,9 @@ TEST_CASE("AllocationHandle Index handling", "[AllocationHandle][Index]")
 		REQUIRE(handle.GetMaxIndexValue() == 0xFFF);
 	}
 
-	SECTION("Zero index mask")
-	{
-		using TestHandle16_16_0 = Substrate::DefineHandle<16, 0, uint16_t>;
-		TestHandle16_16_0 handle = TestHandle16_16_0(0);
-		REQUIRE(handle.GetIndexMask() == 0x0000);
-		REQUIRE(handle.IsValid() == false);
-	}
+	// "Zero index mask" removed on 2026-09-01 for the same reason as "Max value mask"
+	// above: it instantiated DefineHandle<16, 0, uint16_t>, which the BaseHandle
+	// static_assert now rejects at compile time.
 
 	SECTION("Max value index mask")
 	{
