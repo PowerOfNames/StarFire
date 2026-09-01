@@ -21,6 +21,13 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+
+		if (m_OwnedByRenderGraph)
+		{
+			AURORA_ERROR("Render pass '{}' is owned by a render graph and cannot be destroyed manually.", m_Specification.Name);
+			return;
+		}
+
 		AURORA_INFO("Destroying renderPass '{}'...", m_Specification.Name.c_str());
 		ClearAttachments();
 		m_Compiled = false;
@@ -55,6 +62,13 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 		// Nothing to do here for Vulkan, as we are using dynamic rendering
 
+		if(m_OwnedByRenderGraph)
+		{
+			AURORA_ERROR("Render pass '{}' is owned by a render graph and cannot be compiled manually.", m_Specification.Name);
+			return;
+		}
+
+
 		if(m_Compiled)
 			ClearAttachments();
 
@@ -88,6 +102,14 @@ namespace Aurora::VK {
 	void VulkanRenderPass::OnResize(uint32_t width, uint32_t height)
 	{
 		PROFILE_FUNCTION;
+
+		if (m_OwnedByRenderGraph)
+		{
+			AURORA_ERROR("Render pass '{}' is owned by a render graph and cannot be resized manually.", m_Specification.Name);
+			return;
+		}
+
+
 		if (width == m_Specification.RenderArea.x && height == m_Specification.RenderArea.y)
 			return;
 

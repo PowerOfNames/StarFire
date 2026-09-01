@@ -295,6 +295,7 @@ namespace Aurora::VK {
 
 		//TOOD: extend this by figuring out the slot based off of the attachment chainings
 		m_RenderPasses.push_back(renderPass);
+		renderPass->SetOwnedByRenderGraph(true);
 	}
 
 	void VulkanRenderGraph::AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo)
