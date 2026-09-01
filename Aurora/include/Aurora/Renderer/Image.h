@@ -19,5 +19,6 @@ namespace Aurora {
 		ImageTiling Tiling = ImageTiling::OPTIMAL;
 
 		uint8_t MipLevels = 1;
+		bool AllowResize = true;
 	};
 }

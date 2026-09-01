@@ -19,7 +19,7 @@ namespace Sandbox {
 		Aurora::RenderGraphSpecification rgSpecs{};
 		rgSpecs.Name = "Triangle Test RG";
 		m_DefaultRenderGraph = Aurora::RenderGraph::Create(rgSpecs);
-			
+
 
 		uint32_t width = 800;
 		uint32_t height = 600;
@@ -44,25 +44,29 @@ namespace Sandbox {
 			specs.DepthAttachment.ImageSpecs.Width = width;
 			specs.DepthAttachment.ImageSpecs.Height = height;
 			specs.DepthAttachment.ClearDepth = 1.0f; //needs to be 0.0 if we do infinite far plane, but for now we do a finite far plane so 1.0 is correct
-			specs.RenderArea = { width, height };	
+			specs.RenderArea = { width, height };
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
 		}
 
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
 
-		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
-		m_DefaultRenderGraph->Compile();
-		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
-		colorAttachmentCopy.PassName = c_DefaultPassName;
-		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
-		m_DefaultRenderGraph->AddAttachmentCopy(c_CopyColorTargetName, colorAttachmentCopy);
+		
 	}
 
 	void SandboxLayer::OnAttach()
 	{
 		PROFILE_FUNCTION;
 
-		// == 1. Build scene ==
+		// == 1. Compile and build al GPU resources now
+		
+		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
+		m_DefaultRenderGraph->Compile();
+		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
+		colorAttachmentCopy.PassName = c_DefaultPassName;
+		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
+		m_DefaultRenderGraph->AddAttachmentCopy(c_CopyColorTargetName, colorAttachmentCopy);
+
+		// == 2. Build scene ==
 		// We do initial scene building here probably. Not sure if this is also the place to load assets etc for the given scene
 
 		Aurora::VertexLayout vertexBufferLayout({
@@ -95,6 +99,12 @@ namespace Sandbox {
 	void SandboxLayer::OnUpdate(StarFire::Timestep deltaTime)
 	{
 		PROFILE_FUNCTION;
+
+		if (m_ViewportResized)
+		{
+			m_DefaultRenderGraph->OnResize(static_cast<uint32_t>(m_ViewportPanel.Width), static_cast<uint32_t>(m_ViewportPanel.Height));
+			m_ViewportResized = false;
+		}
 
 		// == 2. Update Scene ==
 
@@ -191,11 +201,24 @@ namespace Sandbox {
 			m_ViewportPanel.IsFocused = ImGui::IsWindowFocused();
 			m_ViewportPanel.IsHovered = ImGui::IsWindowHovered();
 
+			float width = glm::max(m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, 1.0f);
+			float height = glm::max(m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y, 1.0f);
+			
 			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
 			Aurora::ImageHandle viewportImage = m_DefaultRenderGraph->GetCopyTarget(c_CopyColorTargetName);
-			uint64_t textureId = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
+			if(viewportImage != Aurora::ImageHandle::INVALID_HANDLE)
+			{
+				uint64_t textureId = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
 
-			ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
+				if (m_ViewportPanel.Width != width || m_ViewportPanel.Height != height)
+				{
+					m_ViewportPanel.Width = width;
+					m_ViewportPanel.Height = height;
+					m_ViewportResized = true;
+				}
+
+				ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Width, m_ViewportPanel.Height }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
+			}
 
 			ImGui::End();
 		}
@@ -210,14 +233,24 @@ namespace Sandbox {
 		PROFILE_FUNCTION;
 
 		StarFire::EventDispatcher dispatcher(e);
+		dispatcher.Dispatch<StarFire::FramebufferResizeEvent>(SF_BIND_EVENT_FN(SandboxLayer::OnFramebufferResize));
 	}
 
-
-
-	void SandboxLayer::Test()
+	bool SandboxLayer::OnFramebufferResize(StarFire::FramebufferResizeEvent& e)
 	{
 		PROFILE_FUNCTION;
 
+		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+			return false;
 
+		if (m_FramebufferWidth == e.GetWidth() && m_FramebufferHeight == e.GetHeight())
+			return false;
+
+		m_FramebufferWidth = e.GetWidth();
+		m_FramebufferHeight = e.GetHeight();
+		m_FramebufferResized = true;
+
+
+		return false;
 	}
 }

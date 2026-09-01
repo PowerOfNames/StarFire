@@ -45,10 +45,6 @@ namespace Aurora::VK {
 			m_MainDeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
 		}
 
-		inline void SubmitToFrameDeletionQueue(DeletionFunction func, uint8_t fif)
-		{
-			GetFrameData(fif).DeletionQueue.SubmitDeletion(func);
-		}
 		inline void SubmitToFrameDeletionQueue(DeletionFunction func)
 		{
 			GetCurrentFrameData().DeletionQueue.SubmitWaitingDeletion(func);

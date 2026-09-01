@@ -51,10 +51,10 @@ namespace StarFire {
 		}
 
 		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(ImGuiLayer::OnWindowResize));
+		dispatcher.Dispatch<FramebufferResizeEvent>(SF_BIND_EVENT_FN(ImGuiLayer::OnFramebufferResize));
 	}
 
-	bool ImGuiLayer::OnWindowResize(WindowResizeEvent& e)
+	bool ImGuiLayer::OnFramebufferResize(FramebufferResizeEvent& e)
 	{
 		PROFILE_FUNCTION;
 
@@ -63,7 +63,7 @@ namespace StarFire {
 		if (newWidth == 0 || newHeight == 0)	
 			return false;
 		
-		m_ImGuiRenderer->OnWindowResize(newWidth, newHeight);
+		m_ImGuiRenderer->OnFramebufferResize(newWidth, newHeight);
 		SF_CORE_DEBUG("New extent: [{}|{}]", newWidth, newHeight);
 
 		return false;
