@@ -37,15 +37,10 @@ namespace Substrate {
 	}
 
 	template<typename THandleType>
-	concept HandleTypeCheck = requires ()
-	{
-		std::is_integral_v<THandleType> &&
-		std::is_unsigned_v<THandleType> &&
-		std::is_floating_point_v<THandleType> == false &&
-		std::is_same_v<THandleType, bool> == false &&
-		std::is_same_v<THandleType, char> == false;
-	};
-
+	concept HandleTypeCheck = std::is_integral_v<THandleType> 
+		&& std::is_unsigned_v<THandleType> 
+		&& !std::is_same_v<THandleType, bool> 
+		&& !std::is_same_v<THandleType, char>;
 
 	template<typename TDerivedHandle, typename THandleType, THandleType GenerationMask>
 		requires HandleTypeCheck<THandleType>
@@ -70,7 +65,7 @@ namespace Substrate {
 		/// <summary>
 		/// Increment the ID bit -> 0x0001D1A6 ID:0001 Idx:D1A6 mask -> 0xFFFF 0000 -> 0x0002D1A6
 		/// </summary>
-		constexpr TDerivedHandle IncrementGeneration()
+		constexpr TDerivedHandle IncrementGeneration() const
 		{
 			if (!IsValid())
 				return TDerivedHandle::FromRawType(m_Handle);
@@ -80,7 +75,7 @@ namespace Substrate {
 
 		/// <returns>Only true if the generation is not equal to the generation mask. This also covers GenerationMask = 0 -> the only invalid handle IS INVALID_HANDLE -> Index maxed out.
 		/// Or, generationBits maxed and index maxed, which is invalid because generation is maxed out.</returns>
-		constexpr bool IsValid()
+		constexpr bool IsValid() const
 		{
 			if constexpr(GenerationMask == 0)
 				return true;
@@ -89,7 +84,7 @@ namespace Substrate {
 		}
 
 		/// <returns>This is only true if the generations are equal AND the index! </returns>
-		constexpr bool EqualsGeneration(const BaseHandle& otherHandle)
+		constexpr bool EqualsGeneration(const BaseHandle& otherHandle) const
 		{
 			return Generation() == otherHandle.Generation();
 		}
@@ -99,7 +94,7 @@ namespace Substrate {
 			return m_Handle == other;
 		}
 
-		constexpr bool Equals(const BaseHandle& otherHandle)
+		constexpr bool Equals(const BaseHandle& otherHandle) const
 		{
 			return EqualsRaw(otherHandle.GetRaw());
 		}
@@ -124,12 +119,12 @@ namespace Substrate {
 			return static_cast<THandleType>(~GenerationMask);
 		}
 
-		constexpr uint64_t GetMaxIndexValue()
+		constexpr uint64_t GetMaxIndexValue() const
 		{
 			return static_cast<uint64_t>(static_cast<THandleType>(~GenerationMask));
 		}
 
-		constexpr uint64_t GetMaxGenerationValue()
+		constexpr uint64_t GetMaxGenerationValue() const
 		{
 			THandleType generation = GenerationMask;
 			while ((generation & 1) != 1)
