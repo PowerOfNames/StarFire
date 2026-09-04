@@ -67,8 +67,6 @@ namespace Aurora {
 
 		virtual void OnResize(uint32_t width, uint32_t height) = 0;
 
-		virtual void SetOwnedByRenderGraph(bool owned) = 0;
-
 		virtual const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const = 0;
 		virtual const std::vector<RenderPassAttachment>& GetColorAttachments() const = 0;
 		virtual const RenderPassAttachment& GetDepthAttachment() const = 0;

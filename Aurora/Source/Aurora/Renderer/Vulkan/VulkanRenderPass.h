@@ -17,8 +17,6 @@ namespace Aurora::VK {
 
 		void OnResize(uint32_t width, uint32_t height) override;
 
-		void SetOwnedByRenderGraph(bool owned) override { m_OwnedByRenderGraph = owned; }
-
 		const RenderPassAttachment& GetColorAttachment(std::string_view attachmentName) const override;
 		const std::vector<RenderPassAttachment>& GetColorAttachments() const override {	return m_ColorAttachments; }
 		const RenderPassAttachment& GetDepthAttachment() const override;
@@ -36,7 +34,6 @@ namespace Aurora::VK {
 	private:
 		RenderPassSpecification m_Specification;
 		bool m_Compiled = false;
-		bool m_OwnedByRenderGraph = false;
 
 		std::unordered_map<std::string, uint32_t> m_ColorAttachmentIndices;
 		std::vector<RenderPassAttachment> m_ColorAttachments;
