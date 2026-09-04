@@ -37,21 +37,18 @@ namespace Substrate {
 	}
 
 	template<typename THandleType>
-	concept HandleTypeCheck = requires ()
-	{
-		std::is_integral_v<THandleType> &&
-		std::is_unsigned_v<THandleType> &&
-		std::is_floating_point_v<THandleType> == false &&
-		std::is_same_v<THandleType, bool> == false &&
-		std::is_same_v<THandleType, char> == false;
-	};
-
+	concept HandleTypeCheck = std::is_integral_v<THandleType> 
+		&& std::is_unsigned_v<THandleType> 
+		&& !std::is_same_v<THandleType, bool> 
+		&& !std::is_same_v<THandleType, char>;
 
 	template<typename TDerivedHandle, typename THandleType, THandleType GenerationMask>
 		requires HandleTypeCheck<THandleType>
 	class BaseHandle
 	{
 	public:
+		static_assert(GenerationMask != static_cast<THandleType>(~static_cast<THandleType>(0)), "GenerationMask cannot be all 1s");
+
 		constexpr BaseHandle() : m_Handle(0) {};
 		constexpr BaseHandle(THandleType index) : m_Handle(index) 
 		{
@@ -68,7 +65,7 @@ namespace Substrate {
 		/// <summary>
 		/// Increment the ID bit -> 0x0001D1A6 ID:0001 Idx:D1A6 mask -> 0xFFFF 0000 -> 0x0002D1A6
 		/// </summary>
-		constexpr TDerivedHandle IncrementGeneration()
+		constexpr TDerivedHandle IncrementGeneration() const
 		{
 			if (!IsValid())
 				return TDerivedHandle::FromRawType(m_Handle);
@@ -76,27 +73,18 @@ namespace Substrate {
 		}
 
 
-		/// <returns>Only true if the generation is not equal to the generation mask. Except when there are no generation bits, which is always a valid generation. Returns false if index == indexMask</returns>
-		constexpr bool IsValid()
+		/// <returns>Only true if the generation is not equal to the generation mask. This also covers GenerationMask = 0 -> the only invalid handle IS INVALID_HANDLE -> Index maxed out.
+		/// Or, generationBits maxed and index maxed, which is invalid because generation is maxed out.</returns>
+		constexpr bool IsValid() const
 		{
-			//If the handle's index bits are all set to 1, the handle is invalid.
-			constexpr THandleType indexMask = GetIndexMask();
-			if ((m_Handle & indexMask) == indexMask)
-				return false;
-
-			//If the generation mask is 0, the handle is always valid.
-			if(GenerationMask == 0)
+			if constexpr(GenerationMask == 0)
 				return true;
-
-			//We return false if the generation mask is all bits set, because that means there is no valid index possible.
-			if (GenerationMask == static_cast<THandleType>((~static_cast<THandleType>(0))))
-				return false;
-
-			return  (m_Handle & GenerationMask) != GenerationMask;
+			else
+				return (m_Handle & GenerationMask) != GenerationMask;
 		}
 
 		/// <returns>This is only true if the generations are equal AND the index! </returns>
-		constexpr bool EqualsGeneration(const BaseHandle& otherHandle)
+		constexpr bool EqualsGeneration(const BaseHandle& otherHandle) const
 		{
 			return Generation() == otherHandle.Generation();
 		}
@@ -106,7 +94,7 @@ namespace Substrate {
 			return m_Handle == other;
 		}
 
-		constexpr bool Equals(const BaseHandle& otherHandle)
+		constexpr bool Equals(const BaseHandle& otherHandle) const
 		{
 			return EqualsRaw(otherHandle.GetRaw());
 		}
@@ -131,12 +119,12 @@ namespace Substrate {
 			return static_cast<THandleType>(~GenerationMask);
 		}
 
-		constexpr uint64_t GetMaxIndexValue()
+		constexpr uint64_t GetMaxIndexValue() const
 		{
 			return static_cast<uint64_t>(static_cast<THandleType>(~GenerationMask));
 		}
 
-		constexpr uint64_t GetMaxGenerationValue()
+		constexpr uint64_t GetMaxGenerationValue() const
 		{
 			THandleType generation = GenerationMask;
 			while ((generation & 1) != 1)

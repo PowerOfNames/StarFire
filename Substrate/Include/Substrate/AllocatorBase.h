@@ -14,6 +14,7 @@ namespace Substrate {
 		virtual size_t GetUsedMemory() const = 0;
 		virtual size_t GetCurrentAllocationCount() const = 0;
 		virtual size_t GetTotalAllocationCount() const = 0;
+		virtual size_t GetMaxedGenerationCount() const = 0;
 		virtual size_t GetResetCount() const = 0;
 #endif
 	};
