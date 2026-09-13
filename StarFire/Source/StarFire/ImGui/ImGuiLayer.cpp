@@ -64,7 +64,7 @@ namespace StarFire {
 			return false;
 		
 		m_ImGuiRenderer->OnFramebufferResize(newWidth, newHeight);
-		SF_CORE_DEBUG("New extent: [{}|{}]", newWidth, newHeight);
+		STARFIRE_DEBUG("New extent: [{}|{}]", newWidth, newHeight);
 
 		return false;
 	}

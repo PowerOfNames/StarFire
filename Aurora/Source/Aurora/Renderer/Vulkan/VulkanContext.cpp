@@ -28,86 +28,74 @@ namespace Aurora::VK {
 	}
 
 
-	void VulkanContext::Init()
+	bool VulkanContext::Init()
 	{
 		PROFILE_FUNCTION;
 
-		if (!CreateInstance(
+		if (AURORA_REQUIRE_FAILS(CreateInstance(
 			m_Specification.AppName,
 			m_Specification.InstanceSpecs,
 			m_Specification.AppVersion,
 			m_Specification.AuroraVersion,
-			m_Specification.SurfaceSpecs.WSI))
-		{
-			AURORA_ERROR("Failed to create instance. VulkanContext could not be initialized.");
-			return;
-		}
+			m_Specification.SurfaceSpecs.WSI), "Failed to create instance. VulkanContext could not be initialized."))
+			return false;
+		
 
 
-		if (!CreateSurface(m_Specification.SurfaceSpecs))
-		{
-			AURORA_ERROR("Failed to create surface. VulkanContext could not be instanziated.");
-			return;
-		}
+			if (AURORA_REQUIRE_FAILS(CreateSurface(m_Specification.SurfaceSpecs),
+									 "Failed to create surface. VulkanContext could not be instanziated."))
+			return false;
+		
 
 		DeviceRequirements deviceReqs{};
-		if (!PickPhysicalDevice(deviceReqs))
-		{
-			AURORA_ERROR("Failed to pick a physical device. VulkanContext could not be instantiated.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(PickPhysicalDevice(deviceReqs),
+								 "Failed to pick a physical device. VulkanContext could not be instantiated."))
+			return false;
+		
 
-		if (!CreateLogicalDevice(deviceReqs))
-		{
-			AURORA_ERROR("Failed to create logical device. VulkanContext could not be instantiated.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateLogicalDevice(deviceReqs),
+								 "Failed to create logical device. VulkanContext could not be instantiated."))
+			return false;
+		
 
-		if (!CreateVmAllocator())
-		{
-			AURORA_ERROR("Failed to create vmAllocator. VulkanContext could not be instantiated.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateVmAllocator(),
+								 "Failed to create vmAllocator. VulkanContext could not be instantiated."))
+			return false;
+		
 
-		if (!CreateGraphicsCommandPools())
-		{
-			AURORA_TRACE("Failed to create graphics command pool. VulkanContext could not be initialized.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateGraphicsCommandPools(),
+								 "Failed to create graphics command pool. VulkanContext could not be initialized."))
+			return false;
+	
 
-		if (!CreateTransferSubmissionStructures())
-		{
-			AURORA_ERROR("Failed to create transfer submission structures. VulkanContext could not be initialized.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateTransferSubmissionStructures(),
+								 "Failed to create transfer submission structures. VulkanContext could not be initialized."))
+			return false;
+		
 
-		if (!CreateFramesInFlight(m_Specification.SurfaceSpecs.FramesPerFlight))
-		{
-			AURORA_ERROR("Failed to create per-frame data. VulkanContext could not be initialized.");
-			return;
-		}		
+		if (AURORA_REQUIRE_FAILS(CreateFramesInFlight(m_Specification.SurfaceSpecs.FramesPerFlight),
+								 "Failed to create per-frame data. VulkanContext could not be initialized."))
+			return false;
+		
 
-		if (!CreateSwapchain(m_Specification.SurfaceSpecs))
-		{
-			AURORA_ERROR("Failed to create swapchain. VulkanContext could not be initialized.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateSwapchain(m_Specification.SurfaceSpecs),
+								 "Failed to create swapchain. VulkanContext could not be initialized."))
+			return false;
+		
 
 		m_Renderer = CreateRef<VulkanRenderer>();
-		if (m_Renderer == nullptr)
-		{
-			AURORA_ERROR("Failed to create renderer. VulkanContext could not be initialized.");
-			return;
-		}
-		if (!m_Renderer->Init())
-		{
-			AURORA_ERROR("Failed to initialize renderer. VulkanContext could not be initialized.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(m_Renderer != nullptr, "Failed to create renderer. VulkanContext could not be initialized."))
+			return false;
+		
+		if (AURORA_REQUIRE_FAILS(m_Renderer->Init(),
+								 "Failed to initialize renderer. VulkanContext could not be initialized."))
+			return false;		
 
 		//This initializes FIF, such that the very first rendered frame still is index 0;
 		m_RendererStatistics.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
 		AURORA_INFO("Successfully initialized vulkan rendering context");
+
+		return true;
 	}
 
 
@@ -227,32 +215,30 @@ namespace Aurora::VK {
 		//TODO: make this dynamic!
 		const std::vector<const char*> requiredLayers =
 		{
-#if AURORA_VK_VALIDATION_ENABLED
+#if AURORA_VK_VALIDATION_ENABLED == 1
 			"VK_LAYER_KHRONOS_validation",
 #endif
 			"VK_LAYER_KHRONOS_synchronization2"
 		};
-		if (!CheckRequiredLayerSupport(requiredLayers))
-		{
-			AURORA_ERROR("Some required layers are not available! Instance will not be created.");
+		if (AURORA_REQUIRE_FAILS(CheckRequiredLayerSupport(requiredLayers),
+								 "Some required layers are not available! Instance will not be created."))
 			return false;
-		}
+		
 
 		// ===== Extensions =====
 		std::vector<const char*> requiredExtensions = GetRequiredInstanceExtensions(wsi);
 
-#if AURORA_VK_VALIDATION_ENABLED
+#if AURORA_VK_VALIDATION_ENABLED == 1
 		bool useDebugUtils = instanceSpecs.EnableDebugUtils;
 #else
 		bool useDebugUtils = false;
 #endif 
 		if (useDebugUtils)
 			requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		if (!CheckRequiredInstanceExtensionsSupport(requiredExtensions))
-		{
-			AURORA_ERROR("Some required extensions are not available! Instance will not be created.");
+		if (AURORA_REQUIRE_FAILS(CheckRequiredInstanceExtensionsSupport(requiredExtensions),
+								 "Some required extensions are not available! Instance will not be created."))
 			return false;
-		}
+		
 
 		// ===== Application =====
 
@@ -284,11 +270,8 @@ namespace Aurora::VK {
 		instanceInfo.pApplicationInfo = &appInfo;
 
 		AURORA_VK_CHECK(vkCreateInstance(&instanceInfo, m_AllocationCallbacks, &m_Instance), VK_SUCCESS, "Failed to create VkInstance.");
-		if (m_Instance == VK_NULL_HANDLE)
-		{
-			AURORA_CRITICAL("Failed to create a Vulkan Instance!");
-			return false;
-		}
+		if(AURORA_REQUIRE_FAILS(m_Instance != VK_NULL_HANDLE, "Failed to create a Vulkan Instance!"))		
+			return false;		
 		AURORA_TRACE("Created VkInstance.");
 
 		SubmitToMainDeletionQueue([&instance = m_Instance](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
@@ -297,7 +280,7 @@ namespace Aurora::VK {
 				instance = VK_NULL_HANDLE;
 			});
 
-#if AURORA_VK_VALIDATION_ENABLED
+#if AURORA_VK_VALIDATION_ENABLED == 1
 		if (useDebugUtils)
 			SetupDebugMessenger(m_Instance);
 #endif // AURORA_VK_VALIDATION
@@ -321,16 +304,13 @@ namespace Aurora::VK {
 			case WSIPlatformType::SURFACE_PLAFORM_NONE:
 			default:
 			{
-				AURORA_ERROR("WSI currently not supported!");
+				AURORA_VALIDATE(false, "WSI currently not supported!");
 				return false;
 			}
 		}
 
-		if (m_Surface == VK_NULL_HANDLE)
-		{
-			AURORA_CRITICAL("Failed to create a Vulkan Surface!");
-			return false;
-		}
+		if (AURORA_REQUIRE_FAILS(m_Surface != VK_NULL_HANDLE, "Failed to create a Vulkan Surface!"))
+			return false;		
 
 		SubmitToMainDeletionQueue([instance = m_Instance, &surface = m_Surface](VkDevice, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
@@ -347,12 +327,10 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		uint32_t deviceCount;
-		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
-		if (deviceCount == 0)
-		{
-			AURORA_CRITICAL("No devices found.");
+		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);		
+		if (AURORA_REQUIRE_FAILS(deviceCount > 0, "No devices found."))
 			return false;
-		}
+		
 		std::vector<VkPhysicalDevice> availableDevices(deviceCount);
 		vkEnumeratePhysicalDevices(m_Instance, &deviceCount, availableDevices.data());
 
@@ -364,11 +342,9 @@ namespace Aurora::VK {
 			AURORA_TRACE("Found device with score {}", score);
 			candidates.insert(std::make_pair(score, phDevice));
 		}
-		if (candidates.rbegin()->first <= 0)
-		{
-			AURORA_CRITICAL("No suitable device found.");
+		if (AURORA_REQUIRE_FAILS(candidates.rbegin()->first > 0, "No suitable device found."))
 			return false;
-		}
+
 		m_PhysicalDevice = candidates.rbegin()->second;
 
 		VkPhysicalDeviceProperties props;
@@ -435,11 +411,8 @@ namespace Aurora::VK {
 			queueInfos.push_back(queueInfo);
 		}
 
-		if (queueInfos.size() == 0)
-		{
-			AURORA_ERROR("No queue families can be created!");
-			return false;
-		}
+		if (AURORA_REQUIRE_FAILS(queueInfos.size() > 0, "No queue families can be created!"))
+			return false;		
 
 		VkPhysicalDeviceFeatures features{};
 		auto requiredExtension = GetRequiredDeviceExtensions(deviceRequirements);
@@ -478,11 +451,8 @@ namespace Aurora::VK {
 		deviceInfo.pEnabledFeatures = &features;
 		AURORA_VK_CHECK(vkCreateDevice(m_PhysicalDevice, &deviceInfo, m_AllocationCallbacks, &m_Device), VK_SUCCESS, "Failed to create device!");
 
-		if (m_Device == VK_NULL_HANDLE)
-		{
-			AURORA_ERROR("Failed to create logical device!");
-			return false;
-		}
+		if (AURORA_REQUIRE_FAILS(m_Device != VK_NULL_HANDLE, "Failed to create logical device!"))
+			return false;		
 
 		//TODO: Trace print enabled features here:
 
@@ -576,7 +546,7 @@ namespace Aurora::VK {
 		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
 
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_MainGraphicsCmdPool), VK_SUCCESS, "Failed to create graphics command pool.");
-		if (m_MainGraphicsCmdPool == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_MainGraphicsCmdPool != VK_NULL_HANDLE, "Failed to create main graphics command pool."))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_MainGraphicsCmdPool, "GraphicsCommandPool");
 
@@ -600,7 +570,7 @@ namespace Aurora::VK {
 		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Transfer;
 
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_TransferCmdPool), VK_SUCCESS, "Failed to create transfer command pool.");
-		if (m_TransferCmdPool == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_TransferCmdPool != VK_NULL_HANDLE, "Failed to create submit transfer command pool"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "TransferCommandPool");
 
@@ -616,7 +586,7 @@ namespace Aurora::VK {
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = 1;
 		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_TransferCmdBuffer), VK_SUCCESS, "Failed to allocate transfer command buffer for immediate submit.");
-		if (m_TransferCmdBuffer == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_TransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate submit transfer command buffer"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_TransferCmdBuffer, "TransferCommandBuffer");
 
@@ -630,7 +600,7 @@ namespace Aurora::VK {
 		semaInfo.flags = 0;
 
 		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_TransferSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
-		if (m_TransferSubmitSemaphore.Semaphore == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_TransferSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create submit transfer semaphore"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_TransferSubmitSemaphore.Semaphore, "TransferSubmitSemaphore");
 
@@ -643,7 +613,7 @@ namespace Aurora::VK {
 		// ===== Graphics queue structures =====
 		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_GraphicsTransferCmdPool), VK_SUCCESS, "Failed to create graphics transfer command pool.");
-		if (m_GraphicsTransferCmdPool == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_GraphicsTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer graphics command pool"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "GraphicsTransferCommandPool");
 
@@ -655,12 +625,12 @@ namespace Aurora::VK {
 
 		allocInfo.commandPool = m_GraphicsTransferCmdPool;
 		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_GraphicsTransferCmdBuffer), VK_SUCCESS, "Failed to allocate graphics command buffer for immediate submit.");
-		if (m_GraphicsTransferCmdBuffer == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_GraphicsTransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate transfer graphics command buffer"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_GraphicsTransferCmdBuffer, "GraphicsOwnershipCommandBuffer");
 
 		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_GraphicsSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
-		if (m_GraphicsSubmitSemaphore.Semaphore == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_GraphicsSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer graphics semaphore"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_GraphicsSubmitSemaphore.Semaphore, "GraphicsSubmitSemaphore");
 
@@ -673,7 +643,7 @@ namespace Aurora::VK {
 		// ===== Compute queue structures =====
 		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Compute;
 		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_ComputeTransferCmdPool), VK_SUCCESS, "Failed to create compute transfer command pool.");
-		if (m_ComputeTransferCmdPool == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_ComputeTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer compute command pool"))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_ComputeTransferCmdPool, "ComputeTransferCommandPool");
 
@@ -685,12 +655,12 @@ namespace Aurora::VK {
 
 		allocInfo.commandPool = m_ComputeTransferCmdPool;
 		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_ComputeTransferCmdBuffer), VK_SUCCESS, "Failed to allocate compute command buffer for immediate submit.");
-		if (m_ComputeTransferCmdBuffer == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_ComputeTransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate transfer compute command buffer."))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_ComputeTransferCmdBuffer, "ComputeOwnershipCommandBuffer");
 
 		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_ComputeSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create compute submit semaphore.");
-		if (m_ComputeSubmitSemaphore.Semaphore == VK_NULL_HANDLE)
+		if (AURORA_REQUIRE_FAILS(m_ComputeSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer compute semaphore."))
 			return false;
 		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ComputeSubmitSemaphore.Semaphore, "ComputeSubmitSemaphore");
 
@@ -731,7 +701,7 @@ namespace Aurora::VK {
 			{
 				const std::string poolName = "Frame_commandPool_" + iString;
 				AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &fif.CommandPool), VK_SUCCESS, "Failed to create frame command pool.");
-				if (fif.CommandPool == VK_NULL_HANDLE)
+				if (AURORA_REQUIRE_FAILS(fif.CommandPool != VK_NULL_HANDLE, "Failed to create fif '{}' command pool", i))
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)fif.CommandPool, poolName.c_str());
 
@@ -746,16 +716,16 @@ namespace Aurora::VK {
 				cmdAllocInfo.commandPool = fif.CommandPool;
 				const std::string cmdName = "Frame_commandBuffer_" + iString;
 				AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &cmdAllocInfo, &fif.CommandBuffer), VK_SUCCESS, "Failed to allocate swapchain command buffer.");
-				if (fif.CommandBuffer == VK_NULL_HANDLE)
+				if (AURORA_REQUIRE_FAILS(fif.CommandBuffer != VK_NULL_HANDLE, "Failed to allocate fif '{}' command buffer.", i))
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)fif.CommandBuffer, cmdName.c_str());
-			}			
+			}	
 
 			// ===== Frame fence =====
 			{
 				const std::string inFlightName = "Frame_Fence_" + iString;
 				AURORA_VK_CHECK(vkCreateFence(m_Device, &fenceInfo, m_AllocationCallbacks, &fif.InFlightFence), VK_SUCCESS, "Failed to create in-flight fence.");
-				if (fif.InFlightFence == VK_NULL_HANDLE)
+				if (AURORA_REQUIRE_FAILS(fif.InFlightFence != VK_NULL_HANDLE, "Failed to create fif '{}' fence.", i))
 					return false;
 				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_FENCE, (uint64_t)fif.InFlightFence, inFlightName.c_str());
 
@@ -786,19 +756,12 @@ namespace Aurora::VK {
 		swapchainSpecs.ClearColor = { surfaceSpecs.ClearColor.R, surfaceSpecs.ClearColor.G, surfaceSpecs.ClearColor.B, surfaceSpecs.ClearColor.A };
 		m_Swapchain = VulkanSwapchain::Create(swapchainSpecs);
 
-		if (m_Swapchain == nullptr)
-		{
-			AURORA_TRACE("Failed to create swapchain object.");
+		if (AURORA_REQUIRE_FAILS(m_Swapchain != nullptr, "Failed to create swapchain object."))
 			return false;
-		}
-
-		m_Swapchain->Init();
-
-		if (m_Swapchain->GetHandle() == VK_NULL_HANDLE)
-		{
-			AURORA_TRACE("Failed to initialize swapchain.");
+		
+		if (AURORA_REQUIRE_FAILS(m_Swapchain->Init(), "Failed to initialize swapchain."))		
 			return false;
-		}
+		
 
 
 		SubmitToMainDeletionQueue([this](VkDevice, VmaAllocator, const VkAllocationCallbacks*)
@@ -817,11 +780,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (frameIdx >= m_FramesInFlight.size())
-		{
-			AURORA_ERROR("Invalid frame index for deletion queue flush!");
-			return;
-		}
+		AURORA_VALIDATE(frameIdx < m_FramesInFlight.size(), "Invalid frame index for deletion queue flush!");
 
 		m_FramesInFlight[frameIdx].DeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
 	}
@@ -830,11 +789,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (frameIdx >= m_FramesInFlight.size())
-		{
-			AURORA_ERROR("Invalid frame index for deletion queue stamping!");
-			return;
-		}
+		AURORA_VALIDATE(frameIdx < m_FramesInFlight.size(), "Invalid frame index for deletion queue stamping!");
 
 		ResourceSubmissionWaits waitValues;
 		waitValues.Graphics = GetQueueSemaphoreSnapshot(QueueOwner::GRAPHICS).Value;
@@ -1193,7 +1148,7 @@ namespace Aurora::VK {
 				}
 				default:
 				{
-					AURORA_ERROR("Unknown submission op type!");
+					AURORA_VALIDATE(false, "Unknown submission op type!");
 					return;
 				}
 			}
@@ -1207,11 +1162,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (src == dst)
-		{
-			AURORA_ERROR("Src handle equals dst handle");
-			return;
-		}		
+		AURORA_VALIDATE(src != dst, "Source handle must not be destination handle.");
 
 		VulkanSubmissionScheduler(CreateRefFromThis<VulkanContext>())
 			.CopyBufferToBuffer(src, dst, destroySrc, QueueOwner::GRAPHICS)
@@ -1275,11 +1226,8 @@ namespace Aurora::VK {
 		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
 
 		VkQueue vkQueue = GetQueueFromOwner(specs.Queue);
-		if (vkQueue == VK_NULL_HANDLE)
-		{
-			AURORA_ERROR("Failed to get queue for immediate submit.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(vkQueue != VK_NULL_HANDLE, "Failed to get queue for immediate submit."))
+			return;		
 
 		AURORA_VK_CHECK(vkQueueSubmit2(vkQueue, 1, &submitInfo, nullptr), VK_SUCCESS, "Failed to submit command buffer for immediate submit.");
 	}
@@ -1298,7 +1246,7 @@ namespace Aurora::VK {
 		if (it != m_QueueOwnerIndices.end())
 			return it->second;
 
-		AURORA_ERROR("Queue family index for owner {} not found.", QueueOwnerToString(owner));
+		AURORA_VALIDATE(false, "Queue family index for owner {} not found.", QueueOwnerToString(owner));
 		return VK_QUEUE_FAMILY_IGNORED;
 	}
 	VkQueue VulkanContext::GetQueueFromOwner(QueueOwner owner) const
@@ -1307,7 +1255,7 @@ namespace Aurora::VK {
 		if (it != m_QueueOwnerQueues.end())
 			return it->second;
 
-		AURORA_ERROR("Queue for owner {} not found.", QueueOwnerToString(owner));
+		AURORA_VALIDATE(false, "Queue for owner {} not found.", QueueOwnerToString(owner));
 		return VK_NULL_HANDLE;
 	}
 	TimelineSemaphore& VulkanContext::GetSubmissionSemaFromQueueOwner(QueueOwner owner)
@@ -1326,8 +1274,7 @@ namespace Aurora::VK {
 				return m_ComputeSubmitSemaphore;
 				break;
 			default:
-				AURORA_ERROR("Invalid queue owner for TimelineSemaphore. Using Graphics semaphore (default).");
-				AURORA_ASSERT(false, "Invalid queue owner for TimelineSemaphore selection.");
+				AURORA_VALIDATE(false, "Invalid queue owner for TimelineSemaphore. Using Graphics semaphore (default).");
 				return m_GraphicsSubmitSemaphore;
 		}
 	}
@@ -1347,8 +1294,7 @@ namespace Aurora::VK {
 				cmd = m_ComputeTransferCmdBuffer;
 				break;
 			default:
-				AURORA_ERROR("Invalid queue owner for CommandBuffer. Using Graphics command buffer (default).");
-				AURORA_ASSERT(false, "Invalid queue owner for CommandBuffer selection.");
+				AURORA_VALIDATE(false, "Invalid queue owner for CommandBuffer selection.");
 				return m_GraphicsTransferCmdBuffer;
 		}
 		return cmd;
@@ -1427,10 +1373,8 @@ namespace Aurora::VK {
 			if (requiredExtensions.empty())
 				return true;
 		}
-		for (const auto& extension : requiredExtensions)
-		{
-			AURORA_ERROR("Required extension {} not supported by device.", extension);
-		}
+		for (const auto& extension : requiredExtensions)		
+			AURORA_ERROR("Required extension {} not supported by device.", extension);		
 
 		return false;
 	}
@@ -1464,11 +1408,8 @@ namespace Aurora::VK {
 					break;
 				}
 			}
-			if (!layerFound)
-			{
-				allLayerFound = false;
-				AURORA_ERROR("Requested instance layer {} not available!", layer);
-			}
+			if (AURORA_REQUIRE_FAILS_ALL(layerFound, "Requested instance layer {} not available!", layer))
+				allLayerFound = false;			
 		}
 		return allLayerFound;
 	}
@@ -1511,11 +1452,8 @@ namespace Aurora::VK {
 				}
 			}
 
-			if (!foundExtension)
-			{
+			if (AURORA_REQUIRE_FAILS_ALL(foundExtension, "Required instance extension {} not availale!", required))
 				foundAll = false;
-				AURORA_ERROR("Required instance extension {} not availale!", required);
-			}
 		}
 
 		return foundAll;
@@ -1548,8 +1486,8 @@ namespace Aurora::VK {
 
 		VkDebugUtilsMessageSeverityFlagsEXT severityFlags = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
 			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-#if defined(AURORA_DEBUG_MODE) && allowInfoLevel
-		severityFlags |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+#if defined(AURORA_DEBUG_MODE)
+		severityFlags |= allowInfoLevel ? VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT : 0;
 #endif
 		createInfo.messageSeverity = severityFlags;
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT

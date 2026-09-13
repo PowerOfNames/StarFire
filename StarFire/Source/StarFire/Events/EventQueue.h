@@ -1,7 +1,6 @@
 #pragma once
 #include "StarFire/Events/Event.h"
 #include "StarFire/Core/Core.h"
-#include "StarFire/Core/Assert.h"
 
 
 namespace StarFire {

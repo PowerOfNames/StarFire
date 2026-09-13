@@ -43,7 +43,7 @@ namespace Aurora::VK {
 		VulkanSwapchain(const SwapchainSpecification& spec);
 		~VulkanSwapchain() = default;
 
-		void Init();
+		bool Init();
 		bool PrepareFrame(VulkanFrame& frame);
 		bool SwapImages(VulkanFrame& frame, TimelineSemaphore& graphicsSemaphore);
 		void OnResize(uint32_t width, uint32_t height, bool force = false);

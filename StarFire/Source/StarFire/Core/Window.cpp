@@ -12,10 +12,10 @@ namespace StarFire {
 	Scope<Window> Window::Create(const WindowSpecification& specs /* = WindowSpecification() */)
 	{
 #ifdef SF_PLATFORM_WINDOWS
-		SF_CORE_TRACE("Selecting WindowsWindow");
+		STARFIRE_TRACE("Selecting WindowsWindow");
 		return CreateScope<Platform::WindowsWindow>(specs);
 #else
-		SF_CORE_WARN("No window created");
+		STARFIRE_VALIDATE(false, "Window::Create() is not implemented for this platform!");
 		return nullptr;
 #endif
 	}

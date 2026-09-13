@@ -1,7 +1,6 @@
 #include "Aurora/Aurora.h"
 
 #include "Aurora/Core/Core.h"
-#include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Core/RefRegistry.h"
 
 #include "Aurora/Renderer/Vulkan/VulkanContext.h"
@@ -49,16 +48,15 @@ namespace Aurora {
 	bool Initialize(const InitializationSpecification& contextSpecs)
 	{
 		PROFILE_FUNCTION;
-
-		if (g_RenderContext)
-		{
-			AURORA_WARN("RenderContext already initialized.");
-			return false;
-		}
+						
+		AURORA_ASSERT(g_RenderContext == nullptr, "RenderContext already initialized.");
 
 		g_RenderContext = CreateRef<VK::VulkanContext>(contextSpecs);
-		AURORA_ASSERT(g_RenderContext != nullptr, "Failed to create RenderContext.");
-		g_RenderContext->Init();
+		if (AURORA_REQUIRE_FAILS(g_RenderContext != nullptr, "Failed to create RenderContext."))
+			return false;
+		if (AURORA_REQUIRE_FAILS(g_RenderContext->Init(), "Failed to initialize render context."))
+			return false;
+
 		g_ResourceManager = CreateRef<VK::VulkanResourceManager>(g_RenderContext);
 		return true;
 	}

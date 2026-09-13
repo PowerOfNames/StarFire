@@ -1,7 +1,7 @@
 #include "sfpch.h"
 #include "Platform/Windows/WindowsWindow.h"
 
-#include "StarFire/Core/Assert.h"
+#include "StarFire/Core/Core.h"
 #include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Events/KeyEvent.h"
 #include "StarFire/Events/MouseEvent.h"
@@ -13,7 +13,7 @@ namespace StarFire{
 
 		static void GLFWErrorCallback(int code, const char* description)
 		{
-			SF_CORE_ERROR("GLFW error ({}): {}", code, description);
+			STARFIRE_ERROR("GLFW error ({}): {}", code, description);
 		}
 
 		WindowsWindow::WindowsWindow(const WindowSpecification& specs)
@@ -48,10 +48,10 @@ namespace StarFire{
 			if (s_GLFWwindowCount == 0)
 			{
 				int success = glfwInit();
-				SF_CORE_ASSERT(success != 0, "Failed to initialize GLFW!");
+				STARFIRE_ASSERT(success != 0, "Failed to initialize GLFW!");
 				int major, minor, revision;
 				glfwGetVersion(&major, &minor, &revision);
-				SF_CORE_INFO("Initialized GLFW, compiled against version {}.{}.{}, running against version {}.{}.{}", 
+				STARFIRE_INFO("Initialized GLFW, compiled against version {}.{}.{}, running against version {}.{}.{}", 
 					GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR, GLFW_VERSION_REVISION, 
 					major, minor, revision);				
 				glfwSetErrorCallback(GLFWErrorCallback);
@@ -66,9 +66,9 @@ namespace StarFire{
 				m_Specification.Title.c_str(), 
 				m_Specification.Fullscreen ? glfwGetPrimaryMonitor() : NULL, 
 				NULL);
-			SF_CORE_ASSERT(m_Window != nullptr, "Failed to create GLFW Window");
+			STARFIRE_ASSERT(m_Window != nullptr, "Failed to create GLFW Window");
 			s_GLFWwindowCount++;
-			SF_CORE_TRACE("Created window number {}", s_GLFWwindowCount);
+			STARFIRE_TRACE("Created window number {}", s_GLFWwindowCount);
 			
 
 			glfwSetWindowUserPointer(m_Window, &m_Data);
@@ -221,11 +221,8 @@ namespace StarFire{
 
 		void WindowsWindow::SetFullscreen(bool enabled)
 		{
-			if (m_Window == nullptr)
-			{
-				SF_CORE_ERROR("No window pointer set!");
-				return;
-			}
+			if (!STARFIRE_REQUIRE(m_Window != nullptr, "No window pointer set!"))
+				return;	
 
 			if (enabled)
 			{
@@ -274,7 +271,7 @@ namespace StarFire{
 				}
 				default:
 				{
-					SF_CORE_WARN("Cursor state not found. Fallback to normal");
+					STARFIRE_VALIDATE(false, "Cursor state not found. Fallback to normal");
 					glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				}
 			}

@@ -24,13 +24,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-
 		Ref<VulkanContext> renderContext = GetRenderContext();
-		if (renderContext == nullptr)
-		{
-			AURORA_ERROR("VulkanImGuiRenderer::Init: RenderContext is null. Cannot initialize ImGui Vulkan renderer.");
-			return;
-		}
 		VkDevice device = renderContext->GetLogicalDevice();
 		const VkAllocationCallbacks* allocCbs = renderContext->GetAllocationCallbacks();
 
@@ -165,12 +159,17 @@ namespace Aurora::VK {
 		Ref<VulkanContext> renderContext = GetRenderContext();
 
 		for (size_t fif = 0; fif < m_RenderTargets.size(); fif++)
-			resourceManager->DestroyImage(m_RenderTargets[fif]);
+		{
+			ImageHandle handle = m_RenderTargets[fif];
+			//Check only here for failed creation during resize. its not hot code, so its fine
+			if(handle != ImageHandle::INVALID_HANDLE)
+				resourceManager->DestroyImage(handle);
+		}
 		m_RenderTargets.clear();
 
 		m_RenderTargets.resize(renderContext->GetFramesInFlightCount());
 		bool success = true;
-		for (size_t i = 0; i < m_RenderTargets.size(); i++)
+		for (size_t i = 0; i < renderContext->GetFramesInFlightCount(); i++)
 		{
 			ImageSpecification imageSpecs{};
 			imageSpecs.Name = "ImGui_RenderTarget_" + std::to_string(i);
@@ -182,47 +181,38 @@ namespace Aurora::VK {
 			imageSpecs.Tiling = ImageTiling::OPTIMAL;
 
 			ImageHandle handle = resourceManager->CreateImage(imageSpecs);
-			if (!resourceManager->IsHandleValid(handle))
+			if (AURORA_REQUIRE_FAILS_ALL(resourceManager->IsHandleValid(handle), "Failed to create ImGui render target image for frame {}. This will likely cause a crash later on when trying to use it.", i))
 			{
-				AURORA_ERROR("Failed to create ImGui render target image for frame {}. This will likely cause a crash later on when trying to use it.", i);
 				success = false;
+				m_RenderTargets[i] = ImageHandle::INVALID_HANDLE;
 				continue;
 			}
 			m_RenderTargets[i] = handle;
 		}
 
-		m_NeedsResize = !success;		
+		m_NeedsResize = !success;
 	}
 
 	void VulkanImGuiRenderer::EndFrame()
 	{
 		PROFILE_FUNCTION;
 
-
 		VulkanFrame& frame = GetRenderContext()->GetCurrentFrameData();
 
 		uint8_t frameIdx = frame.FrameIndex;
-		if (frameIdx >= m_RenderTargets.size())
-		{
-			AURORA_ERROR("Invalid frame index {} for ImGui render target.", frameIdx);
-			return;
-		}
+		AURORA_ASSERT(frameIdx < m_RenderTargets.size(), "Invalid frame index {} for ImGui render target.", frameIdx);
 
 		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
 		VulkanImageData* renderTarget = resourceManager->GetImageData(m_RenderTargets[frameIdx]);
-		if (!renderTarget)
-		{
-			AURORA_ERROR("Failed to retrieve ImGui render target image data for frame {}. Unable to produce final rendering via ImGui.", frameIdx);
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(renderTarget, "Failed to retrieve ImGui render target image data for frame {}. Unable to produce final rendering via ImGui.", frameIdx))
+			return;		
 
 		VkCommandBuffer cmd = frame.CommandBuffer;
 
 		VkImageLayout renderingImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		if (renderTarget->Layout != renderingImageLayout)
-		{
 			renderTarget->Layout = Commands::TransitionImageLayout(cmd, renderTarget->Image, renderTarget->Format, renderTarget->Layout, renderingImageLayout);
-		}
+		
 
 		VkClearValue* clear = nullptr;
 
@@ -255,16 +245,12 @@ namespace Aurora::VK {
 
 		const Ref<VulkanSwapchain>& swapchain = GetRenderContext()->GetSwapchain();
 		VkFormat swapchainImageFormat = swapchain->GetImageFormat();
-		if (renderTarget->Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-		{
+		if (renderTarget->Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)		
 			renderTarget->Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTarget->Image, renderTarget->Format, renderTarget->Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		}
-
-		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-		{
+		
+		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)		
 			frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, true);
-		}
-
+		
 		VK::Commands::BlitImageToImage(frame.CommandBuffer, renderTarget->Image, renderTarget->Width, renderTarget->Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
 
 		renderTarget->Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTarget->Image, renderTarget->Format, renderTarget->Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -277,18 +263,14 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		auto it = m_TextureIDMap.find(image);
-		if (it != m_TextureIDMap.end())
-		{
+		if (it != m_TextureIDMap.end())		
 			return it->second;
-		}
+		
 
 		Ref<VulkanContext> renderContext = GetRenderContext();
 		VulkanImageData* imageData = GetResourceManager()->GetImageData(image);
-		if (!imageData)
-		{
-			AURORA_ERROR("Failed to create ImGui texture for invalid image handle.");
-			return 0;
-		}
+		if (AURORA_REQUIRE_FAILS(imageData, "Failed to get ImGui texture for invalid image handle."))
+			return 0;		
 
 		VkDescriptorSet descriptorSet = ImGui_ImplVulkan_AddTexture(m_TextureSampler, imageData->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		uint64_t textureID = std::bit_cast<uint64_t, VkDescriptorSet>(descriptorSet);
@@ -301,17 +283,14 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		auto it = m_TextureIDMap.find(image);
-		if (it == m_TextureIDMap.end())
-		{
-			AURORA_ERROR("Tried to return ImGui texture ID for image handle {} but it was not found in the texture ID map. Ignoring this call.", static_cast<uint16_t>(image));
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(it != m_TextureIDMap.end(), "Tried to return ImGui texture ID for image handle {} but it was not found in the texture ID map. Ignoring this call.", static_cast<uint16_t>(image)))
+			return;		
 
 		VkDescriptorSet descriptorSet = std::bit_cast<VkDescriptorSet, uint64_t>(it->second);
 		GetRenderContext()->SubmitToFrameDeletionQueue(
 			[set = descriptorSet](VkDevice, VmaAllocator, const VkAllocationCallbacks*)
 			{
-				ImGui_ImplVulkan_RemoveTexture(set);												  
+				ImGui_ImplVulkan_RemoveTexture(set);											  
 			});
 		m_TextureIDMap.erase(it);
 	}

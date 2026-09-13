@@ -1,7 +1,7 @@
 #include "Aurora/Renderer/Shader.h"
 #include "Aurora/Utility/FileIO.h"
 #include "Aurora/AppSettings.h"
-
+#include "Aurora/Core/Core.h"
 
 #include <fstream>
 
@@ -71,19 +71,17 @@ namespace Aurora::VK {
 			layoutInfo.SortBindings();
 	}*/
 
-	/*bool CheckDescriptorHash(VkShaderStageFlagBits stage, uint32_t set, const DescriptorLayoutInfo& layoutInfo)
-	{
-		if (m_LayoutInfoHashes.find(stage) == m_LayoutInfoHashes.end())
-		{
-			AURORA_WARN("VulkanShader::CheckDescriptorHash: Shader: {} - Stage {} not contained in previous shader reflection!", m_DebugName, VulkanUtils::VKShaderStageToString(stage));
-			return false;
-		}
-		auto& sets = m_LayoutInfoHashes.at(stage);
-		if (sets.find(set) == sets.end())
-		{
-			AURORA_WARN("VulkanShader::CheckDescriptorHash: Shader: {}, Stage {} - Set {} not contained in previous shader reflection!", m_DebugName, VulkanUtils::VKShaderStageToString(stage), set);
-			return false;
-		}
-		return sets.at(set) == layoutInfo.hash();
-	}*/
+	//bool CheckDescriptorHash(VkShaderStageFlagBits stage, uint32_t set, const DescriptorLayoutInfo& layoutInfo)
+	//{
+	//	if (AURORA_ENSURE(m_LayoutInfoHashes.find(stage) == m_LayoutInfoHashes.end(), "VulkanShader::CheckDescriptorHash: Shader: {} - Stage {} not contained in previous shader reflection!", m_DebugName, VulkanUtils::VKShaderStageToString(stage)))
+	//		return false;		
+	//	
+	//	auto& sets = m_LayoutInfoHashes.at(stage);
+	//	if (sets.find(set) == sets.end())
+	//	{
+	//		AURORA_WARN("VulkanShader::CheckDescriptorHash: Shader: {}, Stage {} - Set {} not contained in previous shader reflection!", m_DebugName, VulkanUtils::VKShaderStageToString(stage), set);
+	//		return false;
+	//	}
+	//	return sets.at(set) == layoutInfo.hash();
+	//}
 }

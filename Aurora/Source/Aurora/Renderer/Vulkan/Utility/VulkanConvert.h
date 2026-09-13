@@ -19,6 +19,7 @@
 // ============================================================================
 
 #include "Aurora/Core/Logging.h"
+#include "Aurora/Core/Checks.h"
 #include "Aurora/Renderer/Image.h"
 #include "Aurora/Renderer/Buffer.h"
 #include "Aurora/Renderer/Types.h"
@@ -228,7 +229,7 @@ namespace Aurora::VK::Convert {
 			case VK_FORMAT_D24_UNORM_S8_UINT:
 			case VK_FORMAT_D32_SFLOAT_S8_UINT: aspects |= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; break;
 			default:
-				AURORA_WARN("Unhandles VK_FORMAT {} detected. Falling back to VK_IMAGE_ASPECT_COLOR_BIT", FormatToString(format).c_str());
+				AURORA_VALIDATE(false, "Unhandled VK_FORMAT {} detected. Falling back to VK_IMAGE_ASPECT_COLOR_BIT", FormatToString(format).c_str());
 				return VK_IMAGE_ASPECT_COLOR_BIT;
 		}
 		return aspects;

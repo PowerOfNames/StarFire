@@ -12,7 +12,7 @@ namespace StarFire {
 	void RefRegistry::Register(std::string_view typeName, std::atomic<uint64_t>* counter)
 	{
 		std::lock_guard<std::mutex> lock(m_RegistryMutex);
-		SF_CORE_ASSERT(m_Registry.find(typeName) == m_Registry.end(), "RefType already contained!");
+		STARFIRE_ASSERT(m_Registry.find(typeName) == m_Registry.end(), "RefType already contained!");
 		m_Registry[std::string(typeName)] = counter;
 	}
 
@@ -20,7 +20,7 @@ namespace StarFire {
 	void RefRegistry::Unregister(std::string_view typeName)
 	{
 		std::lock_guard<std::mutex> lock(m_RegistryMutex);
-		SF_CORE_ASSERT(m_Registry.find(typeName) != m_Registry.end(), "RefType not contained contained!");
+		STARFIRE_ASSERT(m_Registry.find(typeName) != m_Registry.end(), "RefType not contained contained!");
 		m_Registry.erase(typeName);
 	}
 
@@ -28,10 +28,10 @@ namespace StarFire {
 	void RefRegistry::PrintRegister()
 	{
 		std::lock_guard<std::mutex> lock(m_RegistryMutex);
-		SF_CORE_INFO("Registry Entries: {}", m_Registry.size());
+		STARFIRE_INFO("Registry Entries: {}", m_Registry.size());
 		for (const auto& entry : m_Registry)
 		{
-			SF_CORE_TRACE("Registry Entry '{}': Instances: {}", entry.first, static_cast<uint64_t>(entry.second->load()));
+			STARFIRE_TRACE("Registry Entry '{}': Instances: {}", entry.first, static_cast<uint64_t>(entry.second->load()));
 		}
 	}
 

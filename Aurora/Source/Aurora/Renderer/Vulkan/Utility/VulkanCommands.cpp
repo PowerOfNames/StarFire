@@ -1,5 +1,6 @@
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
 #include "Aurora/Core/Logging.h"
+#include "Aurora/Core/Checks.h"
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanToString.h"
@@ -36,8 +37,8 @@ namespace Aurora::VK::Commands {
 		if (newLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
 			newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)
 		{
+			AURORA_VALIDATE(false, "Invalid target layout. Fallback to general.");
 			newLayout = VK_IMAGE_LAYOUT_GENERAL;
-			AURORA_WARN("Invalid target layout. Fallback to general.");
 		}
 
 		barrier.oldLayout = oldLayout;
@@ -102,7 +103,7 @@ namespace Aurora::VK::Commands {
 			}
 			default:
 			{
-				AURORA_WARN("Unsupported layout transition! Old layout: {0}, new layout: {1}", LayoutToString(oldLayout).c_str(), LayoutToString(newLayout).c_str());
+				AURORA_VALIDATE(false, "Unsupported layout transition! Old layout: {0}, new layout: {1}", LayoutToString(oldLayout).c_str(), LayoutToString(newLayout).c_str());
 				break;
 			}
 		}
@@ -160,7 +161,7 @@ namespace Aurora::VK::Commands {
 			}
 			default:
 			{
-				AURORA_WARN("Unsupported layout transition! Old layout: {0}, new layout: {1}", LayoutToString(oldLayout).c_str(), LayoutToString(newLayout).c_str());
+				AURORA_VALIDATE(false, "Unsupported layout transition! Old layout: {0}, new layout: {1}", LayoutToString(oldLayout).c_str(), LayoutToString(newLayout).c_str());
 				break;
 			}
 		}

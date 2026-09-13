@@ -20,18 +20,32 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 			
-		SF_CORE_TRACE("Application: Starting initialization...");
-
+		STARFIRE_TRACE("Application: Starting initialization...");
 
 		s_Instance = this;
 
-		m_EventQueue = CreateScope<EventQueue>(100);
-		RefRegistry::Init();
+		// ========== Application Setup ==========
+		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
+			{
+				RefRegistry::Get()->Register(typeName, counter);
+			});
+		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
+			{
+				RefRegistry::Get()->Unregister(typeName);
+			});
 
+		auto& appSettings = Aurora::ChangeAppSettings();
+		if (!appSettings.SetRootPath(std::filesystem::current_path()))
+		{
+			STARFIRE_CRITICAL("Failed to set root path.");
+			return;
+		}
+
+		m_EventQueue = CreateScope<EventQueue>(100);
 
 		WindowSpecification windowSpecs{};
 		m_MainWindow = Window::Create(windowSpecs);
-		SF_CORE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
+		STARFIRE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
 		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
 		m_MainWindow->Init();
 
@@ -40,22 +54,14 @@ namespace StarFire {
 			{
 				switch (level)
 				{
-					case Aurora::LogLevel::LOG_LEVEL_TRACE: SF_R_CORE_TRACE(file, func, line, msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_INFO: SF_R_CORE_INFO(file, func, line, msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_DEBUG: SF_R_CORE_DEBUG(file, func, line, msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_WARN: SF_R_CORE_WARN(file, func, line, msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_ERROR: SF_R_CORE_ERROR(file, func, line, msg); break;
-					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: SF_R_CORE_CRITICAL(file, func, line, msg); break;
-					default: SF_CORE_WARN("Unknown Aurora::LogLevel!"); break;
+					case Aurora::LogLevel::LOG_LEVEL_TRACE: RENDERER_TRACE_HOOK(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_INFO: RENDERER_INFO_HOOK(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_DEBUG: RENDERER_DEBUG_HOOK(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_WARN: RENDERER_WARN_HOOK(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_ERROR: RENDERER_ERROR_HOOK(file, func, line, msg); break;
+					case Aurora::LogLevel::LOG_LEVEL_CRITICAL: RENDERER_CRITICAL_HOOK(file, func, line, msg); break;
+					default: STARFIRE_VALIDATE(false, "Unknown Aurora::LogLevel!"); break;
 				}
-			});
-		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
-			{
-				RefRegistry::Get()->Register(typeName, counter);
-			});
-		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
-			{
-				RefRegistry::Get()->Unregister(typeName);
 			});
 		
 		Aurora::InitializationSpecification initSpecs{};
@@ -72,12 +78,12 @@ namespace StarFire {
 		initSpecs.SurfaceSpecs.FramebufferWidth = m_MainWindow->GetFramebufferWidth();
 		initSpecs.SurfaceSpecs.FramebufferHeight = m_MainWindow->GetFramebufferHeight();
 		initSpecs.SurfaceSpecs.ClearColor = { 0.5f, 0.0f, 0.0f, 1.0f };
-		Aurora::Initialize(initSpecs);
+		if (!Aurora::Initialize(initSpecs))
+		{
+			STARFIRE_CRITICAL("Failed to initialize Aurora.");
+			return;
+		}
 		
-		// ========== Register Resources ==========
-		auto& appSettings = Aurora::ChangeAppSettings();
-		appSettings.SetRootPath(std::filesystem::current_path());
-
 		if (m_Specification.UseImGui)
 		{
 			m_ImGuiLayer = new ImGuiLayer();
@@ -89,8 +95,8 @@ namespace StarFire {
 
 		RefRegistry::Get()->PrintRegister();
 
-
-		SF_CORE_TRACE("Application: Finished initialization.");
+		m_Ready = true;
+		STARFIRE_TRACE("Application: Finished initialization.");
 	}
 	Application::~Application()
 	{
@@ -98,16 +104,19 @@ namespace StarFire {
 
 		m_LayerStack.Clear();
 		Aurora::Shutdown();
-		m_MainWindow->Close();
+		if (m_MainWindow)
+			m_MainWindow->Close();
+		m_MainWindow = nullptr;
 
 		RefRegistry::Get()->PrintRegister();
+		m_Ready = false;
 	}
 
 	void Application::PushOverlay(Layer* overlay)
 	{
 		PROFILE_FUNCTION;
 
-		SF_CORE_INFO("Pushing {}", overlay->GetDebugName());
+		STARFIRE_INFO("Pushing {}", overlay->GetDebugName());
 
 		m_LayerStack.PushOverlay(overlay);
 	}
@@ -116,7 +125,7 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
-		SF_CORE_INFO("Pushing {}", layer->GetDebugName());
+		STARFIRE_INFO("Pushing {}", layer->GetDebugName());
 
 		m_LayerStack.PushLayer(layer);
 	}
@@ -125,16 +134,20 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
-		SF_CORE_INFO("Closing...");
+		STARFIRE_INFO("Closing...");
 		m_Running = false;
 	}
 
 	void Application::Run()
 	{
 		PROFILE_FUNCTION;
+		
+		if (STARFIRE_REQUIRE_FAILS(m_Ready, "Application is not ready to run!"))
+			return;
+
 		PROFILE_THREAD_NAME("Main Thread", 0);
 
-		SF_CORE_TRACE("Starting main loop...");
+		STARFIRE_TRACE("Starting main loop...");
 		//std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
 		Utils::Timer timer;
 		while (m_Running)
@@ -145,7 +158,7 @@ namespace StarFire {
 			HandleUserInput();
 
 			if (m_Minimized)
-				SF_CORE_INFO("Application minimized");
+				STARFIRE_INFO("Application minimized");
 
 
 			if (!Aurora::BeginFrame())
@@ -172,15 +185,18 @@ namespace StarFire {
 
 			PROFILE_FRAME_MARK;
 		}
-		SF_CORE_WARN("Leaving main loop!");
 
 		//appThread.join();
-		SF_CORE_TRACE("Ending main loop...");	
+		STARFIRE_TRACE("Ending main loop...");	
 	}
 
 	void Application::AppLoop()
 	{
 		PROFILE_FUNCTION;
+
+		if (STARFIRE_REQUIRE_FAILS(m_Ready, "Application is not ready to run!"))
+			return;
+
 		PROFILE_THREAD_NAME("Render Thread", 1);
 
 		Utils::Timer timer;
@@ -191,7 +207,7 @@ namespace StarFire {
 			m_DeltaTimeInS = timer.Timestamp();
 			HandleUserInput();
 			if (m_Minimized)
-				SF_CORE_INFO("Application minimized");
+				STARFIRE_INFO("Application minimized");
 			
 
 			if(!Aurora::BeginFrame())
@@ -218,7 +234,7 @@ namespace StarFire {
 
 			PROFILE_FRAME_MARK;
 		}
-		SF_CORE_WARN("Leaving main loop!");
+		STARFIRE_INFO("Leaving main loop!");
 	}
 
 	void Application::HandleUserInput()
@@ -256,7 +272,7 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 
-		SF_CORE_DEBUG("Closing window...");
+		STARFIRE_DEBUG("Closing window...");
 		Close();
 		return true;
 	}
@@ -274,7 +290,7 @@ namespace StarFire {
 		}
 		m_Minimized = false;
 		
-		SF_CORE_DEBUG("Window resize to [{}|{}]", newWidth, newHeight);
+		STARFIRE_DEBUG("Window resize to [{}|{}]", newWidth, newHeight);
 
 		return false;
 	}
@@ -289,7 +305,7 @@ namespace StarFire {
 		{
 			return false;
 		}
-		SF_CORE_DEBUG("Framebuffer resize to to [{}|{}]", newWidth, newHeight);
+		STARFIRE_DEBUG("Framebuffer resize to to [{}|{}]", newWidth, newHeight);
 		Aurora::Resize(newWidth, newHeight);
 
 		return false;

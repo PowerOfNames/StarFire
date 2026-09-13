@@ -49,6 +49,9 @@ namespace StarFire {
 		bool OnWindowResize(WindowResizeEvent& e);
 		bool OnFramebufferResize(FramebufferResizeEvent& e);
 
+	protected:
+		bool m_Ready = false;
+
 	private:
 		ApplicationSpecification m_Specification;
 		static Application* s_Instance;

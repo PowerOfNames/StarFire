@@ -9,17 +9,12 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 		AURORA_INFO("Initializing VulkanRenderer...");
 
-		if (!CreateBindlessDescriptorSet())
-		{
-			AURORA_ERROR("Failed to create bindless descriptor set. VulkanContext could not be initialized.");
+		if (AURORA_REQUIRE_FAILS(CreateBindlessDescriptorSet(), "Failed to create bindless descriptor set. VulkanContext could not be initialized."))		
 			return false;
-		}
-
-		if (!CreateBindlessGraphicsPipeline())
-		{
-			AURORA_ERROR("Failed to create bindless graphics pipeline. VulkanContext could not be initialized.");
+		
+		if (AURORA_REQUIRE_FAILS(CreateBindlessGraphicsPipeline(), "Failed to create bindless graphics pipeline. VulkanContext could not be initialized."))		
 			return false;
-		}
+		
 
 		return true;
 	}

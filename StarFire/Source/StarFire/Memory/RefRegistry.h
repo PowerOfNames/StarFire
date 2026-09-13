@@ -1,5 +1,4 @@
 #pragma once
-#include "StarFire/Core/Assert.h"
 #include "StarFire/Core/Core.h"
 
 #include "StarFire/Core/StringKeyMap.h"
@@ -10,7 +9,6 @@
 
 namespace StarFire {
 
-	class Application;
 	class RefRegistry
 	{
 	public:
@@ -23,8 +21,8 @@ namespace StarFire {
 				
 		inline static RefRegistry* Get()
 		{
-			SF_CORE_ASSERT(s_Instance != nullptr, "Registry was not created yet! Application needs to call Init first!");
-			return s_Instance.get(); 
+			static RefRegistry instance;
+			return &instance;
 		}
 
 		void Register(std::string_view typeName, std::atomic<uint64_t>* counter);
@@ -33,20 +31,9 @@ namespace StarFire {
 		void PrintRegister();
 
 	private:
-		RefRegistry() = default;		
-		inline static void Init()
-		{
-			if (s_Instance == nullptr)
-			{
-				s_Instance = Scope<RefRegistry>(new RefRegistry);
-			}
-		}
+		RefRegistry() = default;
 
-	private:
-		friend class StarFire::Application;
-
-		inline static Scope<RefRegistry> s_Instance = nullptr;
-		
+	private:		
 		Containers::StringKeyMap<std::atomic<uint64_t>*> m_Registry;
 		std::mutex m_RegistryMutex;
 	};

@@ -28,7 +28,7 @@ namespace Aurora::VK {
 		VulkanContext(const InitializationSpecification& specs);
 		~VulkanContext() = default;
 
-		void Init();
+		bool Init();
 		bool BeginFrame();
 		void Render();
 		void EndFrame();

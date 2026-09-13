@@ -18,46 +18,29 @@ namespace Aurora::VK {
 		return CreateRef<VulkanSwapchain>(spec);
 	}
 
-	void VulkanSwapchain::Init()
+	bool VulkanSwapchain::Init()
 	{
 		PROFILE_FUNCTION;
 
-		if (!CreateSwapchain(m_Specification.InitialExtent.Width, m_Specification.InitialExtent.Height))
-		{
-			AURORA_TRACE("Failed to create swapchain.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateSwapchain(m_Specification.InitialExtent.Width, m_Specification.InitialExtent.Height), "Failed to create swapchain."))		
+			return false;
 
-		if (!CreateImageViews())
-		{
-			AURORA_TRACE("Failed to create swapchain image view.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateImageViews(), "Failed to create swapchain image view."))		
+			return false;		
 
-		if (!CreateImageSemaphores())
-		{
-			AURORA_TRACE("Failed to create swapchain image semaphores");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateImageSemaphores(), "Failed to create swapchain image semaphores"))		
+			return false;		
 
-		if (!CreateRenderPass())
-		{
-			AURORA_TRACE("Failed to create swapchain render pass handle.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateRenderPass(), "Failed to create swapchain render pass handle."))
+			return false;		
 
-		if (!CreateFramebuffers())
-		{
-			AURORA_TRACE("Failed to create swapchain framebuffers");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateFramebuffers(), "Failed to create swapchain framebuffers"))
+			return false;
 
-		if (!CreateFallbackPipeline())
-		{
-			AURORA_TRACE("Failed to create fallabck pipeline");
-			//we technically do not need this EO, but will do anyways for development purposes
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateFallbackPipeline(), "Failed to create fallback pipeline"))
+			return false;
+
+		return true;
 	}
 
 	void VulkanSwapchain::CleanupSwapchain()
@@ -145,9 +128,10 @@ namespace Aurora::VK {
 			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
 			return false;
 		}
-		else
+		else if (result != VK_SUCCESS)
 		{
-			AURORA_ASSERT(result == VK_SUCCESS, "Failed to acquire swap chain image!");
+			AURORA_ASSERT(false, "Failed to acquire swap chain image!");
+			return false;
 		}
 		vkResetFences(m_Specification.Device, 1, &frame.InFlightFence);
 		
@@ -241,8 +225,11 @@ namespace Aurora::VK {
 			AURORA_ERROR("Swapchain not usable. Presentation failed and resize required!");
 			return false;
 		}
-		else
-			AURORA_ASSERT(result == VK_SUCCESS, "Failed to present swap chain image!");		
+		else if (result != VK_SUCCESS)
+		{
+			AURORA_ASSERT(false, "Failed to present swap chain image!");
+			return false;
+		}
 
 		return true;
 	}
@@ -261,23 +248,15 @@ namespace Aurora::VK {
 		AURORA_TRACE("Resizing swapchain to [{}|{}] (Forced: {})", width, height, force);
 		CleanupSwapchain();
 
-		if (!CreateSwapchain(width, height))
-		{
-			AURORA_TRACE("Failed to create(resize) swapchain.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateSwapchain(width, height), "Failed to create(resize) swapchain."))		
+			return;		
 
-		if (!CreateImageViews())
-		{
-			AURORA_TRACE("Failed to create(resize) swapchain image view.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(CreateImageViews(), "Failed to create(resize) swapchain image view."))
+			return;		
 
-		if (!CreateFramebuffers())
-		{
-			AURORA_TRACE("Failed to create(resize) swapchain framebuffers");
+		if (AURORA_REQUIRE_FAILS(CreateFramebuffers(), "Failed to create(resize) swapchain framebuffers"))
 			return;
-		}
+		
 		AURORA_INFO("Resized swapchain to [{}|{}] (Forced: {})", width, height, force);
 
 		m_NeedsResize = false;
