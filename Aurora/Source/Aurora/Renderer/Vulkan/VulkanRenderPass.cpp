@@ -115,11 +115,9 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 		
 		ImageHandle handle = CreateImage(attachmentSpecs);
-		if (handle == ImageHandle::INVALID_HANDLE)
-		{
-			AURORA_ERROR("Failed to create image for render pass attachment {}!", attachmentSpecs.Name);
+		if (AURORA_REQUIRE_FAILS(GetResourceManager()->IsHandleValid(handle), "Failed to create image for render pass attachment {}!", attachmentSpecs.Name))		
 			return ImageHandle::INVALID_HANDLE;
-		}
+		
 		return handle;
 	}
 
@@ -128,9 +126,8 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		auto it = m_ColorAttachmentIndices.find(std::string(attachmentName));
-		if (it == m_ColorAttachmentIndices.end())
+		if (AURORA_REQUIRE_FAILS(it != m_ColorAttachmentIndices.end(), "Attachment '{}' not found in render pass '{}'", attachmentName, m_Specification.Name))
 		{
-			AURORA_ERROR("Attachment '{}' not found in render pass '{}'", attachmentName, m_Specification.Name);
 			static RenderPassAttachment emptyAttachment;
 			return emptyAttachment;
 		}
@@ -141,9 +138,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (!m_HasDepthAttachment)
+		if (AURORA_REQUIRE_FAILS(m_HasDepthAttachment, "Render pass '{}' does not have a depth attachment", m_Specification.Name))
 		{
-			AURORA_ERROR("Render pass '{}' does not have a depth attachment", m_Specification.Name);
 			static RenderPassAttachment emptyAttachment;
 			return emptyAttachment;
 		}

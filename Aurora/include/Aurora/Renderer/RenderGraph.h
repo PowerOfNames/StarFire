@@ -47,7 +47,7 @@ namespace Aurora {
 		// a resize is pending), or removed. Check IsHandleValid before use.
 		virtual ImageHandle GetCopyTarget(std::string_view copyRequestName) = 0;
 
-		virtual void Compile() = 0;
+		virtual bool Compile() = 0;
 
 		// This will take in the scene data in a data driven way (either already culled, or the render graph will do the culling itself)
 		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle) = 0;

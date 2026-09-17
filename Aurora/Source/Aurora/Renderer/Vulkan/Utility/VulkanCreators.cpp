@@ -1,5 +1,6 @@
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCreators.h"
 #include "Aurora/Core/Logging.h"
+#include "Aurora/Core/Checks.h"
 
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
@@ -11,17 +12,11 @@ namespace Aurora::VK::Creators {
 	{
 		PROFILE_FUNCTION;
 
-		if (data.Width == 0 || data.Height == 0)
-		{
-			AURORA_WARN("Unable to create an image with extent ({}; {})", data.Width, data.Height);
+		if (AURORA_REQUIRE_FAILS(data.Width > 0 && data.Height > 0, "Unable to create an image with extent ({}; {})", data.Width, data.Height))
 			return false;
-		}
 
-		if (data.MipLevels == 0)
-		{
-			AURORA_WARN("Unable to create an image with 0 mip levels");
+		if (AURORA_REQUIRE_FAILS(data.MipLevels > 0, "Unable to create an image with 0 mip levels"))
 			return false;
-		}
 
 		VkImageCreateInfo imageCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 		imageCreateInfo.pNext = nullptr;
@@ -79,11 +74,8 @@ namespace Aurora::VK::Creators {
 		PROFILE_FUNCTION;
 
 
-		if (data.Size == 0)
-		{
-			AURORA_WARN("Unable to create a buffer with size 0");
+		if (AURORA_REQUIRE_FAILS(data.Size > 0, "Unable to create a buffer with size 0"))
 			return false;
-		}
 
 		VkBufferCreateInfo bufferCreateInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		bufferCreateInfo.pNext = nullptr;

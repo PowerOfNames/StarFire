@@ -4,24 +4,49 @@
 
 #include <vulkan/vulkan.h>
 
-#if defined(AURORA_DEBUG_MODE)
-#define AURORA_VK_VALIDATION_ENABLED 1
-#define AURORA_VK_DEBUG_NAME_ENABLED 1
-#else
-#define AURORA_VK_VALIDATION 0
-#define AURORA_VK_DEBUG_NAME_ENABLED 0
+#ifndef AURORA_VK_VALIDATION_ENABLED
+#	if defined(AURORA_DEBUG_MODE)
+#		define AURORA_VK_VALIDATION_ENABLED 1
+#	else
+#		define AURORA_VK_VALIDATION_ENABLED 0
+#	endif
 #endif
 
-#if defined(AURORA_VK_DEBUG_NAME_ENABLED)
-#define AURORA_VK_ATTACH_DEBUG_NAME(Device, ObjectType, Handle, DebugName) Aurora::VK::Debug::SetVkObjDebugName(Device, ObjectType, Handle, DebugName)
-#else
-#define AURORA_VK_ATTACH_DEBUG_NAME(Device, ObjectType, Handle, DebugName) do{}while(0)
+#ifndef AURORA_VK_DEBUG_NAME_ENABLED
+#	if defined(AURORA_DEBUG_MODE)
+#		define AURORA_VK_DEBUG_NAME_ENABLED 1
+#	else
+#		define AURORA_VK_DEBUG_NAME_ENABLED 0
+#	endif	
 #endif
 
-#if defined(AURORA_ASSERT_ENABLED) && AURORA_VK_VALIDATION_ENABLED
-#define AURORA_VK_CHECK(x, y, ...) { if(!Aurora::VK::Debug::CheckVkResult(x, y)) { AURORA_ERROR("Unexpected VkResult. Message: {}",  __VA_ARGS__); __debugbreak(); } }
+#if AURORA_VK_DEBUG_NAME_ENABLED == 1
+#	define AURORA_VK_ATTACH_DEBUG_NAME(Device, ObjectType, Handle, DebugName) do{ Aurora::VK::Debug::SetVkObjDebugName(Device, ObjectType, Handle, DebugName); }while(false)
 #else
-#define AURORA_VK_CHECK(x, y, ...) x;  //we need to pass the function without log message when not in debug mode!
+#	define AURORA_VK_ATTACH_DEBUG_NAME(Device, ObjectType, Handle, DebugName) do{}while(false)
+#endif
+
+#if AURORA_CHECK_LEVEL >= 3
+#	define AURORA_VK_CHECK_BREAK() SUBSTRATE_DEBUG_BREAK()
+#else
+#	define AURORA_VK_CHECK_BREAK() do{}while(false)
+#endif
+
+#if AURORA_CHECK_LEVEL >= 1
+#	define AURORA_VK_CHECK(x, y, ...)											\
+	do {																		\
+		if(!Aurora::VK::Debug::CheckVkResult(x, y)) {							\
+			AURORA_ERROR( __VA_ARGS__);											\
+			AURORA_VK_CHECK_BREAK();											\
+		}																		\
+	} while(false)
+#else
+#	define AURORA_VK_CHECK(x, y, ...)											\
+	do {																		\
+		(void)(x);																\
+		(void)sizeof(y);														\
+		(void)sizeof(Substrate::CheckHelpers::Unused(__VA_ARGS__));				\
+	} while(false)
 #endif
 
 namespace Aurora::VK::Debug {

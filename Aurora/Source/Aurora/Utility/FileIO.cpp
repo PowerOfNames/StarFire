@@ -10,27 +10,18 @@ namespace Aurora::Utils::IO {
 		std::string result;
 		// input file stream, binary, cause we don't want to change something here. just load it
 		std::ifstream in(path, std::ios::in | std::ios::binary);
-		if (in)
+		if (AURORA_REQUIRE(in, "Could not open file {}", path.string()))
 		{
 			in.seekg(0, std::ios::end);
 			size_t size = in.tellg();
-			if (size != -1)
+			if (AURORA_REQUIRE(size != -1, "Could not read from file {}", path.string()))
 			{
 				result.resize(size);
 				in.seekg(0, std::ios::beg);
 				in.read(&result[0], size);
-			}
-			else
-			{
-				AURORA_ERROR("Could not read from file {}", path.string());
-				in.close();
 			}							
 		}
-		else
-		{
-			AURORA_ERROR("Could not open file '{}' !", path.string());
-			in.close();
-		}
+		in.close();
 		return result;
 	}
 

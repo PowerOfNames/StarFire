@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "StarFire/Core/Logging.h"
+#include "StarFire/Core/Checks.h"
 #include "StarFire/Profiling/Profiling.h"
 #include "Substrate/RefCounted.h"
 #include "Substrate/RefPtr.h"

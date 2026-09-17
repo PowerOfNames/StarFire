@@ -16,16 +16,16 @@ int main(int argc, char** argv)
 
 	auto app = StarFire::CreateApplication(argc, argv);
 
-	SF_CORE_TRACE("App creation took {}ms", timer.TimestampMilli());
+	STARFIRE_TRACE("App creation took {}ms", timer.TimestampMilli());
 
 	app->Run();
 
-	SF_CORE_TRACE("Application ran {}s", timer.Timestamp());
+	STARFIRE_TRACE("Application ran {}s", timer.Timestamp());
 
 	delete app;
 
-	SF_CORE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
-	SF_CORE_TRACE("Closing application after {}s", timer.ElapsedTime());
+	STARFIRE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
+	STARFIRE_TRACE("Closing application after {}s", timer.ElapsedTime());
 	StarFire::Log::Shutdown();
 }
 #endif

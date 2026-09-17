@@ -1,5 +1,5 @@
 #include "sfpch.h"
-#include "StarFire/Core/Assert.h"
+#include "StarFire/Core/Core.h"
 #include "StarFire/Events/ApplicationEvent.h"
 #include "StarFire/Events/EventQueue.h"
 #include "StarFire/Events/MouseEvent.h"
@@ -63,7 +63,7 @@ namespace StarFire {
 
 	void EventQueue::Push(Scope<Event> e)
 	{
-		SF_CORE_ASSERT(m_Initialized, "EventQueue needs to be initialized first!");
+		STARFIRE_ASSERT(m_Initialized, "EventQueue needs to be initialized first!");
 		
 		if (e->IsCoalescent())
 			HandleCoalescent(std::move(e));
@@ -106,7 +106,7 @@ namespace StarFire {
 
 	bool EventQueue::Pop(Scope<Event>& e)
 	{
-		SF_CORE_ASSERT(m_Initialized, "EventQueue needs to be initialized first!");
+		STARFIRE_ASSERT(m_Initialized, "EventQueue needs to be initialized first!");
 		return m_Impl->m_Queue.try_dequeue(e);
 	}
 
@@ -161,7 +161,7 @@ namespace StarFire {
 		}
 		default:
 		{
-			SF_CORE_WARN("Unknown event type. Event could not be coalesced!");
+			STARFIRE_VALIDATE(false, "Unknown event type. Event could not be coalesced!");
 			return;
 		}
 		}

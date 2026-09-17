@@ -34,7 +34,7 @@ namespace StarFire {
 		s_RendererLogger->set_pattern("%^[%T%e] [%n] [%s:%#] %!\t %v%$");
 		s_RendererLogger->set_level(level);
 
-		SF_CORE_INFO("Initialized spdlog (Version {}.{}.{})", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
+		STARFIRE_INFO("Initialized spdlog (Version {}.{}.{})", SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH);
 	}
 
 	void Log::Shutdown()

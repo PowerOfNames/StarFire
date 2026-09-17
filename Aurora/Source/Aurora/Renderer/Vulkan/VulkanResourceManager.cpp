@@ -12,11 +12,15 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (!m_VulkanContext)
-		{
-			AURORA_ERROR("VulkanContext cannot be nullptr");
-			return;
-		}
+		AURORA_ASSERT(vulkanContext != nullptr, "VulkanContext cannot be nullptr");
+	}
+
+	VulkanResourceManager::~VulkanResourceManager()
+	{
+		PROFILE_FUNCTION;
+
+		if (!m_ResourceManagerDestroyed)
+			Destroy();		
 	}
 
 	void VulkanResourceManager::Destroy()
@@ -34,29 +38,25 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-
-		if (handle == BufferHandle::INVALID_HANDLE || !data || size == 0)
-		{
-			AURORA_ERROR("Invalid parameters for UploadBufferData. BufferData pointer: {}, Data pointer: {}, Size: {}.", (uint64_t)handle, (void*)data, size);
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot upload buffer data."))
 			return;
-		}
+
+		AURORA_VALIDATE(IsHandleValid(handle), "Invalid buffer handle for UploadBufferData.");
+		AURORA_VALIDATE(data != nullptr, "Data pointer cannot be nullptr for UploadBufferData.");
+		AURORA_VALIDATE(size > 0, "Size cannot be 0 for UploadBufferData.");
 
 		BufferHandle stagingHandle = m_BufferAllocator.Allocate();
-		if (stagingHandle == BufferHandle::INVALID_HANDLE)
-		{
-			AURORA_ERROR("Failed to allocate staging buffer handle. Maximum number of buffers reached.");
-			return;
-		}
+		if (AURORA_REQUIRE_FAILS(IsHandleValid(stagingHandle), "Failed to allocate staging buffer handle. Maximum number of buffers reached."))
+			return;		
 
 		BufferSpecification stagingSpecs{};
 		stagingSpecs.Size = size;
 		stagingSpecs.Usage = BufferUsageFlags::TRANSFER_SRC;
 		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
 		*stagingData = Convert::MakeBufferData(stagingSpecs);
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU);
-		if (!success)
+		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
+								 "Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle)))
 		{
-			AURORA_ERROR("Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle));
 			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
@@ -64,9 +64,8 @@ namespace Aurora::VK {
 
 		void* mappedData = nullptr;
 		vmaMapMemory(m_VulkanContext->GetVmaAllocator(), stagingData->Allocation, &mappedData);
-		if (!mappedData)
+		if (AURORA_REQUIRE_FAILS(mappedData, "Failed to map memory for buffer upload."))
 		{
-			AURORA_ERROR("Failed to map memory for buffer upload.");
 			vmaDestroyBuffer(m_VulkanContext->GetVmaAllocator(), stagingData->Buffer, stagingData->Allocation);
 			m_BufferAllocator.Free(stagingHandle);
 			return;
@@ -83,23 +82,14 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateImage: Resource manager has been destroyed. Cannot create image.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot create image."))
 			return ImageHandle::INVALID_HANDLE;
-		}
 
-		if (imageSpecs.Width == 0 || imageSpecs.Height == 0)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateImage: Image width and height cannot be 0. Returning invalid handle.");
+		if (AURORA_REQUIRE_FAILS(imageSpecs.Width > 0 && imageSpecs.Height > 0, "Image width and height cannot be 0."))
 			return ImageHandle::INVALID_HANDLE;
-		}
 
-		if (imageSpecs.MipLevels == 0)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateImage: MipLevels cannot be 0. Freeing handle and returning invalid handle.");
+		if (AURORA_REQUIRE_FAILS(imageSpecs.MipLevels > 0, "Image MipLevels cannot be 0."))
 			return ImageHandle::INVALID_HANDLE;
-		}
 
 		ImageHandle handle = m_ImageAllocator.Allocate();
 		if (handle == ImageHandle::INVALID_HANDLE)
@@ -141,11 +131,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::DestroyImage: Resource manager has been destroyed. Cannot destroy image.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot destroy image."))
 			return;
-		}
 
 		VulkanImageData* data = m_ImageAllocator.GetPointerFromHandle(handle);
 		if (!data)
@@ -172,11 +159,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::IsHandleValid: Resource manager has been destroyed. Cannot check handle validity.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot check handle validity."))
 			return false;
-		}
 
 		return m_ImageAllocator.IsHandleValid(handle);
 	}
@@ -185,11 +169,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::GetImageData: Resource manager has been destroyed. Cannot get image data.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot get image data."))
 			return nullptr;
-		}
 
 		return m_ImageAllocator.GetPointerFromHandle(handle);
 	}
@@ -199,17 +180,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateBuffer: Resource manager has been destroyed. Cannot create buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot create buffer."))
 			return BufferHandle::INVALID_HANDLE;
-		}
 
-		if (bufferSpecs.Size == 0)
-		{
-			AURORA_ERROR("Buffer size cannot be 0.");
+		if (AURORA_REQUIRE_FAILS(bufferSpecs.Size > 0, "Buffer size cannot be 0."))
 			return BufferHandle::INVALID_HANDLE;
-		}
 
 		BufferHandle handle = m_BufferAllocator.Allocate();
 		if (handle == BufferHandle::INVALID_HANDLE)
@@ -237,11 +212,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::DestroyBuffer: Resource manager has been destroyed. Cannot destroy buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot destroy buffer."))
 			return;
-		}
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		if (!data)
@@ -266,11 +238,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::IsHandleValid: Resource manager has been destroyed. Cannot check handle validity.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot check handle validity."))
 			return false;
-		}
 
 		return m_BufferAllocator.IsHandleValid(handle);
 	}
@@ -279,11 +248,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::GetBufferData: Resource manager has been destroyed. Cannot get buffer data.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot get buffer data."))
 			return nullptr;
-		}
+
+		if (AURORA_REQUIRE_FAILS(IsHandleValid(handle), "Invalid buffer handle."))
+			return nullptr;
 
 		return m_BufferAllocator.GetPointerFromHandle(handle);
 	}
@@ -293,17 +262,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateVertexBuffer: Resource manager has been destroyed. Cannot create vertex buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot create vertex buffer."))
 			return VertexBufferHandle::INVALID_HANDLE;
-		}
 
-		if (bufferSpecs.Size == 0)
-		{
-			AURORA_ERROR("Buffer size cannot be 0.");
-			return BufferHandle::INVALID_HANDLE;
-		}
+		if (AURORA_REQUIRE_FAILS(bufferSpecs.Size > 0, "Buffer size cannot be 0."))
+			return VertexBufferHandle::INVALID_HANDLE;
 
 		VertexBufferHandle handle = m_BufferAllocator.Allocate();
 		if (handle == VertexBufferHandle::INVALID_HANDLE)
@@ -339,11 +302,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::DestroyVertexBuffer: Resource manager has been destroyed. Cannot destroy vertex buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot destroy vertex buffer."))
 			return;
-		}
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		if (!data)
@@ -360,17 +320,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::IsHandleValid: Resource manager has been destroyed. Cannot check handle validity.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot check handle validity."))
 			return false;
-		}
-
-		if (handle == VertexBufferHandle::INVALID_HANDLE)
-		{
-			AURORA_ERROR("Invalid vertex buffer handle.");
-			return false;
-		}
 
 		return m_BufferAllocator.IsHandleValid(handle);
 	}
@@ -379,17 +330,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::GetBufferData: Resource manager has been destroyed. Cannot get buffer data.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot get buffer data."))
 			return nullptr;
-		}
 
-		if (handle == VertexBufferHandle::INVALID_HANDLE)
-		{
-			AURORA_ERROR("Invalid vertex buffer handle.");
+		if (AURORA_REQUIRE_FAILS(IsHandleValid(handle), "Invalid vertex buffer handle."))
 			return nullptr;
-		}
 
 		return m_BufferAllocator.GetPointerFromHandle(handle);
 	}
@@ -399,17 +344,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::CreateIndexBuffer: Resource manager has been destroyed. Cannot create index buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot create index buffer."))
 			return IndexBufferHandle::INVALID_HANDLE;
-		}
 
-		if (bufferSpecs.Size == 0)
-		{
-			AURORA_ERROR("Buffer size cannot be 0.");
+		if (AURORA_REQUIRE_FAILS(bufferSpecs.Size > 0, "Buffer size cannot be 0."))
 			return IndexBufferHandle::INVALID_HANDLE;
-		}
 
 		IndexBufferHandle handle = m_BufferAllocator.Allocate();
 		if (handle == IndexBufferHandle::INVALID_HANDLE)
@@ -437,11 +376,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::DestroyIndexBuffer: Resource manager has been destroyed. Cannot destroy index buffer.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot destroy index buffer."))
 			return;
-		}
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		if (!data)
@@ -458,17 +394,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::IsHandleValid: Resource manager has been destroyed. Cannot check handle validity.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot check handle validity."))
 			return false;
-		}
-
-		if (handle == IndexBufferHandle::INVALID_HANDLE)
-		{
-			AURORA_ERROR("Invalid index buffer handle.");
-			return false;
-		}
 
 		return m_BufferAllocator.IsHandleValid(handle);
 	}
@@ -477,11 +404,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_ResourceManagerDestroyed)
-		{
-			AURORA_ERROR("VulkanResourceManager::GetBufferData: Resource manager has been destroyed. Cannot get buffer data.");
+		if (AURORA_REQUIRE_FAILS(!m_ResourceManagerDestroyed, "Resource manager has been destroyed. Cannot get buffer data."))
 			return nullptr;
-		}
+
+		if (AURORA_REQUIRE_FAILS(IsHandleValid(handle), "Invalid index buffer handle."))
+			return nullptr;
 
 		return m_BufferAllocator.GetPointerFromHandle(handle);
 	}

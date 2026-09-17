@@ -23,23 +23,14 @@ namespace Aurora::VK {
 
 		Ref<VulkanResourceManager> res = GetResourceManager();
 		VulkanBufferData* srcData = res->GetBufferData(src);
-		if (!srcData)
-		{
-			AURORA_ERROR("Invalid src buffer handle!");
+		if (AURORA_REQUIRE_FAILS(srcData != nullptr, "Invalid src buffer handle!"))
 			return *this;
-		}
 		VulkanBufferData* dstData = res->GetBufferData(dst);
-		if (!dstData)
-		{
-			AURORA_ERROR("Invalid dst buffer handle");
+		if (AURORA_REQUIRE_FAILS(dstData != nullptr, "Invalid dst buffer handle"))
 			return *this;
-		}
 
-		if (dstData->Size < srcData->Size)
-		{
-			AURORA_ERROR("Dst data too small for src");
+		if (AURORA_REQUIRE_FAILS(dstData->Size >= srcData->Size, "Dst data too small for src"))
 			return *this;
-		}
 
 		VulkanBufferCopyOp op;
 		op.Type = SubmissionOpType::COPY_BUFFER;

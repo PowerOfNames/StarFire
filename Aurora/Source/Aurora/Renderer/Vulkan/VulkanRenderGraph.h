@@ -56,7 +56,7 @@ namespace Aurora::VK {
 		virtual void RemoveAttachmentCopy(std::string_view copyRequestName) override;
 		virtual ImageHandle GetCopyTarget(std::string_view copyRequestName) override;
 
-		virtual void Compile() override;
+		virtual bool Compile() override;
 
 		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle) override;
 

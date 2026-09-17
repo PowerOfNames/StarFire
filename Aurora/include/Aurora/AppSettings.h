@@ -25,21 +25,8 @@ namespace Aurora {
 		/// using the assets path as root (e.g. path/to/assets/shaders/ | path/to/assets/textures/
 		/// </summary>
 		/// <param name="assetPath">Path to the assets directory.</param>
-		/// <returns>True if path is valid, false otherwise</returns>
-		void SetRootPath(const std::filesystem::path& path);
-		/// <summary>
-		/// Sets the path to the asset directory of the application.
-		/// If path exists, also looks for Shader, Textures, etc subdirectories.
-		/// using the assets path as root (e.g. path/to/assets/shaders/ | path/to/assets/textures/
-		/// </summary>
-		/// <param name="assetPath">Path to the assets directory.</param>
-		/// <returns>True if path is valid, false otherwise</returns>
-		void SetAssetPath(const std::filesystem::path& path);
-
-		void SetShaderPath(const std::filesystem::path& path);
-		void SetTexturePath(const std::filesystem::path& path);
-
-		void SetCacheOrCreateCacheDirectoryPath(const std::filesystem::path& path);
+		/// <returns>True if successful, false otherwise</returns>
+		bool SetRootPath(const std::filesystem::path& path);
 
 	private:
 		AppSettings() = default;
@@ -49,8 +36,9 @@ namespace Aurora {
 		std::filesystem::path m_ShaderDir = "";
 		std::filesystem::path m_TextureDir = "";
 				
-		std::filesystem::path m_CacheDir = "";
+		std::filesystem::path m_CacheRootDir = "";
 		std::filesystem::path m_ShaderCacheDir = "";
+		std::filesystem::path m_TextureCacheDir = "";
 		
 	};
 }

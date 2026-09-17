@@ -18,7 +18,7 @@ namespace Aurora::VK {
 	{
 	public:
 		VulkanResourceManager(const Ref<VulkanContext>& vulkanContext);
-		~VulkanResourceManager() = default;
+		~VulkanResourceManager();
 
 		void Destroy();
 

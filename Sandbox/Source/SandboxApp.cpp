@@ -16,13 +16,13 @@ namespace Sandbox {
 		{
 			PROFILE_FUNCTION;
 
-			PushLayer(new SandboxLayer());
+			if(m_Ready)
+				PushLayer(new SandboxLayer());
 		}
 
 		~SandboxApp()
 		{
 			PROFILE_FUNCTION;
-
 		}
 	};
 }
