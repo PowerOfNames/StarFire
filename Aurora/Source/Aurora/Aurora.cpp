@@ -62,6 +62,11 @@ namespace Aurora {
 	}
 
 	// ========== Context ==========
+	uint64_t GetTotalFrameCount()
+	{
+		return g_RenderContext->GetTotalFrameCount();
+	}
+
 	bool BeginFrame()
 	{
 		PROFILE_FUNCTION;

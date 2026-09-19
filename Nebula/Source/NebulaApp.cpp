@@ -13,7 +13,10 @@ namespace Nebula {
 			: Application(specs)
 		{
 			PROFILE_FUNCTION;
+		}
 
+		void OnInit() override
+		{
 			PushLayer(new EditorLayer());
 		}
 
@@ -30,6 +33,9 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 	StarFire::ApplicationSpecification specs;
 	specs.Name = "Nebula";
+
+
+
 
 	return new Nebula::NebulaApp(specs);
 }

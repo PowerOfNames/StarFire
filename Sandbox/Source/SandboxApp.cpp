@@ -4,27 +4,41 @@
 
 #include <StarFire.h>
 #include <StarFire/Core/EntryPoint.h>
-
+#include <string_view>
+#include <stdexcept>
 
 namespace Sandbox {
+
+
+	struct SandboxOptions
+	{
+		bool ThrowsInOnInit = false;
+	};
 
 	class SandboxApp : public StarFire::Application
 	{
 	public:
-		SandboxApp(const StarFire::ApplicationSpecification& specs)
-			: Application(specs)
+		SandboxApp(const StarFire::ApplicationSpecification& specs, const SandboxOptions& options)
+			: Application(specs), m_Options(options)
 		{
 			PROFILE_FUNCTION;
+		}
 
-			if(m_Ready)
-				PushLayer(new SandboxLayer());
+		void OnInit() override
+		{
+			if (m_Options.ThrowsInOnInit)
+				throw std::runtime_error("Intentional test throw ");
+			PushLayer(new SandboxLayer());
 		}
 
 		~SandboxApp()
 		{
 			PROFILE_FUNCTION;
 		}
+	private:
+		SandboxOptions m_Options{};
 	};
+
 }
 
 StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
@@ -35,7 +49,46 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 	specs.Name = "StarFire - Sandbox";
 	specs.UseImGui = true;
 
-	return new Sandbox::SandboxApp(specs);
+	Sandbox::SandboxOptions options{};
+	for (int i = 1; i < argc; i++)
+	{
+		std::string_view token = std::string_view(argv[i]);
+		if (token == "--root" && i + 1 < argc)
+		{
+			//Set when FolderRestructure is in
+			//specs.RootPath = argv[++i];
+			//TEMP
+			++i;
+		}
+		else if (token == "--width" && i+1 < argc)
+		{
+			if (auto width = StarFire::ApplicationArgumentParser::Parse<uint32_t>(argv[++i]))
+				specs.WindowSpecs.Width = *width;			
+		}
+		else if (token == "--height" && i+1 < argc)
+		{
+			if (auto height = StarFire::ApplicationArgumentParser::Parse<uint32_t>(argv[++i]))
+				specs.WindowSpecs.Height = *height;
+		}
+		else if (token == "--fullscreen")
+		{
+			specs.WindowSpecs.Fullscreen = true;
+		}
+		else if (token == "--frames" && i + 1 < argc)
+		{
+			if (auto maxFrames = StarFire::ApplicationArgumentParser::Parse<uint32_t>(argv[++i]))
+				specs.MaxFrames = *maxFrames;
+		}
+		else if (token == "--throw-in-oninit")
+		{
+			options.ThrowsInOnInit = true;
+		}
+		else
+			APP_WARN("Unknown token {} argument found", token);
+		
+	}
+
+	return new Sandbox::SandboxApp(specs, options);
 }
 
 	

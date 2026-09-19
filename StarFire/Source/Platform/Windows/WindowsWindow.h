@@ -11,7 +11,7 @@ namespace StarFire {
 		public:
 			WindowsWindow(const WindowSpecification& specs);
 
-			virtual void Init() override;
+			virtual bool Init() override;
 			virtual void Close() override;
 
 			virtual void OnUpdate() override;
