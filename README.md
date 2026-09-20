@@ -43,3 +43,12 @@ Disclaimer: The branches in GLFW were a test. There is no difference between the
 3. Start a StarFire application in (config:Profiling)
 
 
+### Additional Information
+####About using Claude
+Claude is being used to increase my productivity.
+I do this by letting Claude maintain a (non-public) Obsidian vault next to my project that currently contains coarser Documentation, a DevLog/History and a Bug/Gap and open task tracker.
+It is mainly being used for house-keeping of this vault, which helps me extremely staying focused, not ending up in rabbit holes.
+Clause is also used for Debugging, writing near to all Unit-Tests in SubstrateTests, some test scripts and it is allowed to produce boilerplate code, for example the parsers in Aurora, which convert between Vulkan and Aurora internal types.
+All other code is 99% handwritten, as of now. This wont change as long as most of the concepts that get implemented are new to me, which means I want to learn them as thoroughly as I can. Minus heavy debugging sessions, which you can still learn a lot from, but just take too much time for someone working full time in parallel.
+It also creates commits and PRs, which get reviewed by me.
+
