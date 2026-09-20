@@ -1,7 +1,7 @@
 #pragma once
 
 #include "StarFire/Core/Timestep.h"
-#include <spdlog/fmt/fmt.h> 
+#include <spdlog/fmt/fmt.h>
 
 
 namespace fmt {
@@ -14,5 +14,4 @@ namespace fmt {
 			return fmt::format_to(ctx.out(), "{}s", my.InSec());
 		}
 	};
-
 }

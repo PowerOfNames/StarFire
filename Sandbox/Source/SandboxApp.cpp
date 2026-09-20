@@ -53,12 +53,9 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 	for (int i = 1; i < argc; i++)
 	{
 		std::string_view token = std::string_view(argv[i]);
-		if (token == "--root" && i + 1 < argc)
+		if (token == "--project" && i + 1 < argc)
 		{
-			//Set when FolderRestructure is in
-			//specs.RootPath = argv[++i];
-			//TEMP
-			++i;
+			specs.ProjectPath = argv[++i];
 		}
 		else if (token == "--width" && i+1 < argc)
 		{
@@ -85,7 +82,7 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 		}
 		else
 			APP_WARN("Unknown token {} argument found", token);
-		
+
 	}
 
 	return new Sandbox::SandboxApp(specs, options);

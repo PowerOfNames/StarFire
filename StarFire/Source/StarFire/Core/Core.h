@@ -10,7 +10,9 @@
 
 #ifdef _WIN32
 #ifdef _WIN64
-#define SF_PLATFORM_WINDOWS
+#ifndef STARFIRE_PLATFORM_WINDOWS
+#define STARFIRE_PLATFORM_WINDOWS
+#endif
 #else 
 #error "x86 builds are not supported!"
 #endif
@@ -24,10 +26,10 @@
 #if TARGET_IPHONE_SIMULATOR == 1
 #error "IOS simulator not supported!"
 #elif TARGET_OS_PHONE == 1
-#define SF_PLATFORM_IOS
+#define STARFIRE_PLATFORM_IOS
 #error "IOS is not supported!"
 #elif TARGET_OS_MAC
-#define SF_PLATFORM_MACOS
+#define STARFIRE_PLATFORM_MACOS
 #error "MACOS is not supported!"
 #else
 #error "Unknown apple platform!"
@@ -36,10 +38,10 @@
   * since android is based on the linux kernel,
   * it has __linux__ defined*/
 #elif defined(__ANDROID__)
-#define SF_PLATFORM_ANDROID
+#define STARFIRE_PLATFORM_ANDROID
 #error "Android is not supported!"
 #elif defined (__linux__)
-#define SF_PLATFORM_LINUX
+#define STARFIRE_PLATFORM_LINUX
 #error "Linux is not supported!"
 #else
 // unknown compiler/platform
@@ -48,9 +50,9 @@
 
 
 // DLL support
-#ifdef SF_PLATFORM_WINDOWS
-#if SF_DYNAMIC_LINK
-#ifdef SF_BUILD_DLL
+#ifdef STARFIRE_PLATFORM_WINDOWS
+#if STARFIRE_DYNAMIC_LINK
+#ifdef STARFIRE_BUILD_DLL
 #define STARFIRE_API __declspec(dllexport)
 #else
 #define STARFIRE_API __declspec(dllimport)
@@ -62,4 +64,4 @@
 #error "StarFire only supports windows!"
 #endif
 
-#define SF_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) {return this->fn(std::forward<decltype(args)>(args)...); }
+#define STARFIRE_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) {return this->fn(std::forward<decltype(args)>(args)...); }
