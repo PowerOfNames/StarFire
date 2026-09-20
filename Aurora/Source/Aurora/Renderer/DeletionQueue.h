@@ -75,9 +75,12 @@ namespace Aurora::VK {
 			uint64_t computeValue = 0;
 			uint64_t transferValue = 0;
 
-			AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, graphicsSemaphore, &graphicsValue), VK_SUCCESS, "Failed to get graphics semaphore counter value!");
-			AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, computeSemaphore, &computeValue), VK_SUCCESS, "Failed to get compute semaphore counter value!");
-			AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, transferSemaphore, &transferValue), VK_SUCCESS, "Failed to get transfer semaphore counter value!");
+			if(graphicsSemaphore != VK_NULL_HANDLE)
+				AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, graphicsSemaphore, &graphicsValue), VK_SUCCESS, "Failed to get graphics semaphore counter value!");
+			if(computeSemaphore!= VK_NULL_HANDLE)
+				AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, computeSemaphore, &computeValue), VK_SUCCESS, "Failed to get compute semaphore counter value!");
+			if(transferSemaphore!= VK_NULL_HANDLE)
+				AURORA_VK_CHECK(vkGetSemaphoreCounterValue(device, transferSemaphore, &transferValue), VK_SUCCESS, "Failed to get transfer semaphore counter value!");
 
 			for (auto it = DeletionEntries.rbegin(); it != DeletionEntries.rend(); ++it)
 			{

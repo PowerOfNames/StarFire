@@ -29,6 +29,8 @@ namespace Aurora {
 	bool Initialize(const InitializationSpecification& contextSpecs);
 	bool Shutdown();
 
+	uint64_t GetTotalFrameCount();
+
 	bool BeginFrame();
 	void EndFrame();
 	void SwapFrame();

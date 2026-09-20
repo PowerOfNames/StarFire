@@ -12,21 +12,41 @@ extern StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 int main(int argc, char** argv)
 {
 	StarFire::Log::Init();
+	int exitCode = EXIT_FAILURE;
 	StarFire::Utils::Timer timer;
 
-	auto app = StarFire::CreateApplication(argc, argv);
+	{
+		Scope<StarFire::Application> app;
+		try
+		{
+			app.reset(StarFire::CreateApplication(argc, argv));
 
-	STARFIRE_TRACE("App creation took {}ms", timer.TimestampMilli());
+			if (app->Init())
+			{
+				STARFIRE_TRACE("App creation took {}ms", timer.TimestampMilli());
+				app->Run();
+				exitCode = EXIT_SUCCESS;
+				STARFIRE_TRACE("Application ran {}s", timer.Timestamp());
+			}
+			else
+				STARFIRE_CRITICAL("Failed to initialize application");
 
-	app->Run();
-
-	STARFIRE_TRACE("Application ran {}s", timer.Timestamp());
-
-	delete app;
-
-	STARFIRE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
-	STARFIRE_TRACE("Closing application after {}s", timer.ElapsedTime());
+		}
+		catch (const std::exception& e)
+		{
+			STARFIRE_CRITICAL("Unhandled exception: {}", e.what());
+			exitCode = EXIT_FAILURE;
+		}
+		catch (...)
+		{
+			STARFIRE_CRITICAL("Unknown exception.");
+			exitCode = EXIT_FAILURE;
+		}
+		STARFIRE_TRACE("Application shutdown took {}ms", timer.TimestampMilli());
+		STARFIRE_TRACE("Closing application after {}s", timer.ElapsedTime());
+	}
 	StarFire::Log::Shutdown();
+	return exitCode;
 }
 #endif
 

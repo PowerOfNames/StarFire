@@ -20,20 +20,23 @@ namespace StarFire{
 			: m_Specification(specs)
 		{
 			PROFILE_FUNCTION;
-
 		}
 
 		void WindowsWindow::Close()
 		{
 			PROFILE_FUNCTION;
-
-			glfwDestroyWindow(m_Window);
-			--s_GLFWwindowCount;
-			if(s_GLFWwindowCount <= 0)
-				glfwTerminate();
+			
+			//We dont need to track if glfwInit succeeded, because only if that was the case we could create a window
+			if (m_Window)
+			{
+				glfwDestroyWindow(m_Window);
+				--s_GLFWwindowCount;
+			}
+			if (s_GLFWwindowCount == 0)			
+				glfwTerminate();			
 		}
 
-		void WindowsWindow::Init()
+		bool WindowsWindow::Init()
 		{
 			PROFILE_FUNCTION;
 
@@ -48,7 +51,8 @@ namespace StarFire{
 			if (s_GLFWwindowCount == 0)
 			{
 				int success = glfwInit();
-				STARFIRE_ASSERT(success != 0, "Failed to initialize GLFW!");
+				if (STARFIRE_REQUIRE_FAILS(success != 0, "Failed to initialize GLFW!"))
+					return false;			
 				int major, minor, revision;
 				glfwGetVersion(&major, &minor, &revision);
 				STARFIRE_INFO("Initialized GLFW, compiled against version {}.{}.{}, running against version {}.{}.{}", 
@@ -66,7 +70,8 @@ namespace StarFire{
 				m_Specification.Title.c_str(), 
 				m_Specification.Fullscreen ? glfwGetPrimaryMonitor() : NULL, 
 				NULL);
-			STARFIRE_ASSERT(m_Window != nullptr, "Failed to create GLFW Window");
+			if (STARFIRE_REQUIRE_FAILS(m_Window != nullptr, "Failed to create GLFW Window"))
+				return false;			
 			s_GLFWwindowCount++;
 			STARFIRE_TRACE("Created window number {}", s_GLFWwindowCount);
 			
@@ -191,6 +196,8 @@ namespace StarFire{
 			//TODO: Joystick
 			//TODO: Clipboard IO
 			//TODO: File/directory dropping
+
+			return true;
 		}
 
 		void WindowsWindow::OnUpdate()

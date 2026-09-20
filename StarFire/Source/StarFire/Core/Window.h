@@ -48,7 +48,7 @@ namespace StarFire {
 		using EventCallbackFN = std::function<void(Scope<Event>)>;
 		virtual ~Window() = default;
 
-		virtual void Init() = 0;
+		virtual bool Init() = 0;
 		virtual void Close() = 0;		
 
 		virtual void OnUpdate() = 0;

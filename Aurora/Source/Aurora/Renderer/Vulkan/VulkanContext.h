@@ -68,6 +68,8 @@ namespace Aurora::VK {
 		inline const uint32_t GetCurrentFrameInFlightIndex(){ return m_RendererStatistics.FramesInFlightIdx; }
 		inline const uint8_t GetFramesInFlightCount() const { return static_cast<uint8_t>(m_FramesInFlight.size()); }
 
+		inline const uint64_t GetTotalFrameCount() const { return m_RendererStatistics.TotalFinishedFrames; }
+
 		TimelineSemaphore GetQueueSemaphoreSnapshot(QueueOwner owner);
 		uint32_t GetQueueFamilyIndexFromOwner(QueueOwner owner) const;
 		VkQueue GetQueueFromOwner(QueueOwner owner) const;
@@ -192,7 +194,7 @@ namespace Aurora::VK {
 		struct RendererStatistics
 		{
 			uint64_t TotalAttemptedFrames = 0;
-			uint64_t m_TotalFinishedFrames = 0;
+			uint64_t TotalFinishedFrames = 0;
 			uint8_t FramesInFlightIdx = 0;
 		};
 		RendererStatistics m_RendererStatistics{};

@@ -13,7 +13,18 @@ namespace StarFire {
 	struct ApplicationSpecification
 	{
 		std::string Name;
+		std::string RootPath; //empty -> executable dir
+		uint64_t MaxFrames = UINT64_MAX;
 		bool UseImGui = false;
+
+		struct ApplicationWindowSpecification
+		{			
+			uint32_t Width = 1600;
+			uint32_t Height = 900;
+			bool Fullscreen = false;
+		}WindowSpecs;
+
+		//Debugging
 	};
 
 	class ImGuiLayer;
@@ -24,6 +35,7 @@ namespace StarFire {
 		Application(const ApplicationSpecification& specs);
 		virtual ~Application();
 
+		bool Init();
 		void Run();
 
 		void OnEvent(Scope<Event> e);
@@ -41,16 +53,15 @@ namespace StarFire {
 
 		inline Window* GetMainWindowPtr() const { return m_MainWindow.get(); }
 
+	protected:
+		virtual void OnInit() = 0;
+
 	private:
-		void AppLoop();
 		void HandleUserInput();
 
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent& e);
 		bool OnFramebufferResize(FramebufferResizeEvent& e);
-
-	protected:
-		bool m_Ready = false;
 
 	private:
 		ApplicationSpecification m_Specification;

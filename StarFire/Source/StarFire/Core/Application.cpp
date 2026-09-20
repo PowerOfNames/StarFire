@@ -22,8 +22,23 @@ namespace StarFire {
 			
 		STARFIRE_TRACE("Application: Starting initialization...");
 
-		s_Instance = this;
+		s_Instance = this;		
+	}
+	Application::~Application()
+	{
+		PROFILE_FUNCTION;
 
+		m_LayerStack.Clear();
+		Aurora::Shutdown();
+		if (m_MainWindow)
+			m_MainWindow->Close();
+		m_MainWindow = nullptr;
+
+		RefRegistry::Get()->PrintRegister();
+	}
+
+	bool Application::Init()
+	{
 		// ========== Application Setup ==========
 		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
 			{
@@ -38,16 +53,27 @@ namespace StarFire {
 		if (!appSettings.SetRootPath(std::filesystem::current_path()))
 		{
 			STARFIRE_CRITICAL("Failed to set root path.");
-			return;
+			return false;
 		}
 
 		m_EventQueue = CreateScope<EventQueue>(100);
 
 		WindowSpecification windowSpecs{};
+		windowSpecs.Width = m_Specification.WindowSpecs.Width;
+		windowSpecs.Height = m_Specification.WindowSpecs.Height;
+		windowSpecs.Fullscreen = m_Specification.WindowSpecs.Fullscreen;
 		m_MainWindow = Window::Create(windowSpecs);
-		STARFIRE_ASSERT(m_MainWindow != nullptr, "Unknown platform!");
+		if (m_MainWindow == nullptr)
+		{
+			STARFIRE_CRITICAL("Failed to create window!");
+			return false;
+		}
 		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
-		m_MainWindow->Init();
+		if (!m_MainWindow->Init())
+		{
+			STARFIRE_CRITICAL("Failed to initialize window!");
+			return false;
+		}
 
 
 		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg, const char* file, const char* func, int line)
@@ -63,7 +89,7 @@ namespace StarFire {
 					default: STARFIRE_VALIDATE(false, "Unknown Aurora::LogLevel!"); break;
 				}
 			});
-		
+
 		Aurora::InitializationSpecification initSpecs{};
 		initSpecs.AppName = m_Specification.Name;
 		initSpecs.AppVersion = { 1, 0, 0 };
@@ -81,9 +107,9 @@ namespace StarFire {
 		if (!Aurora::Initialize(initSpecs))
 		{
 			STARFIRE_CRITICAL("Failed to initialize Aurora.");
-			return;
+			return false;
 		}
-		
+
 		if (m_Specification.UseImGui)
 		{
 			m_ImGuiLayer = new ImGuiLayer();
@@ -95,21 +121,9 @@ namespace StarFire {
 
 		RefRegistry::Get()->PrintRegister();
 
-		m_Ready = true;
 		STARFIRE_TRACE("Application: Finished initialization.");
-	}
-	Application::~Application()
-	{
-		PROFILE_FUNCTION;
-
-		m_LayerStack.Clear();
-		Aurora::Shutdown();
-		if (m_MainWindow)
-			m_MainWindow->Close();
-		m_MainWindow = nullptr;
-
-		RefRegistry::Get()->PrintRegister();
-		m_Ready = false;
+		OnInit();
+		return true;
 	}
 
 	void Application::PushOverlay(Layer* overlay)
@@ -142,9 +156,6 @@ namespace StarFire {
 	{
 		PROFILE_FUNCTION;
 		
-		if (STARFIRE_REQUIRE_FAILS(m_Ready, "Application is not ready to run!"))
-			return;
-
 		PROFILE_THREAD_NAME("Main Thread", 0);
 
 		STARFIRE_TRACE("Starting main loop...");
@@ -152,6 +163,9 @@ namespace StarFire {
 		Utils::Timer timer;
 		while (m_Running)
 		{
+			if (Aurora::GetTotalFrameCount() > m_Specification.MaxFrames)
+				Close();
+
 			PROFILE_SCOPE("Frame loop");
 			m_MainWindow->PollEvents();
 			m_DeltaTimeInS = timer.Timestamp();
@@ -188,53 +202,6 @@ namespace StarFire {
 
 		//appThread.join();
 		STARFIRE_TRACE("Ending main loop...");	
-	}
-
-	void Application::AppLoop()
-	{
-		PROFILE_FUNCTION;
-
-		if (STARFIRE_REQUIRE_FAILS(m_Ready, "Application is not ready to run!"))
-			return;
-
-		PROFILE_THREAD_NAME("Render Thread", 1);
-
-		Utils::Timer timer;
-		while (m_Running)
-		{
-			PROFILE_SCOPE("Frame loop");
-
-			m_DeltaTimeInS = timer.Timestamp();
-			HandleUserInput();
-			if (m_Minimized)
-				STARFIRE_INFO("Application minimized");
-			
-
-			if(!Aurora::BeginFrame())
-				continue;
-
-			for (Layer* layer : m_LayerStack)
-			{
-				layer->OnUpdate(Timestep(m_DeltaTimeInS));
-			}
-
-			if(m_ImGuiLayer)
-				m_ImGuiLayer->BeginFrame();
-			
-			for (Layer* layer : m_LayerStack)
-			{
-				layer->OnGuiRender();
-			}
-
-			if (m_ImGuiLayer)			
-				m_ImGuiLayer->EndFrame();
-
-			Aurora::EndFrame();
-			Aurora::SwapFrame();
-
-			PROFILE_FRAME_MARK;
-		}
-		STARFIRE_INFO("Leaving main loop!");
 	}
 
 	void Application::HandleUserInput()

@@ -38,20 +38,16 @@ namespace Aurora::VK {
 			m_Specification.AppVersion,
 			m_Specification.AuroraVersion,
 			m_Specification.SurfaceSpecs.WSI), "Failed to create instance. VulkanContext could not be initialized."))
-			return false;
-		
+			return false;	
 
-
-			if (AURORA_REQUIRE_FAILS(CreateSurface(m_Specification.SurfaceSpecs),
+		if (AURORA_REQUIRE_FAILS(CreateSurface(m_Specification.SurfaceSpecs),
 									 "Failed to create surface. VulkanContext could not be instanziated."))
-			return false;
-		
+			return false;		
 
 		DeviceRequirements deviceReqs{};
 		if (AURORA_REQUIRE_FAILS(PickPhysicalDevice(deviceReqs),
 								 "Failed to pick a physical device. VulkanContext could not be instantiated."))
-			return false;
-		
+			return false;		
 
 		if (AURORA_REQUIRE_FAILS(CreateLogicalDevice(deviceReqs),
 								 "Failed to create logical device. VulkanContext could not be instantiated."))
@@ -86,10 +82,12 @@ namespace Aurora::VK {
 		m_Renderer = CreateRef<VulkanRenderer>();
 		if (AURORA_REQUIRE_FAILS(m_Renderer != nullptr, "Failed to create renderer. VulkanContext could not be initialized."))
 			return false;
+
 		
 		if (AURORA_REQUIRE_FAILS(m_Renderer->Init(),
 								 "Failed to initialize renderer. VulkanContext could not be initialized."))
-			return false;		
+			return false;	
+
 
 		//This initializes FIF, such that the very first rendered frame still is index 0;
 		m_RendererStatistics.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
@@ -103,9 +101,11 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
+		if (m_Device != VK_NULL_HANDLE)
+			AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
 
-		m_Renderer->Destroy();
+		if(m_Renderer)
+			m_Renderer->Destroy();
 		for (uint8_t fif = 0; fif < static_cast<uint8_t>(m_FramesInFlight.size()); fif++)
 		{
 			StampFrameDeletionQueueWaitValues(fif);
@@ -190,7 +190,7 @@ namespace Aurora::VK {
 		StampFrameDeletionQueueWaitValues(m_RendererStatistics.FramesInFlightIdx);
 
 		if (present)
-			m_RendererStatistics.m_TotalFinishedFrames++;
+			m_RendererStatistics.TotalFinishedFrames++;
 	}
 
 	void VulkanContext::Resize(uint32_t width, uint32_t height)

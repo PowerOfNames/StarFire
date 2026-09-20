@@ -2,6 +2,7 @@
 
 // ===== Core =====
 #include "StarFire/Core/Application.h"
+#include "StarFire/Core/ApplicationArgumentParser.h"
 #include "StarFire/Core/Core.h"
 #include "StarFire/Core/Layer.h"
 #include "StarFire/Core/Logging.h"
