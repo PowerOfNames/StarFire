@@ -51,7 +51,7 @@ namespace StarFire {
 		}
 
 		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<FramebufferResizeEvent>(SF_BIND_EVENT_FN(ImGuiLayer::OnFramebufferResize));
+		dispatcher.Dispatch<FramebufferResizeEvent>(STARFIRE_BIND_EVENT_FN(ImGuiLayer::OnFramebufferResize));
 	}
 
 	bool ImGuiLayer::OnFramebufferResize(FramebufferResizeEvent& e)

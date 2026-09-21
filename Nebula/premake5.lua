@@ -6,6 +6,7 @@ project "Nebula"
 
 	targetdir("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
+	debugdir("%{wks.location}".."/%{prj.name}")
 	
 	files
 	{
@@ -34,6 +35,10 @@ project "Nebula"
 		"Aurora",
 	}
 	
+	debugargs 
+	{
+		"--project", "%{wks.location}".."%{prj.name}",
+	}
 	
 	filter "system:windows"
 		systemversion "latest"

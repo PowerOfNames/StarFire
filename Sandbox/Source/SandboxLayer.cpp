@@ -233,7 +233,7 @@ namespace Sandbox {
 		PROFILE_FUNCTION;
 
 		StarFire::EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<StarFire::FramebufferResizeEvent>(SF_BIND_EVENT_FN(SandboxLayer::OnFramebufferResize));
+		dispatcher.Dispatch<StarFire::FramebufferResizeEvent>(STARFIRE_BIND_EVENT_FN(SandboxLayer::OnFramebufferResize));
 	}
 
 	bool SandboxLayer::OnFramebufferResize(StarFire::FramebufferResizeEvent& e)

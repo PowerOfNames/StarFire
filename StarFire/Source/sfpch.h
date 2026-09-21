@@ -19,10 +19,8 @@
 #include <set>
 #include <unordered_set>
 
-#include "StarFire/Core/Logging.h"
-#include "Starfire/Profiling/Profiling.h"
-
-#ifdef SF_PLATFORM_WINDOWS
+#include "StarFire/Core/Core.h"
+#ifdef STARFIRE_PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>

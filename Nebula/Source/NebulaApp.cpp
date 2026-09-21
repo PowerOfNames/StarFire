@@ -33,9 +33,14 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 	StarFire::ApplicationSpecification specs;
 	specs.Name = "Nebula";
-
-
-
+	for (int i = 1; i < argc; i++)
+	{
+		std::string_view token = std::string_view(argv[i]);
+		if (token == "--project" && i + 1 < argc)
+		{
+			specs.ProjectPath = argv[++i];
+		}
+	}
 
 	return new Nebula::NebulaApp(specs);
 }

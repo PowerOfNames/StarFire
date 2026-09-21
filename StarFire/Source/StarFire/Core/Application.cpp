@@ -2,6 +2,7 @@
 #include "StarFire/Profiling/Profiling.h"
 
 #include "StarFire/Core/Application.h"
+#include "StarFire/Core/FileSystem.h"
 #include "StarFire/Core/Timestep.h"
 #include "StarFire/Memory/RefRegistry.h"
 #include "StarFire/Utility/Timer.h"
@@ -39,26 +40,19 @@ namespace StarFire {
 
 	bool Application::Init()
 	{
-		// ========== Application Setup ==========
-		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
-			{
-				RefRegistry::Get()->Register(typeName, counter);
-			});
-		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
-			{
-				RefRegistry::Get()->Unregister(typeName);
-			});
-
-		auto& appSettings = Aurora::ChangeAppSettings();
-		if (!appSettings.SetRootPath(std::filesystem::current_path()))
+		// ========== Application Setup ==========		
+		if (!FileSystem::Instance()->SetProjectDir(std::filesystem::path(m_Specification.ProjectPath)))
 		{
-			STARFIRE_CRITICAL("Failed to set root path.");
+			STARFIRE_CRITICAL("Failed to set project path.");
 			return false;
 		}
+		
+		STARFIRE_INFO("Filesystem initialized for Project \"{}\"", FileSystem::Instance()->GetProjectName());
 
 		m_EventQueue = CreateScope<EventQueue>(100);
 
 		WindowSpecification windowSpecs{};
+		windowSpecs.Title = FileSystem::Instance()->GetProjectName();
 		windowSpecs.Width = m_Specification.WindowSpecs.Width;
 		windowSpecs.Height = m_Specification.WindowSpecs.Height;
 		windowSpecs.Fullscreen = m_Specification.WindowSpecs.Fullscreen;
@@ -68,12 +62,22 @@ namespace StarFire {
 			STARFIRE_CRITICAL("Failed to create window!");
 			return false;
 		}
-		m_MainWindow->SetEventCallback(SF_BIND_EVENT_FN(Application::OnEvent));
+		m_MainWindow->SetEventCallback(STARFIRE_BIND_EVENT_FN(Application::OnEvent));
 		if (!m_MainWindow->Init())
 		{
 			STARFIRE_CRITICAL("Failed to initialize window!");
 			return false;
 		}
+
+		// ========== Renderer Setup ==========
+		Aurora::SetRefRegistryRegisterCallback([](const std::string& typeName, std::atomic<uint64_t>* counter)
+			{
+				RefRegistry::Get()->Register(typeName, counter);
+			});
+		Aurora::SetRefRegistryUnregisterCallback([](const std::string& typeName)
+			{
+				RefRegistry::Get()->Unregister(typeName);
+			});
 
 
 		Aurora::SetLoggingCallback([](Aurora::LogLevel level, const std::string& msg, const char* file, const char* func, int line)
@@ -89,6 +93,19 @@ namespace StarFire {
 					default: STARFIRE_VALIDATE(false, "Unknown Aurora::LogLevel!"); break;
 				}
 			});
+		
+		auto& appSettings = Aurora::ChangeAppSettings();
+		if (!appSettings.SetCacheRootDir(FileSystem::Instance()->GetCacheRootDir()))
+		{
+			STARFIRE_CRITICAL("Failed to set cache root dir for Aurora.");
+			return false;
+		}
+
+		if (!appSettings.SetShaderCacheDir(FileSystem::Instance()->GetShaderCacheDir()))
+		{
+			STARFIRE_CRITICAL("Failed to set shader cache dir for Aurora.");
+			return false;
+		}
 
 		Aurora::InitializationSpecification initSpecs{};
 		initSpecs.AppName = m_Specification.Name;
@@ -110,6 +127,7 @@ namespace StarFire {
 			return false;
 		}
 
+		// ========== ImGui setup ==========
 		if (m_Specification.UseImGui)
 		{
 			m_ImGuiLayer = new ImGuiLayer();
@@ -159,7 +177,6 @@ namespace StarFire {
 		PROFILE_THREAD_NAME("Main Thread", 0);
 
 		STARFIRE_TRACE("Starting main loop...");
-		//std::thread appThread(SF_BIND_EVENT_FN(Application::AppLoop));
 		Utils::Timer timer;
 		while (m_Running)
 		{
@@ -215,9 +232,9 @@ namespace StarFire {
 			PROFILE_SCOPE("Handle Event");
 
 			EventDispatcher dispatcher(*(e.get()));
-			dispatcher.Dispatch<WindowCloseEvent>(SF_BIND_EVENT_FN(Application::OnWindowClose));
-			dispatcher.Dispatch<WindowResizeEvent>(SF_BIND_EVENT_FN(Application::OnWindowResize));
-			dispatcher.Dispatch<FramebufferResizeEvent>(SF_BIND_EVENT_FN(Application::OnFramebufferResize));
+			dispatcher.Dispatch<WindowCloseEvent>(STARFIRE_BIND_EVENT_FN(Application::OnWindowClose));
+			dispatcher.Dispatch<WindowResizeEvent>(STARFIRE_BIND_EVENT_FN(Application::OnWindowResize));
+			dispatcher.Dispatch<FramebufferResizeEvent>(STARFIRE_BIND_EVENT_FN(Application::OnFramebufferResize));
 
 			for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 			{

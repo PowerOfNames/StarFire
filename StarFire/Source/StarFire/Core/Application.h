@@ -7,13 +7,14 @@
 
 #include <string>
 #include <atomic>
+#include <filesystem>
 
 namespace StarFire {
 
 	struct ApplicationSpecification
 	{
 		std::string Name;
-		std::string RootPath; //empty -> executable dir
+		std::filesystem::path ProjectPath;
 		uint64_t MaxFrames = UINT64_MAX;
 		bool UseImGui = false;
 
