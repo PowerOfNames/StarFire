@@ -135,7 +135,6 @@ namespace Aurora {
 			MemUsage = MemoryUsage::GPU_ONLY;
 		}
 
-		uint32_t IndexCount = 0;
-		FieldType IndexType = FieldType::U16;
+		IndexType Type = IndexType::UINT16;
 	};
 }

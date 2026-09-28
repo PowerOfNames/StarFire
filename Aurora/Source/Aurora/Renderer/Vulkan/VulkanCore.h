@@ -156,8 +156,6 @@ namespace Aurora::VK {
 		BufferHandle SrcHandle;
 		BufferHandle DstHandle;
 
-		QueueOwner SrcCurrentOwner;
-		QueueOwner DstCurrentOwner;
 		QueueOwner DstNextOwner;
 
 		bool DestroySrc;

@@ -71,6 +71,13 @@ namespace Aurora {
 		TRANSFORM = MAT4,
 	};
 
+	enum class IndexType
+	{
+		UINT8,
+		UINT16,
+		UINT32
+	};
+
 	enum class ImageTiling
 	{
 		OPTIMAL = 0,

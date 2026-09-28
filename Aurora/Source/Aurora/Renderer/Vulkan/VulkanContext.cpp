@@ -143,9 +143,7 @@ namespace Aurora::VK {
 		
 		//Cleanup frame -> this should definitely be done now.
 		FlushFrameDeletionQueue(m_RendererStatistics.FramesInFlightIdx);
-
-		PollPendingResourceUploads();
-		FlushDeferredSubmissionOps();
+			
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		cmdInfo.pNext = nullptr;
@@ -187,6 +185,9 @@ namespace Aurora::VK {
 
 		bool present = m_Swapchain->SwapImages(GetCurrentFrameData(), m_GraphicsSubmitSemaphore);
 		
+		PollPendingResourceUploads();
+		FlushDeferredSubmissionOps();
+
 		StampFrameDeletionQueueWaitValues(m_RendererStatistics.FramesInFlightIdx);
 
 		if (present)
@@ -858,19 +859,38 @@ namespace Aurora::VK {
 	void VulkanContext::HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op)
 	{
 		PROFILE_FUNCTION;
-				
+
 
 		//TODO: decide which queue should handle this
 		QueueOwner copyQueue = QueueOwner::TRANSFER;
 		uint32_t copyQueueIndex = GetQueueFamilyIndexFromOwner(copyQueue);
 
-		QueueOwner srcLastOwner = op.SrcCurrentOwner;
-		QueueOwner srcCurrentOwner = op.SrcCurrentOwner;
+		QueueOwner srcLastOwner = QueueOwner::UNKNOWN;
+		QueueOwner srcCurrentOwner = QueueOwner::UNKNOWN;
 		QueueOwner srcNextOwner = QueueOwner::UNKNOWN;
 
 		QueueOwner dstLastOwner = QueueOwner::UNKNOWN;
-		QueueOwner dstCurrentOwner = op.DstCurrentOwner;
+		QueueOwner dstCurrentOwner = QueueOwner::UNKNOWN;
 		QueueOwner dstNextOwner = op.DstNextOwner;
+
+		Ref<VulkanResourceManager> res = GetResourceManager();
+		VulkanBufferData* srcData = res->GetBufferData(op.SrcHandle);
+		if (AURORA_REQUIRE_FAILS(srcData, "Invalid srcBuffer"))
+			return;				
+		
+		srcLastOwner = srcData->LastOwner;
+		srcCurrentOwner = srcData->CurrentOwner;		
+
+		VulkanBufferData* dstData = res->GetBufferData(op.DstHandle);
+		if (AURORA_REQUIRE_FAILS(dstData, "Invalid dstBuffer."))
+		{
+			if (op.DestroySrc)			
+				res->DestroyBuffer(op.SrcHandle);			
+			return;		
+		}
+		dstLastOwner = dstData->LastOwner;
+		dstCurrentOwner = dstData->CurrentOwner;
+		
 
 		std::vector<TimelineSemaphore> additionalWaits;
 		//We need to realase them on their current queue if they are currently in an owned state (current != unknown) and if current differs from copyQueue
@@ -943,7 +963,7 @@ namespace Aurora::VK {
 				barrier.srcQueueFamilyIndex = srcQIndex;
 				barrier.dstQueueFamilyIndex = dstQIndex;
 
-				barrier.srcStageMask = Convert::GetStageFromBufferUsage(lastUsage);
+				barrier.srcStageMask = Convert::GetStageFromBufferUsage(lastUsage, queue);
 				barrier.srcAccessMask = Convert::GetAccessFromBufferUsage(lastUsage);
 				barrier.dstStageMask = Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST);
 				barrier.dstAccessMask = 0; // always
@@ -1110,26 +1130,18 @@ namespace Aurora::VK {
 			}, submitSpecs);
 		}
 
-		Ref<VulkanResourceManager> res = GetResourceManager();
-		VulkanBufferData* dstData = res->GetBufferData(op.DstHandle);
-		if (dstData)
-		{
-			dstData->LastOwner = copyQueue;
-			dstData->CurrentOwner = dstNextOwner;
-			dstData->NextOwner = QueueOwner::UNKNOWN;				
-		}		
+		dstData->LastOwner = copyQueue;
+		dstData->CurrentOwner = dstNextOwner;
+		dstData->NextOwner = QueueOwner::UNKNOWN;
 
-		VulkanBufferData* srcData = res->GetBufferData(op.SrcHandle);
-		if (srcData)
+		srcData->LastOwner = srcLastOwner;
+		srcData->CurrentOwner = copyQueue;
+		srcData->NextOwner = QueueOwner::UNKNOWN;
+		if (op.DestroySrc)
 		{
-			srcData->LastOwner = srcLastOwner;
-			srcData->CurrentOwner = copyQueue;
-			srcData->NextOwner = QueueOwner::UNKNOWN;
-			if (op.DestroySrc)
-			{
-				res->DestroyBuffer(op.SrcHandle);
-			}
+			res->DestroyBuffer(op.SrcHandle);
 		}
+		
 	}
 
 
