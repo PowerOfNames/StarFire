@@ -66,6 +66,7 @@ namespace Aurora::VK {
 		void ClearCompilations();
 		void CompileCopyRequest(std::string_view request);
 		bool CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout);
+		bool CheckBufferData(VulkanBufferData* vertexData, VulkanBufferData* indexData);
 		const std::vector<CompiledAttachment*> FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName);
 
 #if defined(AURORA_DEBUG_MODE)

@@ -2,6 +2,7 @@
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Core/Core.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 
 #include "Aurora/Aurora.h"
 #include "AuroraInternal.h"
@@ -241,7 +242,19 @@ namespace Aurora::VK {
 			viewport.y = static_cast<float>(pass.RenderArea.offset.y);
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
-			renderer->Draw(cmd, 3);
+
+			VulkanBufferData* vertexBufferData = resManager->GetBufferData(vbHandle);
+			VulkanBufferData* indexBufferData = resManager->GetBufferData(ibHandle);
+			if (CheckBufferData(vertexBufferData, indexBufferData))
+			{
+				IndexedDrawData drawData{};
+				drawData.VertexBuffer = vertexBufferData->Buffer;
+				drawData.IndexBuffer = indexBufferData->Buffer;
+				drawData.IndexOffset = indexBufferData->Offset;
+				drawData.IndexCount = static_cast<uint32_t>(indexBufferData->Size / Convert::GetIndexTypeSize(indexBufferData->IndexType));
+				drawData.IndexType = indexBufferData->IndexType;			
+				renderer->DrawIndexed(cmd, drawData);
+			}
 
 			vkCmdEndRendering(cmd);
 
@@ -429,6 +442,28 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	bool VulkanRenderGraph::CheckBufferData(VulkanBufferData* vertexData, VulkanBufferData* indexData)
+	{
+		if (vertexData && !indexData)
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: IndexBuffer is nullptr, but VertexBuffer is valid. Skipping draw.");
+			return false;
+		}
+		if (!vertexData && indexData)
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: VertexBuffer is nullptr, but IndexBuffer is valid. Skipping draw.");
+			return false;
+		}
+		if (!indexData || !vertexData)
+			return false;
+
+		if (!(vertexData->IsReady && indexData->IsReady))
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: VertexBuffer or IndexBuffer is not ready for rendering. Skipping draw.");
+			return false;
+		}
+		return true;
+	}
 
 	const std::vector<CompiledAttachment*> VulkanRenderGraph::FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName)
 	{

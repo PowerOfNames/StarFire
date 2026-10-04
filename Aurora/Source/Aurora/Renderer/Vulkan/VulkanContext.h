@@ -11,6 +11,7 @@
 #include "Substrate/RefCounted.h"
 
 #include <vector>
+#include <array>
 
 namespace Aurora::VK {
 
@@ -77,12 +78,14 @@ namespace Aurora::VK {
 		inline VkInstance GetVulkanInstance() const { return m_Instance; }
 		inline VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
 		inline const PhysicalDeviceLimits& GetPhysicalDeviceLimits() const { return m_PhDeviceLimits; }
+		inline const DeviceFeatures& GetDeviceFeatures() const { return m_DeviceFeatures; }
 		inline VkDevice GetLogicalDevice() const { return m_Device; }
 		inline const QueueFamilies& GetQueueFamilies() const { return m_QueueFamilies; }
 		inline const QueueFamilyIndices GetQueueFamilyIndices() const { return Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface); }
 		inline const VmaAllocator& GetVmaAllocator() const { return m_VmAllocator; }
 		inline const VkApplicationInfo& GetApplicationInfo() const { return m_AppInfo; }
 		inline const VkAllocationCallbacks* GetAllocationCallbacks() const { return m_AllocationCallbacks; }
+
 
 		inline const VkCommandPool GetGraphicsCommandPool() const { return m_MainGraphicsCmdPool; }
 		inline const VkCommandPool GetTransferCommandPool() const { return m_TransferCmdPool; }
@@ -119,7 +122,7 @@ namespace Aurora::VK {
 		// TODO: refactor out - needs to be public atm to grant access to SubmissionScheduler for immediate submit
 		void HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op);
 		TimelineSemaphore& GetSubmissionSemaFromQueueOwner(QueueOwner owner);
-		VkCommandBuffer GetCommandBufferFromQueueOwner(QueueOwner owner);
+		TransferCmdBuffer& GetCommandBufferFromQueueOwner(QueueOwner owner);
 		
 		// ===== =====
 
@@ -157,20 +160,19 @@ namespace Aurora::VK {
 
 
 		VkAllocationCallbacks* m_AllocationCallbacks = nullptr;
-		VkCommandPool m_MainGraphicsCmdPool = VK_NULL_HANDLE;
-		
+		VkCommandPool m_MainGraphicsCmdPool = VK_NULL_HANDLE;		
+
 		VkCommandPool m_TransferCmdPool = VK_NULL_HANDLE;
-		VkCommandBuffer m_TransferCmdBuffer = VK_NULL_HANDLE;
+		CommandBufferRing m_TransferCmdBuffers;
 		TimelineSemaphore m_TransferSubmitSemaphore{};
 		
 		VkCommandPool m_GraphicsTransferCmdPool = VK_NULL_HANDLE;
-		VkCommandBuffer m_GraphicsTransferCmdBuffer = VK_NULL_HANDLE;
+		CommandBufferRing m_GraphicsTransferCmdBuffers;
 		TimelineSemaphore m_GraphicsSubmitSemaphore{};
 
 		VkCommandPool m_ComputeTransferCmdPool = VK_NULL_HANDLE;
-		VkCommandBuffer m_ComputeTransferCmdBuffer = VK_NULL_HANDLE;
+		CommandBufferRing m_ComputeTransferCmdBuffers;
 		TimelineSemaphore m_ComputeSubmitSemaphore{};
-		
 
 		QueueFamilies m_QueueFamilies{};
 		std::unordered_map<QueueOwner, uint32_t> m_QueueOwnerIndices;
@@ -183,6 +185,7 @@ namespace Aurora::VK {
 				
 
 		PhysicalDeviceLimits m_PhDeviceLimits{};
+		DeviceFeatures m_DeviceFeatures{};
 
 		Ref<VulkanSwapchain> m_Swapchain = nullptr;
 		std::vector<VulkanFrame> m_FramesInFlight;

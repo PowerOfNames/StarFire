@@ -68,9 +68,18 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(BufferUsageFlags::INDIRECT_BUFFER) == VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
 	static_assert(static_cast<int>(BufferUsageFlags::SHADER_DEVICE_ADDRESS) == VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 
+	static_assert(static_cast<int>(IndexType::UINT8) == VK_INDEX_TYPE_UINT8);
+	static_assert(static_cast<int>(IndexType::UINT16) == VK_INDEX_TYPE_UINT16);
+	static_assert(static_cast<int>(IndexType::UINT32) == VK_INDEX_TYPE_UINT32);
+
 	[[nodiscard]] inline constexpr VkFormat ToVkFormat(Format format)
 	{
 		return static_cast<VkFormat>(format);
+	}
+
+	[[nodiscard]] inline constexpr VkIndexType ToVkIndexType(IndexType indexType)
+	{
+		return static_cast<VkIndexType>(indexType);
 	}
 
 	[[nodiscard]] inline constexpr VkImageTiling ToVkImageTiling(ImageTiling tiling)
@@ -175,6 +184,19 @@ namespace Aurora::VK::Convert {
 		if ((usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::TRANSFER_SRC || (usage & ImageUsageFlags::TRANSFER_DST) == ImageUsageFlags::TRANSFER_DST)
 			accessFlags |= VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		return accessFlags;
+	}
+
+	inline constexpr size_t GetIndexTypeSize(IndexType type)
+	{
+		switch (type)
+		{
+			case IndexType::UINT8: return sizeof(uint8_t);
+			case IndexType::UINT16: return sizeof(uint16_t);
+			case IndexType::UINT32: return sizeof(uint32_t);
+			default:
+				AURORA_VALIDATE(false, "Unknown IndexType {} detected. Falling back to UINT16", static_cast<int>(type));
+				return sizeof(uint16_t);
+		}
 	}
 
 	// ========== Specification -> runtime data ==========

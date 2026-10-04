@@ -1,5 +1,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanDebug.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
+#include "Aurora/Renderer/Vertex.h"
 #include "Shaders/ShaderByteCodes.h"
 #include "AuroraInternal.h"
 
@@ -12,9 +14,11 @@ namespace Aurora::VK {
 		if (AURORA_REQUIRE_FAILS(CreateBindlessDescriptorSet(), "Failed to create bindless descriptor set. VulkanContext could not be initialized."))		
 			return false;
 		
-		if (AURORA_REQUIRE_FAILS(CreateBindlessGraphicsPipeline(), "Failed to create bindless graphics pipeline. VulkanContext could not be initialized."))		
+		if (AURORA_REQUIRE_FAILS(CreateUberVertexLayout(), "Failed to create uber vertex layout. VulkanContext could not be initialized."))
 			return false;
 		
+		if (AURORA_REQUIRE_FAILS(CreateBindlessGraphicsPipeline(), "Failed to create bindless graphics pipeline. VulkanContext could not be initialized."))		
+			return false;		
 
 		return true;
 	}
@@ -69,6 +73,19 @@ namespace Aurora::VK {
 			return;
 
 		vkCmdDraw(cmd, vertexCount, 1, 0, 0);
+	}
+
+	void VulkanRenderer::DrawIndexed(VkCommandBuffer cmd, const IndexedDrawData& drawData)
+	{
+		PROFILE_FUNCTION;
+
+		if (drawData.IndexCount == 0)
+			return;
+
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(cmd, 0, 1, &drawData.VertexBuffer, offsets);
+		vkCmdBindIndexBuffer(cmd, drawData.IndexBuffer, drawData.IndexOffset, Convert::ToVkIndexType(drawData.IndexType));
+		vkCmdDrawIndexed(cmd, drawData.IndexCount, drawData.InstanceCount, drawData.FirstIndex, drawData.VertexOffset, drawData.FirstInstance);
 	}
 
 
@@ -159,6 +176,34 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	bool VulkanRenderer::CreateUberVertexLayout()
+	{
+		PROFILE_FUNCTION;
+
+		//TODO: automate this, later auto generate from shader reflection
+		m_UberVertexInputAttributeDescriptions.resize(3);
+		m_UberVertexInputAttributeDescriptions[0].location = 0;
+		m_UberVertexInputAttributeDescriptions[0].binding = 0;
+		m_UberVertexInputAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		m_UberVertexInputAttributeDescriptions[0].offset = offsetof(UberVertex, Position);
+
+		m_UberVertexInputAttributeDescriptions[1].location = 1;
+		m_UberVertexInputAttributeDescriptions[1].binding = 0;
+		m_UberVertexInputAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		m_UberVertexInputAttributeDescriptions[1].offset = offsetof(UberVertex, Color);
+
+		m_UberVertexInputAttributeDescriptions[2].location = 2;
+		m_UberVertexInputAttributeDescriptions[2].binding = 0;
+		m_UberVertexInputAttributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		m_UberVertexInputAttributeDescriptions[2].offset = offsetof(UberVertex, TexCoord);
+
+		m_UberVertexInputBindingDescription.binding = 0;
+		m_UberVertexInputBindingDescription.stride = sizeof(UberVertex);
+		m_UberVertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return true;
+	}
+
 	bool VulkanRenderer::CreateBindlessGraphicsPipeline()
 	{
 		PROFILE_FUNCTION;
@@ -232,14 +277,15 @@ namespace Aurora::VK {
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+
 		//Vertex input state
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		vertexInputInfo.pNext = nullptr;
 		vertexInputInfo.flags = 0;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr;
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_UberVertexInputAttributeDescriptions.size());
+		vertexInputInfo.pVertexAttributeDescriptions = m_UberVertexInputAttributeDescriptions.data();
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &m_UberVertexInputBindingDescription;
 
 		//Input assembly
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };

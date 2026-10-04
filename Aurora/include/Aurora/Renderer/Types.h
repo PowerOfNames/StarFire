@@ -73,9 +73,9 @@ namespace Aurora {
 
 	enum class IndexType
 	{
-		UINT8,
-		UINT16,
-		UINT32
+		UINT16 = 0,
+		UINT32 = 1,
+		UINT8 = 1000265000,
 	};
 
 	enum class ImageTiling

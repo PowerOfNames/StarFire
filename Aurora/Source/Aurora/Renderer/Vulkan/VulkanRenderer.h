@@ -3,7 +3,6 @@
 
 #include "Aurora/Core/Core.h"
 
-#include <deque>
 #include <functional>
 
 namespace Aurora::VK {
@@ -21,6 +20,7 @@ namespace Aurora::VK {
 
 		void BindBindlessPipeline(VkCommandBuffer cmd);
 		void Draw(VkCommandBuffer cmd, uint32_t vertexCount);
+		void DrawIndexed(VkCommandBuffer cmd, const IndexedDrawData& drawData);
 
 		// Delete if not used
 		//inline const VkDescriptorPool GetBindlessDescriptorPool() const {
@@ -43,6 +43,7 @@ namespace Aurora::VK {
 	private:
 		bool CreateBindlessDescriptorSet();
 		bool CreateBindlessGraphicsPipeline();
+		bool CreateUberVertexLayout();
 
 
 	private:
@@ -50,6 +51,9 @@ namespace Aurora::VK {
 		VkDescriptorPool m_BindlessDescriptorPool = VK_NULL_HANDLE;
 		VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
 		VkDescriptorSet m_BindlessDescriptorSet = VK_NULL_HANDLE;
+
+		std::vector<VkVertexInputAttributeDescription> m_UberVertexInputAttributeDescriptions;
+		VkVertexInputBindingDescription m_UberVertexInputBindingDescription{};
 
 		VkPipelineLayout m_BindlessGraphicsPipelineLayout = VK_NULL_HANDLE;
 		VkPipeline m_BindlessGraphicsPipeline = VK_NULL_HANDLE;

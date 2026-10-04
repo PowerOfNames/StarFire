@@ -116,10 +116,9 @@ namespace Aurora::VK {
 		m_MainDeletionQueue.Flush(m_Device, m_GraphicsSubmitSemaphore.Semaphore, m_ComputeSubmitSemaphore.Semaphore, m_TransferSubmitSemaphore.Semaphore, m_VmAllocator, m_AllocationCallbacks);
 		AURORA_TRACE("Flushed main deletion queue. Entries left: {}", m_MainDeletionQueue.GetEntryCount());
 
-
-		m_ComputeTransferCmdBuffer = VK_NULL_HANDLE;
-		m_TransferCmdBuffer = VK_NULL_HANDLE;
-		m_GraphicsTransferCmdBuffer = VK_NULL_HANDLE;
+		m_ComputeTransferCmdBuffers.Buffers.fill({ VK_NULL_HANDLE, 0 });
+		m_GraphicsTransferCmdBuffers.Buffers.fill({ VK_NULL_HANDLE, 0 });
+		m_TransferCmdBuffers.Buffers.fill({ VK_NULL_HANDLE, 0 });
 
 		m_VmAllocator = VK_NULL_HANDLE;
 		m_PhysicalDevice = VK_NULL_HANDLE;
@@ -415,32 +414,54 @@ namespace Aurora::VK {
 		if (AURORA_REQUIRE_FAILS(queueInfos.size() > 0, "No queue families can be created!"))
 			return false;		
 
-		VkPhysicalDeviceFeatures features{};
-		auto requiredExtension = GetRequiredDeviceExtensions(deviceRequirements);
+		VkPhysicalDeviceVulkan12Features supported12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		supported12.pNext = nullptr;
+
+		VkPhysicalDeviceVulkan13Features supported13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+		supported13.pNext = &supported12;
+
+		VkPhysicalDeviceVulkan14Features supported14{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
+		supported14.pNext = &supported13;
+
+		VkPhysicalDeviceMaintenance8FeaturesKHR supportedMaintenance8{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR };
+		supportedMaintenance8.pNext = &supported14;
+
+		VkPhysicalDeviceFeatures2 supported{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+		supported.pNext = &supportedMaintenance8;
+		vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supported);
 
 		VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-		features12.bufferDeviceAddress = true;
-		features12.descriptorIndexing = true;
-		features12.runtimeDescriptorArray = true;
-		features12.descriptorBindingPartiallyBound = true;
-		features12.shaderStorageBufferArrayNonUniformIndexing = true;
-		features12.shaderSampledImageArrayNonUniformIndexing = true;
-		features12.shaderStorageImageArrayNonUniformIndexing = true;
-		features12.timelineSemaphore = true;
+		features12.bufferDeviceAddress = supported12.bufferDeviceAddress;
+		features12.descriptorIndexing = supported12.descriptorIndexing;
+		features12.runtimeDescriptorArray = supported12.runtimeDescriptorArray;
+		features12.descriptorBindingPartiallyBound = supported12.descriptorBindingPartiallyBound;
+		features12.shaderStorageBufferArrayNonUniformIndexing = supported12.shaderStorageBufferArrayNonUniformIndexing;
+		features12.shaderSampledImageArrayNonUniformIndexing = supported12.shaderSampledImageArrayNonUniformIndexing;
+		features12.shaderStorageImageArrayNonUniformIndexing = supported12.shaderStorageImageArrayNonUniformIndexing;
+		features12.timelineSemaphore = supported12.timelineSemaphore;
 
-		features12.descriptorBindingStorageBufferUpdateAfterBind = true;
-		features12.descriptorBindingSampledImageUpdateAfterBind = true;
-		features12.descriptorBindingStorageImageUpdateAfterBind = true;
+		features12.descriptorBindingStorageBufferUpdateAfterBind = supported12.descriptorBindingStorageBufferUpdateAfterBind;
+		features12.descriptorBindingSampledImageUpdateAfterBind = supported12.descriptorBindingSampledImageUpdateAfterBind;
+		features12.descriptorBindingStorageImageUpdateAfterBind = supported12.descriptorBindingStorageImageUpdateAfterBind;
 
 		VkPhysicalDeviceVulkan13Features features13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 		features13.pNext = &features12;
-		features13.dynamicRendering = true;
-		features13.synchronization2 = true;
+		features13.dynamicRendering = supported13.dynamicRendering;
+		features13.synchronization2 = supported13.synchronization2;
+
+		VkPhysicalDeviceVulkan14Features features14{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
+		features14.pNext = &features13;
+		features14.indexTypeUint8 = supported14.indexTypeUint8;
+		m_DeviceFeatures.IndexTypeUint8 = (features14.indexTypeUint8 == VK_TRUE);
 
 		// to enamle VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR for more granular ownership transfer barriers
 		VkPhysicalDeviceMaintenance8FeaturesKHR featureMaintenance8{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR };
-		featureMaintenance8.pNext = &features13;
-		featureMaintenance8.maintenance8 = true;
+		featureMaintenance8.pNext = &features14;
+		featureMaintenance8.maintenance8 = supportedMaintenance8.maintenance8;
+		m_DeviceFeatures.Maintenance8_GranularOwnership = (featureMaintenance8.maintenance8 == VK_TRUE);
+
+		VkPhysicalDeviceFeatures features{};
+		auto requiredExtension = GetRequiredDeviceExtensions(deviceRequirements);
 
 		VkDeviceCreateInfo deviceInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 		deviceInfo.pNext = &featureMaintenance8;
@@ -564,32 +585,16 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		// ===== Transfer queue structures =====
 		VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 		poolInfo.pNext = nullptr;
 		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Transfer;
-
-		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_TransferCmdPool), VK_SUCCESS, "Failed to create transfer command pool.");
-		if (AURORA_REQUIRE_FAILS(m_TransferCmdPool != VK_NULL_HANDLE, "Failed to create submit transfer command pool"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "TransferCommandPool");
-
-		SubmitToMainDeletionQueue([&pool = m_TransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
-			{
-				vkDestroyCommandPool(device, pool, allocCbs);
-				pool = VK_NULL_HANDLE;
-			});
 
 		VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		allocInfo.pNext = nullptr;
-		allocInfo.commandPool = m_TransferCmdPool;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = 1;
-		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_TransferCmdBuffer), VK_SUCCESS, "Failed to allocate transfer command buffer for immediate submit.");
-		if (AURORA_REQUIRE_FAILS(m_TransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate submit transfer command buffer"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_TransferCmdBuffer, "TransferCommandBuffer");
+		allocInfo.commandBufferCount = AURORA_TRANSFER_COMMAND_BUFFER_COUNT;
+
+		std::array<VkCommandBuffer, AURORA_TRANSFER_COMMAND_BUFFER_COUNT> cmdBuffers;
 
 		VkSemaphoreTypeCreateInfo timelineCreateInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
 		timelineCreateInfo.pNext = nullptr;
@@ -600,76 +605,118 @@ namespace Aurora::VK {
 		semaInfo.pNext = &timelineCreateInfo;
 		semaInfo.flags = 0;
 
-		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_TransferSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
-		if (AURORA_REQUIRE_FAILS(m_TransferSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create submit transfer semaphore"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_TransferSubmitSemaphore.Semaphore, "TransferSubmitSemaphore");
+		// ===== Transfer queue structures =====
+		{			
+			poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Transfer;
 
-		SubmitToMainDeletionQueue([&semaphore = m_TransferSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+			AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_TransferCmdPool), VK_SUCCESS, "Failed to create transfer command pool.");
+			if (AURORA_REQUIRE_FAILS(m_TransferCmdPool != VK_NULL_HANDLE, "Failed to create submit transfer command pool"))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "TransferCommandPool");
+
+			SubmitToMainDeletionQueue([&pool = m_TransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroyCommandPool(device, pool, allocCbs);
+					pool = VK_NULL_HANDLE;
+				});
+
+			allocInfo.commandPool = m_TransferCmdPool;			
+			AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, cmdBuffers.data()), VK_SUCCESS, "Failed to allocate transfer command buffer for immediate submit.");
+			for (size_t i = 0; i < AURORA_TRANSFER_COMMAND_BUFFER_COUNT; i++)
 			{
-				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
-				semaphore = {};
-			});
+				if (AURORA_REQUIRE_FAILS(cmdBuffers[i] != VK_NULL_HANDLE, "Failed to allocate transfer command buffer for immediate submit."))
+					return false;
+
+				m_TransferCmdBuffers.Buffers[i].Buffer = cmdBuffers[i];
+				m_TransferCmdBuffers.Buffers[i].WaitValue = 0;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_TransferCmdBuffers.Buffers[i].Buffer, "TransferCommandBuffer_" + std::to_string(i));
+			}
+
+			AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_TransferSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
+			if (AURORA_REQUIRE_FAILS(m_TransferSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create submit transfer semaphore"))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_TransferSubmitSemaphore.Semaphore, "TransferSubmitSemaphore");
+
+			SubmitToMainDeletionQueue([&semaphore = m_TransferSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+					semaphore = {};
+				});
+		}
 
 		// ===== Graphics queue structures =====
-		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
-		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_GraphicsTransferCmdPool), VK_SUCCESS, "Failed to create graphics transfer command pool.");
-		if (AURORA_REQUIRE_FAILS(m_GraphicsTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer graphics command pool"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_TransferCmdPool, "GraphicsTransferCommandPool");
+		{
+			poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Graphics;
+			AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_GraphicsTransferCmdPool), VK_SUCCESS, "Failed to create graphics transfer command pool.");
+			if (AURORA_REQUIRE_FAILS(m_GraphicsTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer graphics command pool"))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_GraphicsTransferCmdPool, "GraphicsTransferCommandPool");
 
-		SubmitToMainDeletionQueue([&pool = m_GraphicsTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+			SubmitToMainDeletionQueue([&pool = m_GraphicsTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroyCommandPool(device, pool, allocCbs);
+					pool = VK_NULL_HANDLE;
+				});
+
+			allocInfo.commandPool = m_GraphicsTransferCmdPool;
+			AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, cmdBuffers.data()), VK_SUCCESS, "Failed to allocate graphics command buffer for immediate submit.");
+			for (size_t i = 0; i < AURORA_TRANSFER_COMMAND_BUFFER_COUNT; i++)
 			{
-				vkDestroyCommandPool(device, pool, allocCbs);
-				pool = VK_NULL_HANDLE;
-			});
+				if (AURORA_REQUIRE_FAILS(cmdBuffers[i] != VK_NULL_HANDLE, "Failed to allocate transfer graphics command buffer"))
+					return false;
+				m_GraphicsTransferCmdBuffers.Buffers[i].Buffer = cmdBuffers[i];
+				m_GraphicsTransferCmdBuffers.Buffers[i].WaitValue = 0;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffers[i], "GraphicsOwnershipCommandBuffer_" + std::to_string(i));
+			}
 
-		allocInfo.commandPool = m_GraphicsTransferCmdPool;
-		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_GraphicsTransferCmdBuffer), VK_SUCCESS, "Failed to allocate graphics command buffer for immediate submit.");
-		if (AURORA_REQUIRE_FAILS(m_GraphicsTransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate transfer graphics command buffer"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_GraphicsTransferCmdBuffer, "GraphicsOwnershipCommandBuffer");
+			AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_GraphicsSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
+			if (AURORA_REQUIRE_FAILS(m_GraphicsSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer graphics semaphore"))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_GraphicsSubmitSemaphore.Semaphore, "GraphicsSubmitSemaphore");
 
-		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_GraphicsSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create transfer semaphore.");
-		if (AURORA_REQUIRE_FAILS(m_GraphicsSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer graphics semaphore"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_GraphicsSubmitSemaphore.Semaphore, "GraphicsSubmitSemaphore");
-
-		SubmitToMainDeletionQueue([&semaphore = m_GraphicsSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
-			{
-				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
-				semaphore = {};
-			});
+			SubmitToMainDeletionQueue([&semaphore = m_GraphicsSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+					semaphore = {};
+				});
+		}
 
 		// ===== Compute queue structures =====
-		poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Compute;
-		AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_ComputeTransferCmdPool), VK_SUCCESS, "Failed to create compute transfer command pool.");
-		if (AURORA_REQUIRE_FAILS(m_ComputeTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer compute command pool"))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_ComputeTransferCmdPool, "ComputeTransferCommandPool");
+		{
+			poolInfo.queueFamilyIndex = Queries::FindQueueFamilies(m_PhysicalDevice, m_Surface).Compute;
+			AURORA_VK_CHECK(vkCreateCommandPool(m_Device, &poolInfo, m_AllocationCallbacks, &m_ComputeTransferCmdPool), VK_SUCCESS, "Failed to create compute transfer command pool.");
+			if (AURORA_REQUIRE_FAILS(m_ComputeTransferCmdPool != VK_NULL_HANDLE, "Failed to create transfer compute command pool"))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)m_ComputeTransferCmdPool, "ComputeTransferCommandPool");
 
-		SubmitToMainDeletionQueue([&pool = m_ComputeTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+			SubmitToMainDeletionQueue([&pool = m_ComputeTransferCmdPool](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroyCommandPool(device, pool, allocCbs);
+					pool = VK_NULL_HANDLE;
+				});
+
+			allocInfo.commandPool = m_ComputeTransferCmdPool;
+			AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, cmdBuffers.data()), VK_SUCCESS, "Failed to allocate compute command buffer for immediate submit.");
+			for (size_t i = 0; i < AURORA_TRANSFER_COMMAND_BUFFER_COUNT; i++)
 			{
-				vkDestroyCommandPool(device, pool, allocCbs);
-				pool = VK_NULL_HANDLE;
-			});
+				if (AURORA_REQUIRE_FAILS(cmdBuffers[i] != VK_NULL_HANDLE, "Failed to allocate transfer compute command buffer."))
+					return false;
+				m_ComputeTransferCmdBuffers.Buffers[i].Buffer = cmdBuffers[i];
+				m_ComputeTransferCmdBuffers.Buffers[i].WaitValue = 0;
+				AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffers[i], "ComputeOwnershipCommandBuffer_" + std::to_string(i));		
+			}
 
-		allocInfo.commandPool = m_ComputeTransferCmdPool;
-		AURORA_VK_CHECK(vkAllocateCommandBuffers(m_Device, &allocInfo, &m_ComputeTransferCmdBuffer), VK_SUCCESS, "Failed to allocate compute command buffer for immediate submit.");
-		if (AURORA_REQUIRE_FAILS(m_ComputeTransferCmdBuffer != VK_NULL_HANDLE, "Failed to allocate transfer compute command buffer."))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_ComputeTransferCmdBuffer, "ComputeOwnershipCommandBuffer");
+			AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_ComputeSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create compute submit semaphore.");
+			if (AURORA_REQUIRE_FAILS(m_ComputeSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer compute semaphore."))
+				return false;
+			AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ComputeSubmitSemaphore.Semaphore, "ComputeSubmitSemaphore");
 
-		AURORA_VK_CHECK(vkCreateSemaphore(m_Device, &semaInfo, m_AllocationCallbacks, &m_ComputeSubmitSemaphore.Semaphore), VK_SUCCESS, "Failed to create compute submit semaphore.");
-		if (AURORA_REQUIRE_FAILS(m_ComputeSubmitSemaphore.Semaphore != VK_NULL_HANDLE, "Failed to create transfer compute semaphore."))
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_ComputeSubmitSemaphore.Semaphore, "ComputeSubmitSemaphore");
-
-		SubmitToMainDeletionQueue([&semaphore = m_ComputeSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
-			{
-				vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
-				semaphore = {};
-			});
+			SubmitToMainDeletionQueue([&semaphore = m_ComputeSubmitSemaphore](VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
+				{
+					vkDestroySemaphore(device, semaphore.Semaphore, allocCbs);
+					semaphore = {};
+				});
+		}
 
 		return true;
 	}
@@ -880,7 +927,6 @@ namespace Aurora::VK {
 		
 		srcLastOwner = srcData->LastOwner;
 		srcCurrentOwner = srcData->CurrentOwner;		
-
 		VulkanBufferData* dstData = res->GetBufferData(op.DstHandle);
 		if (AURORA_REQUIRE_FAILS(dstData, "Invalid dstBuffer."))
 		{
@@ -889,8 +935,7 @@ namespace Aurora::VK {
 			return;		
 		}
 		dstLastOwner = dstData->LastOwner;
-		dstCurrentOwner = dstData->CurrentOwner;
-		
+		dstCurrentOwner = dstData->CurrentOwner;		
 
 		std::vector<TimelineSemaphore> additionalWaits;
 		//We need to realase them on their current queue if they are currently in an owned state (current != unknown) and if current differs from copyQueue
@@ -1133,7 +1178,7 @@ namespace Aurora::VK {
 		dstData->LastOwner = copyQueue;
 		dstData->CurrentOwner = dstNextOwner;
 		dstData->NextOwner = QueueOwner::UNKNOWN;
-
+		
 		srcData->LastOwner = srcLastOwner;
 		srcData->CurrentOwner = copyQueue;
 		srcData->NextOwner = QueueOwner::UNKNOWN;
@@ -1186,11 +1231,22 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		//AURORA_VK_CHECK(vkWaitForFences(m_Device, 1, &m_TransferFence, VK_TRUE, UINT64_MAX), VK_SUCCESS, "Failed to wait for transfer fence.");
-		//AURORA_VK_CHECK(vkResetFences(m_Device, 1, &m_TransferFence), VK_SUCCESS, "Failed to reset transfer fence.");
+		VkQueue vkQueue = GetQueueFromOwner(specs.Queue);		
+		if (AURORA_REQUIRE_FAILS(vkQueue != VK_NULL_HANDLE, "Failed to get queue for immediate submit."))
+			return;
 
-		VkCommandBuffer cmd = GetCommandBufferFromQueueOwner(specs.Queue);
+		TransferCmdBuffer& cmd = GetCommandBufferFromQueueOwner(specs.Queue);
 		TimelineSemaphore& semaphore = GetSubmissionSemaFromQueueOwner(specs.Queue);
+
+		VkSemaphoreWaitInfo semaWaitInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+		semaWaitInfo.pNext = nullptr;
+		semaWaitInfo.flags = 0;
+		semaWaitInfo.semaphoreCount = 1;
+		semaWaitInfo.pSemaphores = &semaphore.Semaphore;
+		semaWaitInfo.pValues = &cmd.WaitValue;
+		
+		AURORA_VK_CHECK(vkWaitSemaphores(m_Device, &semaWaitInfo, UINT64_MAX), VK_SUCCESS, "Failed to wait for semaphore.");
+		
 		std::vector<TimelineSemaphore> waits = specs.AdditionalWaitSemaphores;
 		waits.push_back(semaphore);
 
@@ -1206,25 +1262,26 @@ namespace Aurora::VK {
 			waitSemaphoreInfos.push_back(waitSemaphoreInfo);
 		}
 
+		uint64_t newValue = semaphore.Value + 1;
 		VkSemaphoreSubmitInfo signalSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
 		signalSemaphoreInfo.pNext = nullptr;
 		signalSemaphoreInfo.semaphore = semaphore.Semaphore;
 		signalSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		signalSemaphoreInfo.deviceIndex = 0;
-		signalSemaphoreInfo.value = ++semaphore.Value;
+		signalSemaphoreInfo.value = newValue;
 
 		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		beginInfo.pNext = nullptr;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr;
 
-		AURORA_VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo), VK_SUCCESS, "Failed to begin command buffer for immediate submit.");
-		recordFunc(cmd);
-		AURORA_VK_CHECK(vkEndCommandBuffer(cmd), VK_SUCCESS, "Failed to end command buffer for immediate submit.");
+		AURORA_VK_CHECK(vkBeginCommandBuffer(cmd.Buffer, &beginInfo), VK_SUCCESS, "Failed to begin command buffer for immediate submit.");
+		recordFunc(cmd.Buffer);
+		AURORA_VK_CHECK(vkEndCommandBuffer(cmd.Buffer), VK_SUCCESS, "Failed to end command buffer for immediate submit.");
 
 		VkCommandBufferSubmitInfo cmdBufferSubmitInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
 		cmdBufferSubmitInfo.pNext = nullptr;
-		cmdBufferSubmitInfo.commandBuffer = cmd;
+		cmdBufferSubmitInfo.commandBuffer = cmd.Buffer;
 		cmdBufferSubmitInfo.deviceMask = 0;
 
 		VkSubmitInfo2 submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
@@ -1236,12 +1293,15 @@ namespace Aurora::VK {
 		submitInfo.pWaitSemaphoreInfos = waitSemaphoreInfos.data();
 		submitInfo.signalSemaphoreInfoCount = 1;
 		submitInfo.pSignalSemaphoreInfos = &signalSemaphoreInfo;
-
-		VkQueue vkQueue = GetQueueFromOwner(specs.Queue);
-		if (AURORA_REQUIRE_FAILS(vkQueue != VK_NULL_HANDLE, "Failed to get queue for immediate submit."))
-			return;		
-
-		AURORA_VK_CHECK(vkQueueSubmit2(vkQueue, 1, &submitInfo, nullptr), VK_SUCCESS, "Failed to submit command buffer for immediate submit.");
+		
+		VkResult result = vkQueueSubmit2(vkQueue, 1, &submitInfo, nullptr);
+		AURORA_VK_CHECK(result, VK_SUCCESS, "Failed to submit command buffer for immediate submit.");
+		
+		if (result == VK_SUCCESS)
+		{
+			semaphore.Value = newValue;
+			cmd.WaitValue = newValue;
+		}
 	}
 
 	TimelineSemaphore VulkanContext::GetQueueSemaphoreSnapshot(QueueOwner owner)
@@ -1290,26 +1350,23 @@ namespace Aurora::VK {
 				return m_GraphicsSubmitSemaphore;
 		}
 	}
-	VkCommandBuffer VulkanContext::GetCommandBufferFromQueueOwner(QueueOwner owner)
+
+	TransferCmdBuffer& VulkanContext::GetCommandBufferFromQueueOwner(QueueOwner owner)
 	{
 		PROFILE_FUNCTION;
-		VkCommandBuffer cmd = VK_NULL_HANDLE;
+
 		switch (owner)
 		{
 			case QueueOwner::GRAPHICS:
-				cmd = m_GraphicsTransferCmdBuffer;
-				break;
+				return m_GraphicsTransferCmdBuffers.GetNext();				
 			case QueueOwner::TRANSFER:
-				cmd = m_TransferCmdBuffer;
-				break;
+				return m_TransferCmdBuffers.GetNext();
 			case QueueOwner::COMPUTE:
-				cmd = m_ComputeTransferCmdBuffer;
-				break;
+				return m_ComputeTransferCmdBuffers.GetNext();
 			default:
 				AURORA_VALIDATE(false, "Invalid queue owner for CommandBuffer selection.");
-				return m_GraphicsTransferCmdBuffer;
-		}
-		return cmd;
+				return m_GraphicsTransferCmdBuffers.GetNext();
+		};
 	}
 
 	bool VulkanContext::CheckTimelineSemaphore(VkSemaphore sema, uint64_t targetValue) const

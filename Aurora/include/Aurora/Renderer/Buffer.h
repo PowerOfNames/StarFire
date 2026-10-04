@@ -123,7 +123,8 @@ namespace Aurora {
 			MemUsage = MemoryUsage::GPU_ONLY;
 		}
 
-		VertexLayout Layout{};
+		//TODO:
+		//VertexLayout Layout{};
 	};
 
 	struct IndexBufferSpecification : BufferSpecification

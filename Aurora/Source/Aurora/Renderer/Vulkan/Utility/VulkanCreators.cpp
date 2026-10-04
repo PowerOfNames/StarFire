@@ -69,10 +69,9 @@ namespace Aurora::VK::Creators {
 	}
 
 	// ========== Buffers ==========
-	bool CreateBuffer(VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage)
+	bool CreateBuffer(VkDevice device, VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage)
 	{
 		PROFILE_FUNCTION;
-
 
 		if (AURORA_REQUIRE_FAILS(data.Size > 0, "Unable to create a buffer with size 0"))
 			return false;
@@ -86,7 +85,20 @@ namespace Aurora::VK::Creators {
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = memUsage;
-		VkResult result = vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &data.Buffer, &data.Allocation, &data.AllocationInfo);
+
+		VmaAllocationInfo allocInfo{};
+
+		VkResult result = vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &data.Buffer, &data.Allocation, &allocInfo);
+		data.MappedPtr = allocInfo.pMappedData;		
+
+		if ((data.Usage & BufferUsageFlags::SHADER_DEVICE_ADDRESS) == BufferUsageFlags::SHADER_DEVICE_ADDRESS)
+		{
+			VkBufferDeviceAddressInfo bufferAddressInfo{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+			bufferAddressInfo.pNext = nullptr;
+			bufferAddressInfo.buffer = data.Buffer;
+			data.DeviceAddress = vkGetBufferDeviceAddress(device, &bufferAddressInfo);
+		}
+
 		AURORA_VK_CHECK(result, VK_SUCCESS, "Failed to create buffer!");
 		return true;
 	}
