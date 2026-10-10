@@ -2,6 +2,9 @@
 
 #include "Aurora/BitField.h"
 
+#include <vector>
+#include <string>
+
 namespace Aurora {
 
 	enum class Format
@@ -71,6 +74,35 @@ namespace Aurora {
 		TRANSFORM = MAT4,
 	};
 
+	enum class WindingOrder
+	{
+		COUNTER_CLOCKWISE = 0,
+		CLOCKWISE = 1,
+	};
+
+	enum class PrimitiveTopology
+	{
+		POINT_LIST = 0,
+		LINE_LIST = 1,
+		LINE_STRIP = 2,
+		TRIANGLE_LIST = 3,
+		TRIANGLE_STRIP = 4,
+		TRIANGLE_FAN = 5,
+	};
+
+	enum class PolygonMode
+	{
+		FILL = 0,
+		LINE = 1,
+		POINT = 2,
+	};
+
+	enum class VertexInputRate
+	{
+		VERTEX = 0,
+		INSTANCE = 1,
+	};
+
 	enum class IndexType
 	{
 		UINT16 = 0,
@@ -124,7 +156,77 @@ namespace Aurora {
 		INDIRECT_BUFFER = BIT(8),
 		SHADER_DEVICE_ADDRESS = BIT(17),
 	};
-}
+
+	struct VertexAttribute
+	{
+		std::string Name;
+		uint32_t Location = 0;
+		FieldType Type = FieldType::U32;
+		uint32_t Offset = 0; // in bytes
+	};
+
+	/// <summary>
+	/// Use constructor with initializer list to create a vertex layout. The stride will be calculated automatically based on the attributes and their types.
+	/// </summary>
+	struct VertexLayout
+	{
+		std::vector<VertexAttribute> Attributes;
+		uint32_t Stride = 0;
+
+		VertexLayout(std::initializer_list<VertexAttribute> attributes)
+			: Attributes(attributes)
+		{
+			// calculate stride
+			for (const VertexAttribute& attr : Attributes)
+			{
+				uint32_t attrSize = 0;
+				switch (attr.Type)
+				{
+					case FieldType::U8:
+					case FieldType::I8:
+						attrSize = 1;
+						break;
+					case FieldType::U16:
+					case FieldType::I16:
+						attrSize = 2;
+						break;
+					case FieldType::U32:
+					case FieldType::I32:
+					case FieldType::F32:
+						attrSize = 4;
+						break;
+					case FieldType::U64:
+					case FieldType::I64:
+					case FieldType::F64:
+						attrSize = 8;
+						break;
+					case FieldType::BOOL:
+						attrSize = 1; // we can pack bools, but for simplicity we just use 1 byte per bool for now
+						break;
+					case FieldType::VEC2:
+						attrSize = 4 * 2;
+						break;
+					case FieldType::VEC3:
+						attrSize = 4 * 3;
+						break;
+					case FieldType::VEC4:
+						attrSize = 4 * 4;
+						break;
+					case FieldType::MAT3:
+						attrSize = 4 * 3 * 3; // we can pack matrices, but for simplicity we just use a flat array of floats for now
+						break;
+					case FieldType::MAT4:
+						attrSize = 4 * 4 * 4; // we can pack matrices, but for simplicity we just use a flat array of floats for now
+						break;
+					default:
+						break;
+				}
+				Stride += attrSize;
+			}
+		}
+	};
+
+}	
 
 namespace Substrate {
 	SST_ENABLE_BIT_OPS(Aurora::ImageUsageFlags);

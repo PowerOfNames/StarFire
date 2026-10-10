@@ -20,6 +20,12 @@ namespace Aurora::VK {
 
 		AURORA_INFO("Destroying renderGraph '{}'...", m_Specification.Name.c_str());
 
+		if (m_BindlessPipeline)
+		{
+			m_BindlessPipeline->Destroy();
+			m_BindlessPipeline = nullptr;
+		}
+
 		for (const auto& rp : m_RenderPasses)
 			rp->Destroy();		
 		m_RenderPasses.clear();
@@ -62,8 +68,15 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_Compiled)		
-			ClearCompilations();		
+		//If block for all resources that only need to compiled once
+		if (!m_Compiled)
+		{
+			if (m_BindlessPipeline)
+				if (AURORA_REQUIRE_FAILS(m_BindlessPipeline->Compile(), "Failed to compile bindless pipeline!"))
+					return false;
+		}
+		else
+			ClearCompilations();
 
 		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
 		const uint8_t fif = GetRenderContext()->GetFramesInFlightCount();
@@ -72,7 +85,11 @@ namespace Aurora::VK {
 		bool success = true;
 		for (const Ref<RenderPass>& renderPass : m_RenderPasses)
 		{
-			renderPass->Compile();				
+			if (AURORA_REQUIRE_FAILS_ALL(renderPass->Compile(), "Failed to compile render pass '{}'!", renderPass->GetSpecification().Name))
+			{
+				success = false;
+				continue;
+			}
 
 			//Create one CompiledPass
 			CompiledPass pass{};
@@ -159,7 +176,7 @@ namespace Aurora::VK {
 		// Even though AddCopyRequest must only be called after Compile, during resize copy targets need to be recompiled as well. 
 		// Hence CopyRequest compilation needs to happen here for previously added requests
 		for (const auto& [copyName, copyRequest] : m_CopyRequests)
-			CompileCopyRequest(copyName);
+			CompileCopyRequest(copyName);		
 
 		return true;
 	}
@@ -189,7 +206,8 @@ namespace Aurora::VK {
 		VulkanFrame& frameData = renderContext->GetCurrentFrameData();
 		VkCommandBuffer cmd = frameData.CommandBuffer;
 
-		renderer->BindBindlessPipeline(cmd);
+		if (m_BindlessPipeline)
+			renderer->BindPipeline(cmd, m_BindlessPipeline);
 
 		for (const auto& pass : m_CompiledPasses)
 		{

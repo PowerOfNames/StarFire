@@ -1,5 +1,6 @@
 #pragma once
 #include "Aurora/Renderer/RenderPass.h"
+#include "Aurora/Renderer/GraphicsPipeline.h"
 #include "Aurora/Renderer/Handles.h"
 
 #include "Substrate/RefCounted.h"
@@ -21,8 +22,9 @@ namespace Aurora {
 		std::string AttachmentName;
 	};
 
-	class RenderGraph : public ::Substrate::RefCounted
+	class RenderGraph : public ::Substrate::RefCounted, public ::Substrate::Base<RenderGraph>
 	{
+		DECLARE_TYPE(RenderGraph, nullptr);
 	public:
 		virtual ~RenderGraph() = default;
 		static Ref<RenderGraph> Create(const RenderGraphSpecification& specs);
@@ -42,6 +44,8 @@ namespace Aurora {
 		// Compile() rebuilds every registered copy, so subscriptions survive a resize without re-adding.
 		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo) = 0;
 		virtual void RemoveAttachmentCopy(std::string_view copyRequestName) = 0;
+
+		virtual void SetBindlessPipeline(const Ref<GraphicsPipeline>& pipeline) = 0;
 
 		// May return INVALID_HANDLE — the subscription can be registered but not yet compiled (added while
 		// a resize is pending), or removed. Check IsHandleValid before use.

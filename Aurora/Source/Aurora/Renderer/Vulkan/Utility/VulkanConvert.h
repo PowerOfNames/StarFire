@@ -46,6 +46,23 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(ImageTiling::OPTIMAL) == VK_IMAGE_TILING_OPTIMAL);
 	static_assert(static_cast<int>(ImageTiling::LINEAR) == VK_IMAGE_TILING_LINEAR);
 
+	static_assert(static_cast<int>(WindingOrder::COUNTER_CLOCKWISE) == VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	static_assert(static_cast<int>(WindingOrder::CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
+
+	static_assert(static_cast<int>(PrimitiveTopology::POINT_LIST) == VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::LINE_LIST) == VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::LINE_STRIP) == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_LIST) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_STRIP) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_FAN) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+
+	static_assert(static_cast<int>(PolygonMode::FILL) == VK_POLYGON_MODE_FILL);
+	static_assert(static_cast<int>(PolygonMode::LINE) == VK_POLYGON_MODE_LINE);
+	static_assert(static_cast<int>(PolygonMode::POINT) == VK_POLYGON_MODE_POINT);
+
+	static_assert(static_cast<int>(VertexInputRate::VERTEX) == VK_VERTEX_INPUT_RATE_VERTEX);
+	static_assert(static_cast<int>(VertexInputRate::INSTANCE) == VK_VERTEX_INPUT_RATE_INSTANCE);
+
 	static_assert(static_cast<int>(MemoryUsage::UNKNOWN) == VMA_MEMORY_USAGE_UNKNOWN);
 	static_assert(static_cast<int>(MemoryUsage::GPU_ONLY) == VMA_MEMORY_USAGE_GPU_ONLY);
 	static_assert(static_cast<int>(MemoryUsage::CPU_ONLY) == VMA_MEMORY_USAGE_CPU_ONLY);
@@ -71,6 +88,26 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(IndexType::UINT8) == VK_INDEX_TYPE_UINT8);
 	static_assert(static_cast<int>(IndexType::UINT16) == VK_INDEX_TYPE_UINT16);
 	static_assert(static_cast<int>(IndexType::UINT32) == VK_INDEX_TYPE_UINT32);
+
+	[[nodiscard]] inline constexpr VkPrimitiveTopology ToVkPrimitiveTopology(PrimitiveTopology topology)
+	{
+		return static_cast<VkPrimitiveTopology>(topology);
+	}
+
+	[[nodiscard]] inline constexpr VkPolygonMode ToVkPolygonMode(PolygonMode mode)
+	{
+		return static_cast<VkPolygonMode>(mode);
+	}
+
+	[[nodiscard]] inline constexpr VkVertexInputRate ToVkVertexInputRate(VertexInputRate rate)
+	{
+		return static_cast<VkVertexInputRate>(rate);
+	}
+
+	[[nodiscard]] inline constexpr VkFrontFace ToVkWindingOrder(WindingOrder order)
+	{
+		return static_cast<VkFrontFace>(order);
+	}
 
 	[[nodiscard]] inline constexpr VkFormat ToVkFormat(Format format)
 	{

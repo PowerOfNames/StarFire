@@ -9,10 +9,11 @@ namespace Aurora::VK {
 
 	class VulkanRenderPass : public RenderPass
 	{
+		DECLARE_TYPE(VulkanRenderPass, RenderPass::GetStaticTypeInfo());
 	public:
 		VulkanRenderPass(const RenderPassSpecification& specs);
 		virtual ~VulkanRenderPass() = default;
-		void Compile() override;
+		bool Compile() override;
 		void Destroy() override;
 
 		void OnResize(uint32_t width, uint32_t height) override;

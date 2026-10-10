@@ -6,6 +6,7 @@
 #include "Aurora/Renderer/RenderGraph.h"
 #include "Aurora/Renderer/RenderPass.h"
 #include "Aurora/Renderer/Vertex.h"
+#include "Aurora/Renderer/GraphicsPipeline.h"
 
 
 #include <imgui.h>
@@ -47,11 +48,18 @@ namespace Sandbox {
 			specs.DepthAttachment.ClearDepth = 1.0f; //needs to be 0.0 if we do infinite far plane, but for now we do a finite far plane so 1.0 is correct
 			specs.RenderArea = { width, height };
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
+
+			Aurora::GraphicsPipelineSpecification pipSpecs{};
+			pipSpecs.Name = "Triangle Test Pipeline";
+			pipSpecs.PolygonMode = Aurora::PolygonMode::FILL;
+			pipSpecs.PrimitiveTopology = Aurora::PrimitiveTopology::TRIANGLE_LIST;
+			pipSpecs.WindingOrder = Aurora::WindingOrder::COUNTER_CLOCKWISE;
+			pipSpecs.IsBindless = true;
+			m_BindlessPipeline = Aurora::GraphicsPipeline::Create(pipSpecs);
 		}
 
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
-
-		
+		m_DefaultRenderGraph->SetBindlessPipeline(m_BindlessPipeline);
 	}
 
 	void SandboxLayer::OnAttach()
@@ -62,6 +70,7 @@ namespace Sandbox {
 		
 		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
 		m_DefaultRenderGraph->Compile();
+
 		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
 		colorAttachmentCopy.PassName = c_DefaultPassName;
 		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
@@ -99,6 +108,7 @@ namespace Sandbox {
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
 		m_TrianglePass = nullptr;
+		m_BindlessPipeline = nullptr;
 		Aurora::DestroyVertexBuffer(m_TriangleVertexBufferHandle);
 		m_TriangleVertexBufferHandle = Aurora::VertexBufferHandle::INVALID_HANDLE;
 		Aurora::DestroyIndexBuffer(m_TriangleIndexBufferHandle);
