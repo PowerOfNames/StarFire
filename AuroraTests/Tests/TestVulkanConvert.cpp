@@ -57,6 +57,42 @@ TEST_CASE("Convert: Aurora enums alias their Vulkan counterparts", "[convert][ty
 		const BufferUsageFlags combined = BufferUsageFlags::VERTEX_BUFFER | BufferUsageFlags::TRANSFER_DST;
 		CHECK(Cv::ToVkBufferUsageFlags(combined) == (VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT));
 	}
+
+	SECTION("IndexType, including the extension-range UINT8")
+	{
+		CHECK(Cv::ToVkIndexType(IndexType::UINT16) == VK_INDEX_TYPE_UINT16);
+		CHECK(Cv::ToVkIndexType(IndexType::UINT32) == VK_INDEX_TYPE_UINT32);
+		CHECK(Cv::ToVkIndexType(IndexType::UINT8) == VK_INDEX_TYPE_UINT8);
+	}
+
+	SECTION("WindingOrder maps to the front face")
+	{
+		CHECK(Cv::ToVkWindingOrder(WindingOrder::COUNTER_CLOCKWISE) == VK_FRONT_FACE_COUNTER_CLOCKWISE);
+		CHECK(Cv::ToVkWindingOrder(WindingOrder::CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
+	}
+
+	SECTION("PrimitiveTopology")
+	{
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::POINT_LIST) == VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::LINE_LIST) == VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::LINE_STRIP) == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::TRIANGLE_LIST) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::TRIANGLE_STRIP) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::TRIANGLE_FAN) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+	}
+
+	SECTION("PolygonMode")
+	{
+		CHECK(Cv::ToVkPolygonMode(PolygonMode::FILL) == VK_POLYGON_MODE_FILL);
+		CHECK(Cv::ToVkPolygonMode(PolygonMode::LINE) == VK_POLYGON_MODE_LINE);
+		CHECK(Cv::ToVkPolygonMode(PolygonMode::POINT) == VK_POLYGON_MODE_POINT);
+	}
+
+	SECTION("VertexInputRate")
+	{
+		CHECK(Cv::ToVkVertexInputRate(VertexInputRate::VERTEX) == VK_VERTEX_INPUT_RATE_VERTEX);
+		CHECK(Cv::ToVkVertexInputRate(VertexInputRate::INSTANCE) == VK_VERTEX_INPUT_RATE_INSTANCE);
+	}
 }
 
 
@@ -64,7 +100,7 @@ TEST_CASE("Convert: buffer usage to pipeline stage", "[convert][stage]")
 {
 	SECTION("an explicit queue short-circuits the usage bits entirely")
 	{
-		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::VERTEX_BUFFER, VK::QueueOwner::TRANSFER) == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
+		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::VERTEX_BUFFER, VK::QueueOwner::TRANSFER) == VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
 		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::VERTEX_BUFFER, VK::QueueOwner::COMPUTE) == VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
 	}
 
@@ -74,8 +110,8 @@ TEST_CASE("Convert: buffer usage to pipeline stage", "[convert][stage]")
 		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::VERTEX_BUFFER) == VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::INDEX_BUFFER) == VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT);
 		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::INDIRECT_BUFFER) == VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
-		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC) == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
-		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST) == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
+		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC) == VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
+		CHECK(Cv::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_DST) == VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
 
 		constexpr VkPipelineStageFlags2 allShaders =
 			VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -112,7 +148,7 @@ TEST_CASE("Convert: image usage to pipeline stage", "[convert][stage]")
 {
 	SECTION("an explicit queue short-circuits the usage bits entirely")
 	{
-		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::SAMPLED, VK::QueueOwner::TRANSFER) == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
+		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::SAMPLED, VK::QueueOwner::TRANSFER) == VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
 		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::SAMPLED, VK::QueueOwner::COMPUTE) == VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
 	}
 
@@ -120,7 +156,7 @@ TEST_CASE("Convert: image usage to pipeline stage", "[convert][stage]")
 	{
 		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::NONE) == 0u);
 		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::COLOR_ATTACHMENT) == VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
-		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::TRANSFER_SRC) == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
+		CHECK(Cv::GetStageFromImageUsage(ImageUsageFlags::TRANSFER_SRC) == VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
 
 		constexpr VkPipelineStageFlags2 allShaders =
 			VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -300,8 +336,8 @@ TEST_CASE("Convert: MakeBufferData translates a specification", "[convert][buffe
 	{
 		CHECK(data.Buffer == VK_NULL_HANDLE);
 		CHECK(data.Allocation == VK_NULL_HANDLE);
-		CHECK(data.AllocationInfo.size == 0u);
-		CHECK(data.AllocationInfo.pMappedData == nullptr);
+		CHECK(data.DeviceAddress == 0u);
+		CHECK(data.MappedPtr == nullptr);
 	}
 
 	SECTION("queue ownership starts unknown rather than uninitialised")
