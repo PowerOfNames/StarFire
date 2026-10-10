@@ -1,5 +1,6 @@
 #pragma once
 #include "Aurora/Renderer/RenderGraph.h"
+#include "Aurora/Renderer/GraphicsPipeline.h"
 #include "Aurora/Renderer/Handles.h"
 
 #include "Substrate/RefPtr.h"
@@ -44,6 +45,8 @@ namespace Aurora::VK {
 
 	class VulkanRenderGraph : public RenderGraph
 	{
+		DECLARE_TYPE(VulkanRenderGraph, RenderGraph::GetStaticTypeInfo());
+
 	public:
 		VulkanRenderGraph(const RenderGraphSpecification& specs);
 		virtual ~VulkanRenderGraph() = default;
@@ -56,6 +59,9 @@ namespace Aurora::VK {
 		virtual void RemoveAttachmentCopy(std::string_view copyRequestName) override;
 		virtual ImageHandle GetCopyTarget(std::string_view copyRequestName) override;
 
+		virtual inline void SetBindlessPipeline(const Ref<GraphicsPipeline>& pipeline) override { m_BindlessPipeline = pipeline; }
+
+
 		virtual bool Compile() override;
 
 		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle) override;
@@ -66,6 +72,7 @@ namespace Aurora::VK {
 		void ClearCompilations();
 		void CompileCopyRequest(std::string_view request);
 		bool CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout);
+		bool CheckBufferData(VulkanBufferData* vertexData, VulkanBufferData* indexData);
 		const std::vector<CompiledAttachment*> FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName);
 
 #if defined(AURORA_DEBUG_MODE)
@@ -85,5 +92,7 @@ namespace Aurora::VK {
 		//Matched passes with copy requests
 		std::unordered_map<std::string, CompiledAttachmentCopy> m_CompiledCopies;
 		std::vector<CompiledPass> m_CompiledPasses;
+
+		Ref<GraphicsPipeline> m_BindlessPipeline;
 	};
 }

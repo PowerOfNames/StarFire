@@ -57,11 +57,12 @@ namespace Aurora {
 	//
 	// Create() allocates no GPU memory; Compile() does. A pass that is created and never added to a graph
 	// therefore owns nothing and needs no teardown.
-	class RenderPass : public Substrate::RefCounted
+	class RenderPass : public Substrate::RefCounted, public Substrate::Base<RenderPass>
 	{
+		DECLARE_TYPE(RenderPass, nullptr);
 	public:
 		virtual ~RenderPass() = default;
-		virtual void Compile() = 0;
+		virtual bool Compile() = 0;
 		virtual void Destroy() = 0;
 
 

@@ -5,6 +5,8 @@
 #include "Aurora/Aurora.h"
 #include "Aurora/Renderer/RenderGraph.h"
 #include "Aurora/Renderer/RenderPass.h"
+#include "Aurora/Renderer/Vertex.h"
+#include "Aurora/Renderer/GraphicsPipeline.h"
 
 
 #include <imgui.h>
@@ -46,11 +48,18 @@ namespace Sandbox {
 			specs.DepthAttachment.ClearDepth = 1.0f; //needs to be 0.0 if we do infinite far plane, but for now we do a finite far plane so 1.0 is correct
 			specs.RenderArea = { width, height };
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
+
+			Aurora::GraphicsPipelineSpecification pipSpecs{};
+			pipSpecs.Name = "Triangle Test Pipeline";
+			pipSpecs.PolygonMode = Aurora::PolygonMode::FILL;
+			pipSpecs.PrimitiveTopology = Aurora::PrimitiveTopology::TRIANGLE_LIST;
+			pipSpecs.WindingOrder = Aurora::WindingOrder::COUNTER_CLOCKWISE;
+			pipSpecs.IsBindless = true;
+			m_BindlessPipeline = Aurora::GraphicsPipeline::Create(pipSpecs);
 		}
 
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
-
-		
+		m_DefaultRenderGraph->SetBindlessPipeline(m_BindlessPipeline);
 	}
 
 	void SandboxLayer::OnAttach()
@@ -61,6 +70,7 @@ namespace Sandbox {
 		
 		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
 		m_DefaultRenderGraph->Compile();
+
 		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
 		colorAttachmentCopy.PassName = c_DefaultPassName;
 		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
@@ -69,17 +79,25 @@ namespace Sandbox {
 		// == 2. Build scene ==
 		// We do initial scene building here probably. Not sure if this is also the place to load assets etc for the given scene
 
-		Aurora::VertexLayout vertexBufferLayout({
+		//TODO:
+		/*Aurora::VertexLayout vertexBufferLayout({
 			{.Name = "a_Position", .Location = 0, .Type = Aurora::FieldType::POSITION, .Offset = offsetof(StarFire::Vertex, Position) },
 			{.Name = "a_Color", .Location = 1, .Type = Aurora::FieldType::COLOR, .Offset = offsetof(StarFire::Vertex, Color) }
-			});
+			});*/
 		Aurora::VertexBufferSpecification vertexBufferSpecs{};
 		vertexBufferSpecs.Name = "Triangle Vertex Buffer";
-		vertexBufferSpecs.Layout = vertexBufferLayout;
-		vertexBufferSpecs.Size = StarFire::TriangleVertices.size() * sizeof(StarFire::Vertex);
+		//vertexBufferSpecs.Layout = vertexBufferLayout;
+		vertexBufferSpecs.Size = StarFire::TriangleVertices.size() * sizeof(Aurora::UberVertex);
 		vertexBufferSpecs.SpecializationType = Aurora::BufferSpecializationType::STATIC_VERTEX_BUFFER;
 		vertexBufferSpecs.Data = (void*)StarFire::TriangleVertices.data();
 		m_TriangleVertexBufferHandle = Aurora::CreateVertexBuffer(vertexBufferSpecs);
+
+		Aurora::IndexBufferSpecification indexBufferSpecs{};
+		indexBufferSpecs.Name = "Triangle Index Buffer";
+		indexBufferSpecs.Size = StarFire::TriangleIndices.size() * sizeof(uint16_t);
+		indexBufferSpecs.SpecializationType = Aurora::BufferSpecializationType::STATIC_INDEX_BUFFER;
+		indexBufferSpecs.Data = (void*)StarFire::TriangleIndices.data();
+		m_TriangleIndexBufferHandle = Aurora::CreateIndexBuffer(indexBufferSpecs);
 	}
 
 
@@ -90,8 +108,11 @@ namespace Sandbox {
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
 		m_TrianglePass = nullptr;
+		m_BindlessPipeline = nullptr;
 		Aurora::DestroyVertexBuffer(m_TriangleVertexBufferHandle);
 		m_TriangleVertexBufferHandle = Aurora::VertexBufferHandle::INVALID_HANDLE;
+		Aurora::DestroyIndexBuffer(m_TriangleIndexBufferHandle);
+		m_TriangleIndexBufferHandle = Aurora::IndexBufferHandle::INVALID_HANDLE;
 		//Here the scene resources should be freed (or pushed into destruction queues, etc). This is also probably the place to save the scene if needed
 	}
 

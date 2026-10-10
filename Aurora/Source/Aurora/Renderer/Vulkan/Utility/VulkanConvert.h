@@ -46,6 +46,23 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(ImageTiling::OPTIMAL) == VK_IMAGE_TILING_OPTIMAL);
 	static_assert(static_cast<int>(ImageTiling::LINEAR) == VK_IMAGE_TILING_LINEAR);
 
+	static_assert(static_cast<int>(WindingOrder::COUNTER_CLOCKWISE) == VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	static_assert(static_cast<int>(WindingOrder::CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
+
+	static_assert(static_cast<int>(PrimitiveTopology::POINT_LIST) == VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::LINE_LIST) == VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::LINE_STRIP) == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_LIST) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_STRIP) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+	static_assert(static_cast<int>(PrimitiveTopology::TRIANGLE_FAN) == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+
+	static_assert(static_cast<int>(PolygonMode::FILL) == VK_POLYGON_MODE_FILL);
+	static_assert(static_cast<int>(PolygonMode::LINE) == VK_POLYGON_MODE_LINE);
+	static_assert(static_cast<int>(PolygonMode::POINT) == VK_POLYGON_MODE_POINT);
+
+	static_assert(static_cast<int>(VertexInputRate::VERTEX) == VK_VERTEX_INPUT_RATE_VERTEX);
+	static_assert(static_cast<int>(VertexInputRate::INSTANCE) == VK_VERTEX_INPUT_RATE_INSTANCE);
+
 	static_assert(static_cast<int>(MemoryUsage::UNKNOWN) == VMA_MEMORY_USAGE_UNKNOWN);
 	static_assert(static_cast<int>(MemoryUsage::GPU_ONLY) == VMA_MEMORY_USAGE_GPU_ONLY);
 	static_assert(static_cast<int>(MemoryUsage::CPU_ONLY) == VMA_MEMORY_USAGE_CPU_ONLY);
@@ -68,9 +85,38 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(BufferUsageFlags::INDIRECT_BUFFER) == VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
 	static_assert(static_cast<int>(BufferUsageFlags::SHADER_DEVICE_ADDRESS) == VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 
+	static_assert(static_cast<int>(IndexType::UINT8) == VK_INDEX_TYPE_UINT8);
+	static_assert(static_cast<int>(IndexType::UINT16) == VK_INDEX_TYPE_UINT16);
+	static_assert(static_cast<int>(IndexType::UINT32) == VK_INDEX_TYPE_UINT32);
+
+	[[nodiscard]] inline constexpr VkPrimitiveTopology ToVkPrimitiveTopology(PrimitiveTopology topology)
+	{
+		return static_cast<VkPrimitiveTopology>(topology);
+	}
+
+	[[nodiscard]] inline constexpr VkPolygonMode ToVkPolygonMode(PolygonMode mode)
+	{
+		return static_cast<VkPolygonMode>(mode);
+	}
+
+	[[nodiscard]] inline constexpr VkVertexInputRate ToVkVertexInputRate(VertexInputRate rate)
+	{
+		return static_cast<VkVertexInputRate>(rate);
+	}
+
+	[[nodiscard]] inline constexpr VkFrontFace ToVkWindingOrder(WindingOrder order)
+	{
+		return static_cast<VkFrontFace>(order);
+	}
+
 	[[nodiscard]] inline constexpr VkFormat ToVkFormat(Format format)
 	{
 		return static_cast<VkFormat>(format);
+	}
+
+	[[nodiscard]] inline constexpr VkIndexType ToVkIndexType(IndexType indexType)
+	{
+		return static_cast<VkIndexType>(indexType);
 	}
 
 	[[nodiscard]] inline constexpr VkImageTiling ToVkImageTiling(ImageTiling tiling)
@@ -175,6 +221,19 @@ namespace Aurora::VK::Convert {
 		if ((usage & ImageUsageFlags::TRANSFER_SRC) == ImageUsageFlags::TRANSFER_SRC || (usage & ImageUsageFlags::TRANSFER_DST) == ImageUsageFlags::TRANSFER_DST)
 			accessFlags |= VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		return accessFlags;
+	}
+
+	inline constexpr size_t GetIndexTypeSize(IndexType type)
+	{
+		switch (type)
+		{
+			case IndexType::UINT8: return sizeof(uint8_t);
+			case IndexType::UINT16: return sizeof(uint16_t);
+			case IndexType::UINT32: return sizeof(uint32_t);
+			default:
+				AURORA_VALIDATE(false, "Unknown IndexType {} detected. Falling back to UINT16", static_cast<int>(type));
+				return sizeof(uint16_t);
+		}
 	}
 
 	// ========== Specification -> runtime data ==========

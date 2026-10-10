@@ -2,6 +2,7 @@
 #include "Aurora/Profiling/Profiling.h"
 #include "Aurora/Core/Core.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCommands.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 
 #include "Aurora/Aurora.h"
 #include "AuroraInternal.h"
@@ -18,6 +19,12 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		AURORA_INFO("Destroying renderGraph '{}'...", m_Specification.Name.c_str());
+
+		if (m_BindlessPipeline)
+		{
+			m_BindlessPipeline->Destroy();
+			m_BindlessPipeline = nullptr;
+		}
 
 		for (const auto& rp : m_RenderPasses)
 			rp->Destroy();		
@@ -61,8 +68,15 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (m_Compiled)		
-			ClearCompilations();		
+		//If block for all resources that only need to compiled once
+		if (!m_Compiled)
+		{
+			if (m_BindlessPipeline)
+				if (AURORA_REQUIRE_FAILS(m_BindlessPipeline->Compile(), "Failed to compile bindless pipeline!"))
+					return false;
+		}
+		else
+			ClearCompilations();
 
 		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
 		const uint8_t fif = GetRenderContext()->GetFramesInFlightCount();
@@ -71,7 +85,11 @@ namespace Aurora::VK {
 		bool success = true;
 		for (const Ref<RenderPass>& renderPass : m_RenderPasses)
 		{
-			renderPass->Compile();				
+			if (AURORA_REQUIRE_FAILS_ALL(renderPass->Compile(), "Failed to compile render pass '{}'!", renderPass->GetSpecification().Name))
+			{
+				success = false;
+				continue;
+			}
 
 			//Create one CompiledPass
 			CompiledPass pass{};
@@ -158,7 +176,7 @@ namespace Aurora::VK {
 		// Even though AddCopyRequest must only be called after Compile, during resize copy targets need to be recompiled as well. 
 		// Hence CopyRequest compilation needs to happen here for previously added requests
 		for (const auto& [copyName, copyRequest] : m_CopyRequests)
-			CompileCopyRequest(copyName);
+			CompileCopyRequest(copyName);		
 
 		return true;
 	}
@@ -188,7 +206,8 @@ namespace Aurora::VK {
 		VulkanFrame& frameData = renderContext->GetCurrentFrameData();
 		VkCommandBuffer cmd = frameData.CommandBuffer;
 
-		renderer->BindBindlessPipeline(cmd);
+		if (m_BindlessPipeline)
+			renderer->BindPipeline(cmd, m_BindlessPipeline);
 
 		for (const auto& pass : m_CompiledPasses)
 		{
@@ -241,7 +260,19 @@ namespace Aurora::VK {
 			viewport.y = static_cast<float>(pass.RenderArea.offset.y);
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
-			renderer->Draw(cmd, 3);
+
+			VulkanBufferData* vertexBufferData = resManager->GetBufferData(vbHandle);
+			VulkanBufferData* indexBufferData = resManager->GetBufferData(ibHandle);
+			if (CheckBufferData(vertexBufferData, indexBufferData))
+			{
+				IndexedDrawData drawData{};
+				drawData.VertexBuffer = vertexBufferData->Buffer;
+				drawData.IndexBuffer = indexBufferData->Buffer;
+				drawData.IndexOffset = indexBufferData->Offset;
+				drawData.IndexCount = static_cast<uint32_t>(indexBufferData->Size / Convert::GetIndexTypeSize(indexBufferData->IndexType));
+				drawData.IndexType = indexBufferData->IndexType;			
+				renderer->DrawIndexed(cmd, drawData);
+			}
 
 			vkCmdEndRendering(cmd);
 
@@ -429,6 +460,28 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	bool VulkanRenderGraph::CheckBufferData(VulkanBufferData* vertexData, VulkanBufferData* indexData)
+	{
+		if (vertexData && !indexData)
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: IndexBuffer is nullptr, but VertexBuffer is valid. Skipping draw.");
+			return false;
+		}
+		if (!vertexData && indexData)
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: VertexBuffer is nullptr, but IndexBuffer is valid. Skipping draw.");
+			return false;
+		}
+		if (!indexData || !vertexData)
+			return false;
+
+		if (!(vertexData->IsReady && indexData->IsReady))
+		{
+			AURORA_WARN("RenderGraph::CheckBufferData: VertexBuffer or IndexBuffer is not ready for rendering. Skipping draw.");
+			return false;
+		}
+		return true;
+	}
 
 	const std::vector<CompiledAttachment*> VulkanRenderGraph::FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName)
 	{

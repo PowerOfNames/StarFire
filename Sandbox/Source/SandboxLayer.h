@@ -47,6 +47,7 @@ namespace Sandbox {
 
 		Aurora::VertexBufferHandle m_TriangleVertexBufferHandle;
 		Aurora::IndexBufferHandle m_TriangleIndexBufferHandle;
+		Ref<Aurora::GraphicsPipeline> m_BindlessPipeline;
 
 		const std::string c_DefaultPassName = "TrianglePass";
 		const std::string c_DefaultColorAttachmentName = "TriangleColorAttachment";

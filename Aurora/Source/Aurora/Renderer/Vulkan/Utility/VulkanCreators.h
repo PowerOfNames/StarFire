@@ -39,5 +39,5 @@ namespace Aurora::VK::Creators {
 	bool CreateImageView(VkDevice device, const VkAllocationCallbacks* allocationCbs, VulkanImageData& data);
 
 	// ========== Buffers ==========
-	bool CreateBuffer(VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage);
+	bool CreateBuffer(VkDevice device, VmaAllocator allocator, VulkanBufferData& data, VmaMemoryUsage memUsage);
 }

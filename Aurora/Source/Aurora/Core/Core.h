@@ -5,4 +5,5 @@
 #include "Aurora/Core/Checks.h"
 #include "Aurora/Profiling/Profiling.h"
 #include "Substrate/RefPtr.h"
+#include "Substrate/TypeInfo.h"
 

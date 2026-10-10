@@ -50,7 +50,7 @@ namespace Aurora::VK {
 		}
 	}
 
-	void VulkanRenderPass::Compile()
+	bool VulkanRenderPass::Compile()
 	{
 		PROFILE_FUNCTION;
 		// Nothing to do here for Vulkan, as we are using dynamic rendering
@@ -83,6 +83,8 @@ namespace Aurora::VK {
 		}
 
 		m_Compiled = true;
+
+		return true;
 	}
 
 	void VulkanRenderPass::OnResize(uint32_t width, uint32_t height)

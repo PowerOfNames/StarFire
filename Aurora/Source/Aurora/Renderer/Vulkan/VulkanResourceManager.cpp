@@ -54,7 +54,7 @@ namespace Aurora::VK {
 		stagingSpecs.Usage = BufferUsageFlags::TRANSFER_SRC;
 		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
 		*stagingData = Convert::MakeBufferData(stagingSpecs);
-		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
+		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
 								 "Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle)))
 		{
 			m_BufferAllocator.Free(stagingHandle);
@@ -195,7 +195,7 @@ namespace Aurora::VK {
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		*data = Convert::MakeBufferData(bufferSpecs);
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage));
+		bool success = Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage));
 
 		if (!success)
 		{
@@ -278,7 +278,7 @@ namespace Aurora::VK {
 		VulkanBufferData* data = GetBufferData(handle);
 		*data = Convert::MakeBufferData(bufferSpecs);
 		data->Usage |= BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
-		if (!Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
+		if (!Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
 		{
 			AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
 			m_BufferAllocator.Free(handle);
@@ -286,7 +286,7 @@ namespace Aurora::VK {
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), "StaticVertexBuffer");
 
-		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownershitp to transfer queue 
+		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownership to transfer queue 
 		// and then upload the data via a staging buffer and then copy the staging content into data
 		if (bufferSpecs.Data)
 		{
@@ -308,10 +308,18 @@ namespace Aurora::VK {
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		if (!data)
 		{
-			AURORA_ERROR("Failed to retrieve buffer data pointer during destruction. Leaking memory might happen");
+			AURORA_ERROR("Failed to retrieve vertex buffer data pointer during destruction. Leaking memory might happen");
 			return;
 		}
-		vmaDestroyBuffer(m_VulkanContext->GetVmaAllocator(), data->Buffer, data->Allocation);
+
+		m_VulkanContext->SubmitToFrameDeletionQueue(
+			[
+				buffer = data->Buffer,
+				allocation = data->Allocation
+			](VkDevice, VmaAllocator allocator, const VkAllocationCallbacks*)
+		{
+			vmaDestroyBuffer(allocator, buffer, allocation);
+		});
 
 		m_BufferAllocator.Free(handle);
 	}
@@ -359,15 +367,31 @@ namespace Aurora::VK {
 
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		*data = Convert::MakeBufferData(bufferSpecs);
-		bool success = Creators::CreateBuffer(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage));
 
-		if (!success)
+		if (bufferSpecs.Type == IndexType::UINT8 && !m_VulkanContext->GetDeviceFeatures().IndexTypeUint8)
+		{
+			AURORA_ERROR("IndexType::UINT8 is not supported on this device. Please change to uint16");
+			m_BufferAllocator.Free(handle);
+			return IndexBufferHandle::INVALID_HANDLE;
+		}
+		data->IndexType = bufferSpecs.Type;
+
+		data->Usage |= BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
+		if (!Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
 		{
 			AURORA_ERROR("Failed to create buffer for handle {}. Freeing handle.", static_cast<uint16_t>(handle));
 			m_BufferAllocator.Free(handle);
 			return IndexBufferHandle::INVALID_HANDLE;
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), bufferSpecs.Name.c_str());
+
+		// if bufferSpecs.Data is not null, we need to transfer the buffer at offset with size from current ownership to transfer queue 
+		// and then upload the data via a staging buffer and then copy the staging content into data
+		if (bufferSpecs.Data)
+		{
+			data->IsReady = false; // mark buffer as not ready until the upload is finished
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+		}
 
 		return handle;
 	}
@@ -382,10 +406,17 @@ namespace Aurora::VK {
 		VulkanBufferData* data = m_BufferAllocator.GetPointerFromHandle(handle);
 		if (!data)
 		{
-			AURORA_ERROR("Failed to retrieve buffer data pointer during destruction. Leaking memory might happen");
+			AURORA_ERROR("Failed to retrieve index buffer data pointer during destruction. Leaking memory might happen");
 			return;
 		}
-		vmaDestroyBuffer(m_VulkanContext->GetVmaAllocator(), data->Buffer, data->Allocation);
+		m_VulkanContext->SubmitToFrameDeletionQueue(
+			[
+				buffer = data->Buffer,
+				allocation = data->Allocation
+			](VkDevice, VmaAllocator allocator, const VkAllocationCallbacks*)
+		{
+			vmaDestroyBuffer(allocator, buffer, allocation);
+		});
 
 		m_BufferAllocator.Free(handle);
 	}

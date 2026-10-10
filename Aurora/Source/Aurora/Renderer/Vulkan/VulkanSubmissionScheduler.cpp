@@ -46,8 +46,6 @@ namespace Aurora::VK {
 		op.SrcHandle = src;
 		op.DstHandle = dst;
 
-		op.SrcCurrentOwner = srcData->CurrentOwner;
-		op.DstCurrentOwner = dstData->CurrentOwner;
 		op.DstNextOwner = nextOwner;
 
 		op.DestroySrc = destroySrc;

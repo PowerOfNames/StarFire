@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Aurora/Core/Defines.h"
 #include "Aurora/Renderer/Vulkan/VMA.h"
 #include "Aurora/Renderer/Vulkan/VulkanDebug.h"
 #include "Aurora/Renderer/DeletionQueue.h"
@@ -10,6 +11,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <string>
+#include <array>
 
 namespace Aurora::VK {
 
@@ -91,6 +93,24 @@ namespace Aurora::VK {
 		uint64_t Value = 0;
 	};
 
+	struct TransferCmdBuffer
+	{
+		VkCommandBuffer Buffer = VK_NULL_HANDLE;
+		uint64_t WaitValue = 0;
+	};
+
+	struct CommandBufferRing
+	{
+		std::array<TransferCmdBuffer, AURORA_TRANSFER_COMMAND_BUFFER_COUNT> Buffers;
+		uint8_t NextIdx = 0;
+		TransferCmdBuffer& GetNext()
+		{
+			TransferCmdBuffer& cmd = Buffers[NextIdx];
+			NextIdx = (NextIdx + 1) % AURORA_TRANSFER_COMMAND_BUFFER_COUNT;
+			return cmd;
+		}
+	};
+
 	struct PendingResourceUpload
 	{
 		VkSemaphore SignalSemaphore = VK_NULL_HANDLE;
@@ -141,6 +161,12 @@ namespace Aurora::VK {
 		} DescriptorLimits;
 	};
 
+	struct DeviceFeatures
+	{
+		bool IndexTypeUint8 = false;
+		bool Maintenance8_GranularOwnership = false;
+	};
+
 	struct VulkanBufferCopyOp : public SubmissionOp
 	{
 		VkBuffer SrcBuffer;
@@ -156,8 +182,6 @@ namespace Aurora::VK {
 		BufferHandle SrcHandle;
 		BufferHandle DstHandle;
 
-		QueueOwner SrcCurrentOwner;
-		QueueOwner DstCurrentOwner;
 		QueueOwner DstNextOwner;
 
 		bool DestroySrc;
@@ -189,17 +213,33 @@ namespace Aurora::VK {
 	{
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VmaAllocation Allocation = VK_NULL_HANDLE;
-		VmaAllocationInfo AllocationInfo{}; 
+		VkDeviceAddress DeviceAddress = 0;
+		void* MappedPtr = nullptr;
 		size_t Size = 0;
 		size_t Offset = 0;
 
 		BufferUsageFlags Usage = BufferUsageFlags::NONE;
-
+		IndexType IndexType = IndexType::UINT16;
 		//Used to track ownership transferring
 		QueueOwner LastOwner = QueueOwner::UNKNOWN;
 		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;
 		QueueOwner NextOwner = QueueOwner::UNKNOWN;
 
 		bool IsReady = true;
+	};
+
+
+	// ========== DrawData ==========
+	struct IndexedDrawData
+	{
+		VkBuffer VertexBuffer = VK_NULL_HANDLE;
+		VkBuffer IndexBuffer = VK_NULL_HANDLE;
+		VkDeviceSize IndexOffset = 0;
+		IndexType IndexType = IndexType::UINT16;
+		uint32_t IndexCount = 0;
+		uint32_t InstanceCount = 1;
+		uint32_t FirstIndex = 0;
+		int32_t VertexOffset = 0;
+		uint32_t FirstInstance = 0;
 	};
 }
