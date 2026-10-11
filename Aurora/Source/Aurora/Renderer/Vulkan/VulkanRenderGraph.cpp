@@ -206,6 +206,9 @@ namespace Aurora::VK {
 		VulkanFrame& frameData = renderContext->GetCurrentFrameData();
 		VkCommandBuffer cmd = frameData.CommandBuffer;
 
+		renderer->BindGlobalDescriptorSet(cmd);
+
+		//TODO: Once materials and PipelineStates are in, this changes
 		if (m_BindlessPipeline)
 			renderer->BindPipeline(cmd, m_BindlessPipeline);
 
