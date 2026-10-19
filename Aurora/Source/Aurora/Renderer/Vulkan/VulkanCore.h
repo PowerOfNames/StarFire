@@ -133,6 +133,9 @@ namespace Aurora::VK {
 
 	struct DeviceRequirements
 	{
+		bool BufferDeviceAddress = true;
+		bool TimelineSemaphores = true;
+		bool ScalarBlockLayout = true;
 	};
 
 	struct SwapchainSupportDetails
@@ -165,6 +168,9 @@ namespace Aurora::VK {
 	{
 		bool IndexTypeUint8 = false;
 		bool Maintenance8_GranularOwnership = false;
+		bool BufferDeviceAddress = false;
+		bool ScalarBlockLayout = false;
+		bool TimelineSemaphores = false;
 	};
 
 	struct VulkanBufferCopyOp : public SubmissionOp
@@ -232,7 +238,7 @@ namespace Aurora::VK {
 	// ========== DrawData ==========
 	struct IndexedDrawData
 	{
-		VkBuffer VertexBuffer = VK_NULL_HANDLE;
+		//VkBuffer VertexBuffer = VK_NULL_HANDLE;
 		VkBuffer IndexBuffer = VK_NULL_HANDLE;
 		VkDeviceSize IndexOffset = 0;
 		IndexType IndexType = IndexType::UINT16;

@@ -261,6 +261,8 @@ namespace Aurora::VK {
 			viewport.height = static_cast<float>(pass.RenderArea.extent.height);
 			viewport.x = static_cast<float>(pass.RenderArea.offset.x);
 			viewport.y = static_cast<float>(pass.RenderArea.offset.y);
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 

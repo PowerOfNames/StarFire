@@ -18,8 +18,8 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		if (AURORA_REQUIRE_FAILS(CreateVertexLayout(), "Failed to create uber vertex layout."))
-			return false;
+		//if (AURORA_REQUIRE_FAILS(CreateVertexLayout(), "Failed to create uber vertex layout."))
+		//	return false;
 
 		if (AURORA_REQUIRE_FAILS(CreateGraphicsPipeline(), "Failed to create bindless graphics pipeline."))
 			return false;
@@ -129,10 +129,10 @@ namespace Aurora::VK {
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		vertexInputInfo.pNext = nullptr;
 		vertexInputInfo.flags = 0;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_VertexInputAttributeDescriptions.size());
-		vertexInputInfo.pVertexAttributeDescriptions = m_VertexInputAttributeDescriptions.data();
-		vertexInputInfo.vertexBindingDescriptionCount = 1;
-		vertexInputInfo.pVertexBindingDescriptions = &m_VertexInputBindingDescription;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
 
 		//Input assembly
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };

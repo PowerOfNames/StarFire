@@ -88,7 +88,7 @@ namespace Aurora::VK {
 			return;
 
 		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(cmd, 0, 1, &drawData.VertexBuffer, offsets);
+		//vkCmdBindVertexBuffers(cmd, 0, 1, &drawData.VertexBuffer, offsets);
 		vkCmdBindIndexBuffer(cmd, drawData.IndexBuffer, drawData.IndexOffset, Convert::ToVkIndexType(drawData.IndexType));
 		vkCmdDrawIndexed(cmd, drawData.IndexCount, drawData.InstanceCount, drawData.FirstIndex, drawData.VertexOffset, drawData.FirstInstance);
 	}
@@ -167,6 +167,7 @@ namespace Aurora::VK {
 
 		// == Descriptor Set ==
 		VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		allocInfo.pNext = nullptr;
 		allocInfo.pNext = nullptr;
 		allocInfo.descriptorPool = m_BindlessSetData.DescriptorPool;
 		allocInfo.descriptorSetCount = 1;

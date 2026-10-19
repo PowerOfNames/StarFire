@@ -439,6 +439,10 @@ namespace Aurora::VK {
 		features12.shaderSampledImageArrayNonUniformIndexing = supported12.shaderSampledImageArrayNonUniformIndexing;
 		features12.shaderStorageImageArrayNonUniformIndexing = supported12.shaderStorageImageArrayNonUniformIndexing;
 		features12.timelineSemaphore = supported12.timelineSemaphore;
+		features12.scalarBlockLayout = supported12.scalarBlockLayout;
+		m_DeviceFeatures.BufferDeviceAddress = (features12.bufferDeviceAddress == VK_TRUE);
+		m_DeviceFeatures.TimelineSemaphores = (features12.timelineSemaphore == VK_TRUE);
+		m_DeviceFeatures.ScalarBlockLayout = (features12.scalarBlockLayout == VK_TRUE);
 
 		features12.descriptorBindingStorageBufferUpdateAfterBind = supported12.descriptorBindingStorageBufferUpdateAfterBind;
 		features12.descriptorBindingSampledImageUpdateAfterBind = supported12.descriptorBindingSampledImageUpdateAfterBind;
@@ -1411,10 +1415,43 @@ namespace Aurora::VK {
 		VkPhysicalDeviceProperties deviceProperties;
 		vkGetPhysicalDeviceProperties(phDevice, &deviceProperties);
 
+		VkPhysicalDeviceVulkan12Features supported12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		supported12.pNext = nullptr;
+
+		VkPhysicalDeviceVulkan13Features supported13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+		supported13.pNext = &supported12;
+
+		VkPhysicalDeviceVulkan14Features supported14{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
+		supported14.pNext = &supported13;
+
+		VkPhysicalDeviceMaintenance8FeaturesKHR supportedMaintenance8{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR };
+		supportedMaintenance8.pNext = &supported14;
+
+		VkPhysicalDeviceFeatures2 supported{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+		supported.pNext = &supportedMaintenance8;
+		vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supported);
+
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceFeatures(phDevice, &deviceFeatures);
 		if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 			score += 1000; //magic number
+
+		if (!supported12.bufferDeviceAddress && deviceRequirements.BufferDeviceAddress)
+		{
+			AURORA_ERROR("Device {} does not support required feature BufferDeviceAddress.", deviceProperties.deviceName);
+			return 0;
+		}
+		if (!supported12.scalarBlockLayout && deviceRequirements.ScalarBlockLayout)
+		{
+			AURORA_ERROR("Device {} does not support required feature ScalarBlockLayout.", deviceProperties.deviceName);
+			return 0;
+		}
+		if (!supported12.timelineSemaphore && deviceRequirements.TimelineSemaphores)
+		{
+			AURORA_ERROR("Device {} does not support required feature TimelineSemaphores.", deviceProperties.deviceName);
+			return 0;
+		}
+		//TODO make this more stable an decide on metric+fallback routes (MUUUCH later)
 
 		return score;
 	}

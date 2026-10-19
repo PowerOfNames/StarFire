@@ -1,4 +1,6 @@
-#version 450
+#version 460
+#include "Bindless.glsl"
+
 layout(location = 0) in vec3 v_Color;
 layout(location = 1) in vec2 v_TexCoord;
 
