@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <array>
+#include <glm/glm.hpp>
 
 namespace Aurora::VK {
 
@@ -220,6 +221,7 @@ namespace Aurora::VK {
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VmaAllocation Allocation = VK_NULL_HANDLE;
 		VkDeviceAddress DeviceAddress = 0;
+		//this will be nullptr if not mapped
 		void* MappedPtr = nullptr;
 		size_t Size = 0;
 		size_t Offset = 0;
@@ -238,7 +240,6 @@ namespace Aurora::VK {
 	// ========== DrawData ==========
 	struct IndexedDrawData
 	{
-		//VkBuffer VertexBuffer = VK_NULL_HANDLE;
 		VkBuffer IndexBuffer = VK_NULL_HANDLE;
 		VkDeviceSize IndexOffset = 0;
 		IndexType IndexType = IndexType::UINT16;
@@ -247,5 +248,15 @@ namespace Aurora::VK {
 		uint32_t FirstIndex = 0;
 		int32_t VertexOffset = 0;
 		uint32_t FirstInstance = 0;
+	};
+
+	struct BindlessPushConstant
+	{
+		VkDeviceAddress DrawDataAddress = 0;
+	};
+
+	struct BindlessDrawData
+	{
+		VkDeviceAddress VertexBufferAddress = 0;
 	};
 }

@@ -24,14 +24,10 @@ namespace Aurora::VK {
 	
 	private:
 		bool CreateGraphicsPipeline();
-		bool CreateVertexLayout();
 
 	private:
 		GraphicsPipelineSpecification m_Specification;
 
 		VkPipeline m_Pipeline = VK_NULL_HANDLE;
-
-		std::vector<VkVertexInputAttributeDescription> m_VertexInputAttributeDescriptions;
-		VkVertexInputBindingDescription m_VertexInputBindingDescription{};
 	};
  }

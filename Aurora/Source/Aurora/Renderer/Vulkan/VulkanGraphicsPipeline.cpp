@@ -1,7 +1,6 @@
 #include "Aurora/Renderer/Vulkan/VulkanGraphicsPipeline.h"
 #include "AuroraInternal.h"
 
-#include "Aurora/Renderer/Vertex.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 
@@ -17,9 +16,6 @@ namespace Aurora::VK {
 	bool VulkanGraphicsPipeline::Compile()
 	{
 		PROFILE_FUNCTION;
-
-		//if (AURORA_REQUIRE_FAILS(CreateVertexLayout(), "Failed to create uber vertex layout."))
-		//	return false;
 
 		if (AURORA_REQUIRE_FAILS(CreateGraphicsPipeline(), "Failed to create bindless graphics pipeline."))
 			return false;
@@ -42,34 +38,6 @@ namespace Aurora::VK {
 				vkDestroyPipeline(device, pipeline, allocCbs);
 			});
 		m_Pipeline = VK_NULL_HANDLE;
-	}
-
-	bool VulkanGraphicsPipeline::CreateVertexLayout()
-	{
-		PROFILE_FUNCTION;
-
-		//TODO: automate this, later auto generate from shader reflection
-		m_VertexInputAttributeDescriptions.resize(3);
-		m_VertexInputAttributeDescriptions[0].location = 0;
-		m_VertexInputAttributeDescriptions[0].binding = 0;
-		m_VertexInputAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		m_VertexInputAttributeDescriptions[0].offset = offsetof(UberVertex, Position);
-
-		m_VertexInputAttributeDescriptions[1].location = 1;
-		m_VertexInputAttributeDescriptions[1].binding = 0;
-		m_VertexInputAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		m_VertexInputAttributeDescriptions[1].offset = offsetof(UberVertex, Color);
-
-		m_VertexInputAttributeDescriptions[2].location = 2;
-		m_VertexInputAttributeDescriptions[2].binding = 0;
-		m_VertexInputAttributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		m_VertexInputAttributeDescriptions[2].offset = offsetof(UberVertex, TexCoord);
-
-		m_VertexInputBindingDescription.binding = 0;
-		m_VertexInputBindingDescription.stride = sizeof(UberVertex);
-		m_VertexInputBindingDescription.inputRate = Convert::ToVkVertexInputRate(m_Specification.VertexInputRate);
-
-		return true;
 	}
 
 	bool VulkanGraphicsPipeline::CreateGraphicsPipeline()

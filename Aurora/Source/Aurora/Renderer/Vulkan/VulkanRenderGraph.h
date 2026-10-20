@@ -12,6 +12,8 @@
 
 namespace Aurora::VK {
 
+	constexpr uint32_t MAX_DRAWS_PER_FRAME = 1024;
+
 	struct CompiledAttachment
 	{
 		std::string Name;
@@ -94,5 +96,7 @@ namespace Aurora::VK {
 		std::vector<CompiledPass> m_CompiledPasses;
 
 		Ref<GraphicsPipeline> m_BindlessPipeline;
+
+		BufferHandle m_BindlessDrawDataBuffer;
 	};
 }

@@ -34,7 +34,7 @@ namespace Aurora::VK {
 		m_ResourceManagerDestroyed = true;
 	}
 
-	void VulkanResourceManager::UploadBufferData(BufferHandle handle, const void* data, size_t size)
+	void VulkanResourceManager::UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t dstOffsetInBytes /*= 0*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -43,35 +43,50 @@ namespace Aurora::VK {
 
 		AURORA_VALIDATE(IsHandleValid(handle), "Invalid buffer handle for UploadBufferData.");
 		AURORA_VALIDATE(data != nullptr, "Data pointer cannot be nullptr for UploadBufferData.");
-		AURORA_VALIDATE(size > 0, "Size cannot be 0 for UploadBufferData.");
+		AURORA_VALIDATE(sizeInBytes > 0, "Size cannot be 0 for UploadBufferData.");
+
+		VmaAllocator vmaAllocator = m_VulkanContext->GetVmaAllocator();
+		VulkanBufferData* buffer = GetBufferData(handle);
+		if (buffer->MappedPtr)
+		{
+			AURORA_VALIDATE(buffer->Size >= sizeInBytes + dstOffsetInBytes, "Offset+Size ({} + {} = {}) exceeds buffer size ({}).", sizeInBytes, dstOffsetInBytes, sizeInBytes + dstOffsetInBytes, buffer->Size);
+			std::byte* dst= static_cast<std::byte*>(buffer->MappedPtr) + dstOffsetInBytes;
+			std::memcpy(dst, data, sizeInBytes);
+			vmaFlushAllocation(vmaAllocator, buffer->Allocation, dstOffsetInBytes, sizeInBytes);
+			buffer->IsReady = true;
+			return;
+		}
+	
 
 		BufferHandle stagingHandle = m_BufferAllocator.Allocate();
 		if (AURORA_REQUIRE_FAILS(IsHandleValid(stagingHandle), "Failed to allocate staging buffer handle. Maximum number of buffers reached."))
 			return;		
 
 		BufferSpecification stagingSpecs{};
-		stagingSpecs.Size = size;
+		stagingSpecs.Size = sizeInBytes;
 		stagingSpecs.Usage = BufferUsageFlags::TRANSFER_SRC;
 		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
 		*stagingData = Convert::MakeBufferData(stagingSpecs);
-		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
+		VkDevice device = m_VulkanContext->GetLogicalDevice();
+		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(device, vmaAllocator, *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
 								 "Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle)))
 		{
 			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
-		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingData->Buffer), "StagingBuffer");
+		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingData->Buffer), "StagingBuffer");
 
 		void* mappedData = nullptr;
-		vmaMapMemory(m_VulkanContext->GetVmaAllocator(), stagingData->Allocation, &mappedData);
+		vmaMapMemory(vmaAllocator, stagingData->Allocation, &mappedData);
 		if (AURORA_REQUIRE_FAILS(mappedData, "Failed to map memory for buffer upload."))
 		{
-			vmaDestroyBuffer(m_VulkanContext->GetVmaAllocator(), stagingData->Buffer, stagingData->Allocation);
+			vmaDestroyBuffer(vmaAllocator, stagingData->Buffer, stagingData->Allocation);
 			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
-		std::memcpy(mappedData, data, size);
-		vmaUnmapMemory(m_VulkanContext->GetVmaAllocator(), stagingData->Allocation);
+		std::byte* dst = static_cast<std::byte*>(mappedData) + dstOffsetInBytes;
+		std::memcpy(dst, data, sizeInBytes);
+		vmaUnmapMemory(vmaAllocator, stagingData->Allocation);
 
 		m_VulkanContext->CopyBufferToBuffer(stagingHandle, handle, false, true);
 	}
@@ -204,6 +219,12 @@ namespace Aurora::VK {
 			return BufferHandle::INVALID_HANDLE;
 		}
 		AURORA_VK_ATTACH_DEBUG_NAME(m_VulkanContext->GetLogicalDevice(), VK_OBJECT_TYPE_BUFFER, (uint64_t)(data->Buffer), bufferSpecs.Name.c_str());
+
+		if (bufferSpecs.Data)
+		{
+			data->IsReady = false; // mark buffer as not ready until the upload is finished
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+		}
 
 		return handle;
 	}

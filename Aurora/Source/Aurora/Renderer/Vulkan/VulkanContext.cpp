@@ -1429,7 +1429,7 @@ namespace Aurora::VK {
 
 		VkPhysicalDeviceFeatures2 supported{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 		supported.pNext = &supportedMaintenance8;
-		vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supported);
+		vkGetPhysicalDeviceFeatures2(phDevice, &supported);
 
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceFeatures(phDevice, &deviceFeatures);

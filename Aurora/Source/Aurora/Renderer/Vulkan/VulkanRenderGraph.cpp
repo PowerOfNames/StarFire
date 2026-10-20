@@ -20,6 +20,13 @@ namespace Aurora::VK {
 
 		AURORA_INFO("Destroying renderGraph '{}'...", m_Specification.Name.c_str());
 
+		Ref<VulkanResourceManager> resources = GetResourceManager();
+		if (m_BindlessDrawDataBuffer.IsValid())
+		{
+			resources->DestroyBuffer(m_BindlessDrawDataBuffer);
+			m_BindlessDrawDataBuffer = BufferHandle::INVALID_HANDLE;
+		}
+
 		if (m_BindlessPipeline)
 		{
 			m_BindlessPipeline->Destroy();
@@ -69,17 +76,35 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		//If block for all resources that only need to compiled once
+		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
+		const uint8_t fif = GetRenderContext()->GetFramesInFlightCount();
 		if (!m_Compiled)
 		{
+			//Setting up bindless
 			if (m_BindlessPipeline)
+			{
 				if (AURORA_REQUIRE_FAILS(m_BindlessPipeline->Compile(), "Failed to compile bindless pipeline!"))
 					return false;
+
+				BufferSpecification bdlessBufferSpecs{};
+				bdlessBufferSpecs.Name = "BindlessDrawData";
+				bdlessBufferSpecs.Data = nullptr;
+				bdlessBufferSpecs.MemUsage = MemoryUsage::CPU_TO_GPU;
+				bdlessBufferSpecs.SpecializationType = BufferSpecializationType::DRAW_DATA_BUFFER;
+				bdlessBufferSpecs.Usage = BufferUsageFlags::SHADER_DEVICE_ADDRESS | BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_DST;
+				bdlessBufferSpecs.Size = sizeof(BindlessDrawData) * MAX_DRAWS_PER_FRAME * fif;
+				m_BindlessDrawDataBuffer = resourceManager->CreateBuffer(bdlessBufferSpecs);
+
+				VulkanBufferData* drawData = resourceManager->GetBufferData(m_BindlessDrawDataBuffer);
+				if (AURORA_REQUIRE_FAILS(drawData != nullptr, "Failed to create draw data buffer"))
+					return false;
+
+				if (AURORA_REQUIRE_FAILS(drawData->MappedPtr != nullptr, "Draw data buffer not created in mapped form!"))
+					return false;
+			}
 		}
 		else
 			ClearCompilations();
-
-		Ref<VulkanResourceManager> resourceManager = GetResourceManager();
-		const uint8_t fif = GetRenderContext()->GetFramesInFlightCount();
 
 		//For each render pass:
 		bool success = true;
@@ -266,17 +291,33 @@ namespace Aurora::VK {
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 
-			VulkanBufferData* vertexBufferData = resManager->GetBufferData(vbHandle);
-			VulkanBufferData* indexBufferData = resManager->GetBufferData(ibHandle);
-			if (CheckBufferData(vertexBufferData, indexBufferData))
-			{
-				IndexedDrawData drawData{};
-				drawData.VertexBuffer = vertexBufferData->Buffer;
-				drawData.IndexBuffer = indexBufferData->Buffer;
-				drawData.IndexOffset = indexBufferData->Offset;
-				drawData.IndexCount = static_cast<uint32_t>(indexBufferData->Size / Convert::GetIndexTypeSize(indexBufferData->IndexType));
-				drawData.IndexType = indexBufferData->IndexType;			
-				renderer->DrawIndexed(cmd, drawData);
+			VulkanBufferData* drawDataBufferData = resManager->GetBufferData(m_BindlessDrawDataBuffer);
+			if (AURORA_REQUIRE(drawDataBufferData != nullptr && drawDataBufferData->MappedPtr != nullptr, "DrawDataBuffer not available!"))
+			{			
+				VulkanBufferData* vertexBufferData = resManager->GetBufferData(vbHandle);
+				VulkanBufferData* indexBufferData = resManager->GetBufferData(ibHandle);
+				if (CheckBufferData(vertexBufferData, indexBufferData))
+				{
+					size_t drawDataOffset = MAX_DRAWS_PER_FRAME * frameData.FrameIndex * sizeof(BindlessDrawData);
+
+					BindlessDrawData drawData{};
+					drawData.VertexBufferAddress = vertexBufferData->DeviceAddress;
+
+					std::byte* dst = static_cast<std::byte*>(drawDataBufferData->MappedPtr) + drawDataOffset;
+					std::memcpy(dst, &drawData, sizeof(BindlessDrawData));
+					vmaFlushAllocation(renderContext->GetVmaAllocator(), drawDataBufferData->Allocation, drawDataOffset, sizeof(BindlessDrawData));
+
+					BindlessPushConstant pc{};
+					pc.DrawDataAddress = drawDataBufferData->DeviceAddress + drawDataOffset;
+					vkCmdPushConstants(cmd, GetRenderer()->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(BindlessPushConstant), &pc);
+
+					IndexedDrawData indexedDraw{};
+					indexedDraw.IndexBuffer = indexBufferData->Buffer;
+					indexedDraw.IndexOffset = indexBufferData->Offset;
+					indexedDraw.IndexCount = static_cast<uint32_t>(indexBufferData->Size / Convert::GetIndexTypeSize(indexBufferData->IndexType));
+					indexedDraw.IndexType = indexBufferData->IndexType;
+					renderer->DrawIndexed(cmd, indexedDraw);
+				}
 			}
 
 			vkCmdEndRendering(cmd);

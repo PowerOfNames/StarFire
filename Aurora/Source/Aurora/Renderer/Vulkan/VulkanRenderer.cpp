@@ -87,8 +87,6 @@ namespace Aurora::VK {
 		if (drawData.IndexCount == 0)
 			return;
 
-		VkDeviceSize offsets[] = { 0 };
-		//vkCmdBindVertexBuffers(cmd, 0, 1, &drawData.VertexBuffer, offsets);
 		vkCmdBindIndexBuffer(cmd, drawData.IndexBuffer, drawData.IndexOffset, Convert::ToVkIndexType(drawData.IndexType));
 		vkCmdDrawIndexed(cmd, drawData.IndexCount, drawData.InstanceCount, drawData.FirstIndex, drawData.VertexOffset, drawData.FirstInstance);
 	}
@@ -168,7 +166,6 @@ namespace Aurora::VK {
 		// == Descriptor Set ==
 		VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		allocInfo.pNext = nullptr;
-		allocInfo.pNext = nullptr;
 		allocInfo.descriptorPool = m_BindlessSetData.DescriptorPool;
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &m_BindlessSetData.DescriptorSetLayout;
@@ -181,8 +178,8 @@ namespace Aurora::VK {
 		// == Pipeline Layout ==
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = 128;
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+		pushConstantRange.size = sizeof(BindlessPushConstant);
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		VkPipelineLayoutCreateInfo pipLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		pipLayoutInfo.pNext = nullptr;

@@ -19,12 +19,7 @@ namespace Aurora {
 		STATIC_TRANSFORM_DATA_BUFFER,
 		DYNAMIC_TRANSFORM_DATA_BUFFER,
 
-		GLOBAL_DESCRIPTORS_SSBO,
-		CAMERA_DATA_BUFFER = GLOBAL_DESCRIPTORS_SSBO,
-		LIGHT_DATA_BUFFER = GLOBAL_DESCRIPTORS_SSBO,
-
-		STATIC_DRAW_DATA_BUFFER,
-		DYNAMIC_DRAW_DATA_BUFFER,
+		DRAW_DATA_BUFFER,
 
 		STATIC_MATERIAL_DATA_BUFFER,
 		DYNAMIC_MATERIAL_DATA_BUFFER,
@@ -37,6 +32,7 @@ namespace Aurora {
 	{
 		std::string Name = "Buffer";
 		void* Data = nullptr;
+		//In bytes
 		uint64_t Size = 0;
 		BufferUsageFlags Usage = BufferUsageFlags::NONE;
 		MemoryUsage MemUsage = MemoryUsage::GPU_ONLY;
