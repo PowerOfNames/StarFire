@@ -5,6 +5,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanCreators.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
+#include "Aurora/Renderer/Vulkan/Utility/VulkanMemory.h"
 
 namespace Aurora::VK {
 	VulkanResourceManager::VulkanResourceManager(const Ref<VulkanContext>& vulkanContext)
@@ -50,9 +51,7 @@ namespace Aurora::VK {
 		if (buffer->MappedPtr)
 		{
 			AURORA_VALIDATE(buffer->Size >= sizeInBytes + dstOffsetInBytes, "Offset+Size ({} + {} = {}) exceeds buffer size ({}).", sizeInBytes, dstOffsetInBytes, sizeInBytes + dstOffsetInBytes, buffer->Size);
-			std::byte* dst= static_cast<std::byte*>(buffer->MappedPtr) + dstOffsetInBytes;
-			std::memcpy(dst, data, sizeInBytes);
-			vmaFlushAllocation(vmaAllocator, buffer->Allocation, dstOffsetInBytes, sizeInBytes);
+			Memory::WriteMapped(vmaAllocator, *buffer, dstOffsetInBytes, data, sizeInBytes);
 			buffer->IsReady = true;
 			return;
 		}
@@ -65,28 +64,24 @@ namespace Aurora::VK {
 		BufferSpecification stagingSpecs{};
 		stagingSpecs.Size = sizeInBytes;
 		stagingSpecs.Usage = BufferUsageFlags::TRANSFER_SRC;
-		VulkanBufferData* stagingData = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
-		*stagingData = Convert::MakeBufferData(stagingSpecs);
+		VulkanBufferData* stagingBuffer = m_BufferAllocator.GetPointerFromHandle(stagingHandle);
+		*stagingBuffer = Convert::MakeBufferData(stagingSpecs);
 		VkDevice device = m_VulkanContext->GetLogicalDevice();
-		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(device, vmaAllocator, *stagingData, VMA_MEMORY_USAGE_CPU_TO_GPU), 
+		if (AURORA_REQUIRE_FAILS(Creators::CreateBuffer(device, vmaAllocator, *stagingBuffer, VMA_MEMORY_USAGE_CPU_TO_GPU), 
 								 "Failed to create staging buffer for handle {}. Freeing handle.", static_cast<uint16_t>(stagingHandle)))
 		{
 			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
-		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingData->Buffer), "StagingBuffer");
+		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_BUFFER, (uint64_t)(stagingBuffer->Buffer), "StagingBuffer");
 
-		void* mappedData = nullptr;
-		vmaMapMemory(vmaAllocator, stagingData->Allocation, &mappedData);
-		if (AURORA_REQUIRE_FAILS(mappedData, "Failed to map memory for buffer upload."))
+		if (AURORA_REQUIRE_FAILS(stagingBuffer->MappedPtr, "Failed to map memory for buffer upload."))
 		{
-			vmaDestroyBuffer(vmaAllocator, stagingData->Buffer, stagingData->Allocation);
+			vmaDestroyBuffer(vmaAllocator, stagingBuffer->Buffer, stagingBuffer->Allocation);
 			m_BufferAllocator.Free(stagingHandle);
 			return;
 		}
-		std::byte* dst = static_cast<std::byte*>(mappedData) + dstOffsetInBytes;
-		std::memcpy(dst, data, sizeInBytes);
-		vmaUnmapMemory(vmaAllocator, stagingData->Allocation);
+		Memory::WriteMapped(vmaAllocator, *stagingBuffer, 0, data, sizeInBytes);
 
 		m_VulkanContext->CopyBufferToBuffer(stagingHandle, handle, false, true);
 	}
@@ -298,7 +293,9 @@ namespace Aurora::VK {
 
 		VulkanBufferData* data = GetBufferData(handle);
 		*data = Convert::MakeBufferData(bufferSpecs);
-		data->Usage |= BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
+		data->Usage |= BufferUsageFlags::TRANSFER_DST;
+		if (bufferSpecs.IsBindless)
+			data->Usage |= BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
 		if (!Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
 		{
 			AURORA_ERROR("Failed to create static vertex buffer for bindless rendering. Bindless rendering might not work correctly.");
@@ -397,7 +394,8 @@ namespace Aurora::VK {
 		}
 		data->IndexType = bufferSpecs.Type;
 
-		data->Usage |= BufferUsageFlags::TRANSFER_DST | BufferUsageFlags::SHADER_DEVICE_ADDRESS;
+		data->Usage |= BufferUsageFlags::TRANSFER_DST;
+
 		if (!Creators::CreateBuffer(m_VulkanContext->GetLogicalDevice(), m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(bufferSpecs.MemUsage)))
 		{
 			AURORA_ERROR("Failed to create buffer for handle {}. Freeing handle.", static_cast<uint16_t>(handle));

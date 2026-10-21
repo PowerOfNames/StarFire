@@ -13,7 +13,6 @@
 
 
 // ===== Renderer =====
-#include "StarFire/Renderer/Vertex.h"
 #include "StarFire/Renderer/Primitives.h"
 #include "StarFire/Renderer/Renderer.h"
 

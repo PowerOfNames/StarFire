@@ -2,7 +2,6 @@
 
 #include "Aurora/Core/Defines.h"
 #include "Aurora/Renderer/Vulkan/VMA.h"
-#include "Aurora/Renderer/Vulkan/VulkanDebug.h"
 #include "Aurora/Renderer/DeletionQueue.h"
 #include "Aurora/Renderer/Handles.h"
 #include "Aurora/Renderer/Types.h"
@@ -10,9 +9,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include <string>
 #include <array>
-#include <glm/glm.hpp>
 
 namespace Aurora::VK {
 
@@ -248,15 +245,5 @@ namespace Aurora::VK {
 		uint32_t FirstIndex = 0;
 		int32_t VertexOffset = 0;
 		uint32_t FirstInstance = 0;
-	};
-
-	struct BindlessPushConstant
-	{
-		VkDeviceAddress DrawDataAddress = 0;
-	};
-
-	struct BindlessDrawData
-	{
-		VkDeviceAddress VertexBufferAddress = 0;
 	};
 }

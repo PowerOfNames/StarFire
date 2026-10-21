@@ -5,7 +5,7 @@
 #include "Aurora/Aurora.h"
 #include "Aurora/Renderer/RenderGraph.h"
 #include "Aurora/Renderer/RenderPass.h"
-#include "Aurora/Renderer/Vertex.h"
+#include "Aurora/ShaderDataTypes.h"
 #include "Aurora/Renderer/GraphicsPipeline.h"
 
 
@@ -87,7 +87,8 @@ namespace Sandbox {
 		Aurora::VertexBufferSpecification vertexBufferSpecs{};
 		vertexBufferSpecs.Name = "Triangle Vertex Buffer";
 		//vertexBufferSpecs.Layout = vertexBufferLayout;
-		vertexBufferSpecs.Size = StarFire::TriangleVertices.size() * sizeof(Aurora::UberVertex);
+		vertexBufferSpecs.IsBindless = true;
+		vertexBufferSpecs.Size = StarFire::TriangleVertices.size() * sizeof(Aurora::GPU::Vertex);
 		vertexBufferSpecs.SpecializationType = Aurora::BufferSpecializationType::STATIC_VERTEX_BUFFER;
 		vertexBufferSpecs.Data = (void*)StarFire::TriangleVertices.data();
 		m_TriangleVertexBufferHandle = Aurora::CreateVertexBuffer(vertexBufferSpecs);
@@ -142,7 +143,7 @@ namespace Sandbox {
 		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
 
 		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
-		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle);
+		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, deltaTime.InMilli());
 
 	}
 

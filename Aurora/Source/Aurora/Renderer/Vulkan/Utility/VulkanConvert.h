@@ -182,6 +182,7 @@ namespace Aurora::VK::Convert {
 			accessFlags |= VK_ACCESS_2_TRANSFER_READ_BIT;
 		if ((usage & BufferUsageFlags::TRANSFER_DST) == BufferUsageFlags::TRANSFER_DST)
 			accessFlags |= VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		// BufferUsageFlags::SHADER_DEVICE_ADDRESS is not an access, so it stays unmapped. It should always come with SSBO flag, which handles the access		
 		return accessFlags;
 	}
 

@@ -19,11 +19,9 @@ namespace Aurora {
 		STATIC_TRANSFORM_DATA_BUFFER,
 		DYNAMIC_TRANSFORM_DATA_BUFFER,
 
+		GLOBALS_BUFFER,
 		DRAW_DATA_BUFFER,
-
-		STATIC_MATERIAL_DATA_BUFFER,
-		DYNAMIC_MATERIAL_DATA_BUFFER,
-
+		MATERIAL_BUFFER,		
 
 		MAX_BUFFER_SPECIALIZATION_TYPE
 	};
@@ -48,6 +46,7 @@ namespace Aurora {
 			MemUsage = MemoryUsage::GPU_ONLY;
 		}
 
+		bool IsBindless = false;
 		//TODO:
 		//VertexLayout Layout{};
 	};

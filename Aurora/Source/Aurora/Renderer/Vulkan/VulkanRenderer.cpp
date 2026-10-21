@@ -2,6 +2,7 @@
 #include "Aurora/Renderer/Vulkan/VulkanDebug.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 #include "Aurora/Renderer/Vulkan/VulkanGraphicsPipeline.h"
+#include "Aurora/ShaderDataTypes.h"
 
 #include "AuroraInternal.h"
 
@@ -178,7 +179,7 @@ namespace Aurora::VK {
 		// == Pipeline Layout ==
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(BindlessPushConstant);
+		pushConstantRange.size = sizeof(GPU::BindlessPushConstant);
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		VkPipelineLayoutCreateInfo pipLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };

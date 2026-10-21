@@ -1,29 +1,30 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_scalar_block_layout : require
 
-struct Vertex
-{
-	vec3 Position;
-	vec3 Color;
-	vec2 TexCoord;
-};
+#include "../../Include/Aurora/ShaderDataTypes.h"
 
-layout(scalar, buffer_reference, buffer_reference_align = 8) readonly buffer VertexReference
+//The rest will later move into StarFires own resources containing the bindless setup.
+layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer VertexBufferReference
 {
 	Vertex Vertices[];
 };
 
-struct DrawData
+layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer MaterialBufferReference
 {
-	VertexReference VertexBufferAddress;
+	BindlessMaterial Materials[];
 };
 
-layout(scalar, buffer_reference, buffer_reference_align = 8) readonly buffer DrawDataReference
+layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer GlobalStateBufferReference
 {
-	DrawData Data[];
+	BindlessGlobalState Globals;
 };
 
-layout(push_constant) uniform BindlessPushConstant
+layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer DrawDataBufferReference
 {
-	DrawDataReference DrawDataAddress;
-} ddPc;
+	BindlessDrawData Data[];
+};
+
+layout(push_constant, scalar) uniform PushConstantBlock
+{
+	BindlessPushConstant BindlessPC;
+}pcb;
