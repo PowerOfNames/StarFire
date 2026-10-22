@@ -5,8 +5,10 @@ namespace Substrate::CheckHelpers {
 	constexpr bool Unused(const Args&...) noexcept { return true; }
 }
 
+extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
+
 #define SUBSTRATE_EXPAND(x) x
-#define SUBSTRATE_DEBUG_BREAK() __debugbreak()
+#define SUBSTRATE_DEBUG_BREAK() do { if (::IsDebuggerPresent()) { __debugbreak(); } } while (false)
 
 
 #define SUBSTRATE_LOG_IMPL(expr, logMacro, ...)							\

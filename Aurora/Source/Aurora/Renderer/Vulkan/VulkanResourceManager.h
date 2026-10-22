@@ -43,7 +43,7 @@ namespace Aurora::VK {
 		VulkanBufferData* GetBufferData(IndexBufferHandle handle);
 
 	private:
-		void UploadBufferData(BufferHandle handle, const void* data, size_t size);
+		void UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0);
 
 	private:
 		Ref<VulkanContext> m_VulkanContext = nullptr;

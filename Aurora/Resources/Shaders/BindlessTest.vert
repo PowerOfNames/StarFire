@@ -1,15 +1,19 @@
-#version 450
-layout(location = 0) in vec3 a_Position;
-layout(location = 1) in vec3 a_Color;
-layout(location = 2) in vec2 a_TexCoord;
+#version 460
+#include "Bindless.glsl"
 
 layout(location = 0) out vec3 v_Color;
 layout(location = 1) out vec2 v_TexCoord;
 
-
 void main()
 {
-	gl_Position = vec4(a_Position, 1.0);
-	v_Color = a_Color;
-	v_TexCoord = a_TexCoord;
+	BindlessDrawData pDrawData = pcb.BindlessPC.DrawDataBufferAddress.Data[gl_InstanceIndex];
+	Vertex vertex = pDrawData.VertexBufferAddress.Vertices[gl_VertexIndex];
+	BindlessGlobalState globalState = pcb.BindlessPC.GlobalStateBufferAddress.Globals;
+
+
+	vec3 pos = vertex.Position;
+	pos.x = sin(pos.x * globalState.DeltaTime * 0.1) * cos(pos.x * globalState.DeltaTime * 0.1) - 0.5;
+	gl_Position = vec4(pos, 1.0);
+	v_Color = vertex.Color * sin(globalState.DeltaTime * 0.01);
+	v_TexCoord = vertex.TexCoord;
 }

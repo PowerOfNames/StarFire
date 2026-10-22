@@ -1,5 +1,5 @@
 #pragma once
-#include "Aurora/Renderer/Vertex.h"
+#include "Aurora/ShaderDataTypes.h"
 
 #include <cstdint>
 #include <array>
@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 namespace StarFire {
 
-	inline constexpr std::array<Aurora::UberVertex, 3> TriangleVertices{ {
+	inline constexpr std::array<Aurora::GPU::Vertex, 3> TriangleVertices{ {
 		{.Position = { 0.0f, -0.5f, 0.0f }, .Color = {1.0f, 0.0f, 0.0f}, .TexCoord = {0.0f, 0.0f} },
 		{.Position = { -0.5f, 0.5f, 0.0f }, .Color = {0.0f, 1.0f, 0.0f}, .TexCoord = {1.0f, 0.0f} },
 		{.Position = { 0.5f, 0.5f, 0.0f }, .Color = {0.0f, 0.0f, 1.0f}, .TexCoord = {0.0f, 1.0f} },

@@ -3,14 +3,17 @@
 #include "Aurora/Renderer/GraphicsPipeline.h"
 #include "Aurora/Renderer/Handles.h"
 
-#include "Substrate/RefPtr.h"
-
+#include "Aurora/ShaderDataTypes.h"
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 
+#include "Substrate/RefPtr.h"
+#include "Substrate/UtilityFunctions.h"
 
 #include <vector>
 
 namespace Aurora::VK {
+
+	constexpr uint32_t MAX_DRAWS_PER_FRAME = 1024;
 
 	struct CompiledAttachment
 	{
@@ -64,15 +67,18 @@ namespace Aurora::VK {
 
 		virtual bool Compile() override;
 
-		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle) override;
+		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, float deltaTime) override;
 
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
 
 	private:
+		void DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, float deltaTime);
+		bool CreateDataBuffers();
 		void ClearCompilations();
 		void CompileCopyRequest(std::string_view request);
 		bool CheckAndTransitImage(VulkanImageData* imageData, VkCommandBuffer cmd, VkImageLayout targetLayout);
-		bool CheckBufferData(VulkanBufferData* vertexData, VulkanBufferData* indexData);
+		bool CheckObjectDataAvailability(VulkanBufferData* vertexData, VulkanBufferData* indexData);
+		bool CheckBindlessAvailability(VulkanBufferData* globals, VulkanBufferData* drawData, VulkanBufferData* materials);
 		const std::vector<CompiledAttachment*> FindAttachmentByNameInPass(std::string_view passName, std::string_view attachmentName);
 
 #if defined(AURORA_DEBUG_MODE)
@@ -94,5 +100,12 @@ namespace Aurora::VK {
 		std::vector<CompiledPass> m_CompiledPasses;
 
 		Ref<GraphicsPipeline> m_BindlessPipeline;
+
+		static constexpr size_t GLOBALS_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::BindlessGlobalState), AURORA_GPU_REF_ALIGN);
+		static constexpr size_t DRAW_DATA_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::BindlessDrawData), AURORA_GPU_REF_ALIGN) * MAX_DRAWS_PER_FRAME;
+		static constexpr size_t MATERIAL_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::BindlessMaterial) * MAX_DRAWS_PER_FRAME, AURORA_GPU_REF_ALIGN);
+		BufferHandle m_BindlessGlobalsBuffer = BufferHandle::INVALID_HANDLE;
+		BufferHandle m_BindlessDrawDataBuffer = BufferHandle::INVALID_HANDLE;
+		BufferHandle m_BindlessMaterialBuffer = BufferHandle::INVALID_HANDLE;
 	};
 }

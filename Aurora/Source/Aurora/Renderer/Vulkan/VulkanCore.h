@@ -2,7 +2,6 @@
 
 #include "Aurora/Core/Defines.h"
 #include "Aurora/Renderer/Vulkan/VMA.h"
-#include "Aurora/Renderer/Vulkan/VulkanDebug.h"
 #include "Aurora/Renderer/DeletionQueue.h"
 #include "Aurora/Renderer/Handles.h"
 #include "Aurora/Renderer/Types.h"
@@ -10,7 +9,6 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include <string>
 #include <array>
 
 namespace Aurora::VK {
@@ -133,6 +131,9 @@ namespace Aurora::VK {
 
 	struct DeviceRequirements
 	{
+		bool BufferDeviceAddress = true;
+		bool TimelineSemaphores = true;
+		bool ScalarBlockLayout = true;
 	};
 
 	struct SwapchainSupportDetails
@@ -165,6 +166,9 @@ namespace Aurora::VK {
 	{
 		bool IndexTypeUint8 = false;
 		bool Maintenance8_GranularOwnership = false;
+		bool BufferDeviceAddress = false;
+		bool ScalarBlockLayout = false;
+		bool TimelineSemaphores = false;
 	};
 
 	struct VulkanBufferCopyOp : public SubmissionOp
@@ -214,6 +218,7 @@ namespace Aurora::VK {
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VmaAllocation Allocation = VK_NULL_HANDLE;
 		VkDeviceAddress DeviceAddress = 0;
+		//this will be nullptr if not mapped
 		void* MappedPtr = nullptr;
 		size_t Size = 0;
 		size_t Offset = 0;
@@ -232,7 +237,6 @@ namespace Aurora::VK {
 	// ========== DrawData ==========
 	struct IndexedDrawData
 	{
-		VkBuffer VertexBuffer = VK_NULL_HANDLE;
 		VkBuffer IndexBuffer = VK_NULL_HANDLE;
 		VkDeviceSize IndexOffset = 0;
 		IndexType IndexType = IndexType::UINT16;

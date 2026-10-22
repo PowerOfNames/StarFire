@@ -1,8 +1,8 @@
 #include "Aurora/Renderer/Vulkan/VulkanGraphicsPipeline.h"
 #include "AuroraInternal.h"
 
-#include "Aurora/Renderer/Vertex.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
+#include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 
 #include "Shaders/ShaderByteCodes.h"
 
@@ -16,12 +16,6 @@ namespace Aurora::VK {
 	bool VulkanGraphicsPipeline::Compile()
 	{
 		PROFILE_FUNCTION;
-
-		if (AURORA_REQUIRE_FAILS(CreateDescriptorSets(), "Failed to create bindless descriptor set."))
-			return false;
-
-		if (AURORA_REQUIRE_FAILS(CreateVertexLayout(), "Failed to create uber vertex layout."))
-			return false;
 
 		if (AURORA_REQUIRE_FAILS(CreateGraphicsPipeline(), "Failed to create bindless graphics pipeline."))
 			return false;
@@ -38,170 +32,22 @@ namespace Aurora::VK {
 
 		context->SubmitToMainDeletionQueue(
 			[
-				descriptorPool = m_DescriptorPool,
-				descriptorSetLayout = m_DescriptorSetLayout,
-				pipelineLayout = m_PipelineLayout,
 				pipeline = m_Pipeline
 			] (VkDevice device, VmaAllocator, const VkAllocationCallbacks* allocCbs)
 			{
-				vkDestroyDescriptorPool(device, descriptorPool, allocCbs);
-				vkDestroyDescriptorSetLayout(device, descriptorSetLayout, allocCbs);
 				vkDestroyPipeline(device, pipeline, allocCbs);
-				vkDestroyPipelineLayout(device, pipelineLayout, allocCbs);
 			});
-		m_DescriptorPool = VK_NULL_HANDLE;
-		m_DescriptorSetLayout = VK_NULL_HANDLE;
 		m_Pipeline = VK_NULL_HANDLE;
-		m_PipelineLayout = VK_NULL_HANDLE;
 	}
-
-	bool VulkanGraphicsPipeline::CreateVertexLayout()
-	{
-		PROFILE_FUNCTION;
-
-		//TODO: automate this, later auto generate from shader reflection
-		m_VertexInputAttributeDescriptions.resize(3);
-		m_VertexInputAttributeDescriptions[0].location = 0;
-		m_VertexInputAttributeDescriptions[0].binding = 0;
-		m_VertexInputAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		m_VertexInputAttributeDescriptions[0].offset = offsetof(UberVertex, Position);
-
-		m_VertexInputAttributeDescriptions[1].location = 1;
-		m_VertexInputAttributeDescriptions[1].binding = 0;
-		m_VertexInputAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		m_VertexInputAttributeDescriptions[1].offset = offsetof(UberVertex, Color);
-
-		m_VertexInputAttributeDescriptions[2].location = 2;
-		m_VertexInputAttributeDescriptions[2].binding = 0;
-		m_VertexInputAttributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		m_VertexInputAttributeDescriptions[2].offset = offsetof(UberVertex, TexCoord);
-
-		m_VertexInputBindingDescription.binding = 0;
-		m_VertexInputBindingDescription.stride = sizeof(UberVertex);
-		m_VertexInputBindingDescription.inputRate = Convert::ToVkVertexInputRate(m_Specification.VertexInputRate);
-
-		return true;
-	}
-
-
-	bool VulkanGraphicsPipeline::CreateDescriptorSets()
-	{
-		PROFILE_FUNCTION;
-
-		//TODO: refactor IsBindless || DescriptorsFromShader.
-		// We only support bindless atm
-
-		constexpr int STORAGE_BINDING = 0;
-		constexpr int SAMPLER_BINDIG = 1;
-		constexpr int IMAGE_BINDING = 2;
-
-		Ref<VulkanContext> context = GetRenderContext();
-
-		VkDevice device = context->GetLogicalDevice();
-		const PhysicalDeviceLimits& limits = context->GetPhysicalDeviceLimits();
-		const VkAllocationCallbacks* allocCallbacks = context->GetAllocationCallbacks();
-
-
-		std::vector<VkDescriptorPoolSize> poolSizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, limits.DescriptorLimits.MaxPerStageDescriptorStorageBuffers },
-			{ VK_DESCRIPTOR_TYPE_SAMPLER, limits.DescriptorLimits.MaxPerStageDescriptorSampledImages },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, limits.DescriptorLimits.MaxPerStageDescriptorSampledImages }
-		};
-
-		VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.pNext = nullptr;
-		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-		poolInfo.maxSets = 1;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		AURORA_VK_CHECK(vkCreateDescriptorPool(device, &poolInfo, allocCallbacks, &m_DescriptorPool), VK_SUCCESS, "Failed to create bindless descriptor pool.");
-		if (m_DescriptorPool == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t)m_DescriptorPool, "BindlessDescriptorPool");
-
-
-		VkDescriptorSetLayoutBinding storageBinding{};
-		storageBinding.binding = STORAGE_BINDING;
-		storageBinding.descriptorCount = limits.DescriptorLimits.MaxPerStageDescriptorStorageBuffers;
-		storageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		storageBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutBinding samplerBinding{};
-		samplerBinding.binding = SAMPLER_BINDIG;
-		samplerBinding.descriptorCount = limits.DescriptorLimits.MaxPerStageSamplers;
-		samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutBinding imageBinding{};
-		imageBinding.binding = IMAGE_BINDING;
-		imageBinding.descriptorCount = limits.DescriptorLimits.MaxPerStageDescriptorSampledImages;
-		imageBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		imageBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		std::vector<VkDescriptorSetLayoutBinding> bindings = { storageBinding, samplerBinding, imageBinding };
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-		bindingFlagsInfo.pNext = nullptr;
-		VkDescriptorBindingFlags flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
-		std::vector<VkDescriptorBindingFlags> bindingFlags = { flags, flags, flags };
-		bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
-		bindingFlagsInfo.pBindingFlags = bindingFlags.data();
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext = &bindingFlagsInfo;
-		layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
-
-		AURORA_VK_CHECK(vkCreateDescriptorSetLayout(device, &layoutInfo, allocCallbacks, &m_DescriptorSetLayout), VK_SUCCESS, "Failed to create descriptor set layout.");
-		if (m_DescriptorSetLayout == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t)m_DescriptorSetLayout, "DescriptorSetLayout");
-
-
-		VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		allocInfo.pNext = nullptr;
-		allocInfo.descriptorPool = m_DescriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &m_DescriptorSetLayout;
-		AURORA_VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet), VK_SUCCESS, "Failed to allocate bindless descriptor set.");
-		if (m_DescriptorSet == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)m_DescriptorSet, "DescriptorSet");
-
-		return true;
-	}	
 
 	bool VulkanGraphicsPipeline::CreateGraphicsPipeline()
 	{
 		PROFILE_FUNCTION;
 
 
-		// == Pipeline Layout ==
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = 128;
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext = nullptr;
-		layoutInfo.flags = 0;
-		layoutInfo.setLayoutCount = 1;
-		layoutInfo.pSetLayouts = &m_DescriptorSetLayout;
-		layoutInfo.pushConstantRangeCount = 1;
-		layoutInfo.pPushConstantRanges = &pushConstantRange;
-
-
 		Ref<VulkanContext> context = GetRenderContext();
 		VkDevice device = context->GetLogicalDevice();
-		const PhysicalDeviceLimits& limits = context->GetPhysicalDeviceLimits();
 		const VkAllocationCallbacks* allocCallbacks = context->GetAllocationCallbacks();
-
-		AURORA_VK_CHECK(vkCreatePipelineLayout(device, &layoutInfo, allocCallbacks, &m_PipelineLayout), VK_SUCCESS, "Failed to create pipeline layout.");
-		if (m_PipelineLayout == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)m_PipelineLayout, "GraphicsPipelineLayout");
 
 
 		//TODO: bindless uber-shader Shader Modules					
@@ -251,10 +97,10 @@ namespace Aurora::VK {
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		vertexInputInfo.pNext = nullptr;
 		vertexInputInfo.flags = 0;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_VertexInputAttributeDescriptions.size());
-		vertexInputInfo.pVertexAttributeDescriptions = m_VertexInputAttributeDescriptions.data();
-		vertexInputInfo.vertexBindingDescriptionCount = 1;
-		vertexInputInfo.pVertexBindingDescriptions = &m_VertexInputBindingDescription;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
 
 		//Input assembly
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
@@ -381,7 +227,7 @@ namespace Aurora::VK {
 		// == Pipeline ==
 		VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 		pipelineInfo.pNext = &dynaRenderingInfo;
-		pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.layout = GetRenderer()->GetBindlessSetData().PipelineLayout;
 		pipelineInfo.renderPass = VK_NULL_HANDLE; //because of dynamic rendering
 
 		pipelineInfo.flags = 0;

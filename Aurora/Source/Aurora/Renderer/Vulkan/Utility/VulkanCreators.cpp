@@ -85,11 +85,13 @@ namespace Aurora::VK::Creators {
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = memUsage;
+		
+		allocCreateInfo.flags = memUsage == VMA_MEMORY_USAGE_CPU_TO_GPU ? VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT : 0;
 
 		VmaAllocationInfo allocInfo{};
 
 		VkResult result = vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &data.Buffer, &data.Allocation, &allocInfo);
-		data.MappedPtr = allocInfo.pMappedData;		
+		data.MappedPtr = allocInfo.pMappedData;
 
 		if ((data.Usage & BufferUsageFlags::SHADER_DEVICE_ADDRESS) == BufferUsageFlags::SHADER_DEVICE_ADDRESS)
 		{
