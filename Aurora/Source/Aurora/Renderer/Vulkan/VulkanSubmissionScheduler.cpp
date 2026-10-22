@@ -32,8 +32,7 @@ namespace Aurora::VK {
 		if (AURORA_REQUIRE_FAILS(dstData->Size >= srcData->Size, "Dst data too small for src"))
 			return *this;
 
-		VulkanBufferCopyOp op;
-		op.Type = SubmissionOpType::COPY_BUFFER;
+		VulkanBufferToBufferCopyOp op;
 		op.SrcBuffer = srcData->Buffer;
 		op.DstBuffer = dstData->Buffer;
 		op.Size = srcData->Size;
@@ -55,10 +54,52 @@ namespace Aurora::VK {
 		return *this;
 	}
 
+	VulkanSubmissionScheduler& VulkanSubmissionScheduler::CopyBufferToImage(BufferHandle src, ImageHandle dst, bool destroySrc /*= true*/, QueueOwner nextOwner /*= QueueOwner::UNKNOWN*/)
+	{
+		PROFILE_FUNCTION;
+
+
+		Ref<VulkanResourceManager> res = GetResourceManager();
+		VulkanBufferData* srcData = res->GetBufferData(src);
+		if (AURORA_REQUIRE_FAILS(srcData != nullptr, "Invalid src buffer handle!"))
+			return *this;
+		VulkanImageData* dstData = res->GetImageData(dst);
+		if (AURORA_REQUIRE_FAILS(dstData != nullptr, "Invalid dst buffer handle"))
+			return *this;
+
+		if (AURORA_REQUIRE_FAILS(dstData->Width * dstData->Height * Convert::GetBytesFromFormat(dstData->Format) >= srcData->Size, "Dst data too small for src"))
+			return *this;
+
+		VulkanBufferToImageCopyOp op;
+		op.SrcBuffer = srcData->Buffer;
+		op.DstImage= dstData->Image;
+		op.Size = srcData->Size;
+		op.SrcOffset = srcData->Offset;
+		op.NewLayout = dstData->Layout;
+
+		op.SrcUsage = srcData->Usage;
+		op.DstUsage = dstData->Usage;
+
+		op.SrcHandle = src;
+		op.DstHandle = dst;
+
+		op.DstNextOwner = nextOwner;
+
+		op.DestroySrc = destroySrc;
+
+		m_DeferredCopyBufferToImageSubmissions.push_back(std::move(op));
+
+		return *this;
+	}
+
 	void VulkanSubmissionScheduler::ScheduleSubmissions(bool forceNow)
 	{
 		PROFILE_FUNCTION;
 
-		m_Context->AddDeferredBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions, forceNow);
+		m_Context->AddDeferredBufferToBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions, forceNow);
+		m_DeferredCopyBufferToBufferSubmissions.clear();
+
+		m_Context->AddDeferredBufferToImageCopySubmissionOps(m_DeferredCopyBufferToImageSubmissions, forceNow);
+		m_DeferredCopyBufferToImageSubmissions.clear();
 	}
 }

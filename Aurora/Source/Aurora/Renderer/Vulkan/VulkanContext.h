@@ -51,13 +51,13 @@ namespace Aurora::VK {
 			GetCurrentFrameData().DeletionQueue.SubmitWaitingDeletion(func);
 		}
 
-		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
+		void AddDeferredBufferToBufferCopySubmissionOps(const std::vector<VulkanBufferToBufferCopyOp>& ops, bool forceNow = false);
+		void AddDeferredBufferToImageCopySubmissionOps(const std::vector<VulkanBufferToImageCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
-
-
 
 		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
 		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
+		void CopyBufferToImage(BufferHandle src, ImageHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
 
 		
 		inline const InitializationSpecification& GetSpecification() const { return m_Specification; }
@@ -120,7 +120,8 @@ namespace Aurora::VK {
 
 		// ===== SubmissionHelper =====
 		// TODO: refactor out - needs to be public atm to grant access to SubmissionScheduler for immediate submit
-		void HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op);
+		void HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op);
+		void HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op);
 		TimelineSemaphore& GetSubmissionSemaFromQueueOwner(QueueOwner owner);
 		TransferCmdBuffer& GetCommandBufferFromQueueOwner(QueueOwner owner);
 		
@@ -128,10 +129,11 @@ namespace Aurora::VK {
 
 		// == Frame management ==
 		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle);
+		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, ImageHandle handle);
 		void FlushFrameDeletionQueue(uint8_t frameIdx);
 		void StampFrameDeletionQueueWaitValues(uint8_t frameIdx);
 		void PollPendingResourceUploads();
-		void IncrementFramesInFlightIdx();		
+		void IncrementFramesInFlightIdx();
 
 		
 		//keep scoring up-to-date later (#76)
@@ -173,12 +175,14 @@ namespace Aurora::VK {
 		VkCommandPool m_ComputeTransferCmdPool = VK_NULL_HANDLE;
 		CommandBufferRing m_ComputeTransferCmdBuffers;
 		TimelineSemaphore m_ComputeSubmitSemaphore{};
-
+		
 		QueueFamilies m_QueueFamilies{};
 		std::unordered_map<QueueOwner, uint32_t> m_QueueOwnerIndices;
 		std::unordered_map<QueueOwner, VkQueue> m_QueueOwnerQueues;
-		std::vector<VulkanBufferCopyOp> m_DeferredBufferCopySubmissionOps;
-		std::vector<PendingResourceUpload> m_PendingResourceUploads;
+		std::vector<VulkanBufferToBufferCopyOp> m_DeferredBufferToBufferCopyOps;
+		std::vector<VulkanBufferToImageCopyOp> m_DeferredBufferToImageCopyOps;
+		std::vector<PendingUpload<BufferHandle>> m_PendingBufferUploads;
+		std::vector<PendingUpload<ImageHandle>> m_PendingImageUploads;
 
 
 		VkApplicationInfo m_AppInfo{};

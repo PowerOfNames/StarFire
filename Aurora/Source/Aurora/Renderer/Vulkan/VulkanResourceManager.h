@@ -44,6 +44,7 @@ namespace Aurora::VK {
 
 	private:
 		void UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0);
+		void UploadImageData(ImageHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0);
 
 	private:
 		Ref<VulkanContext> m_VulkanContext = nullptr;

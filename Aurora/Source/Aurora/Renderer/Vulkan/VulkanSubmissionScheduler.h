@@ -16,13 +16,15 @@ namespace Aurora::VK{
 		~VulkanSubmissionScheduler();
 
 		VulkanSubmissionScheduler& CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool destroySrc = true, QueueOwner nextOwner = QueueOwner::UNKNOWN);
+		VulkanSubmissionScheduler& CopyBufferToImage(BufferHandle src, ImageHandle dst, bool destroySrc = true, QueueOwner nextOwner = QueueOwner::UNKNOWN);
 
 		void ScheduleSubmissions(bool forceNow = false);
 
 	private:		
 		Ref<VulkanContext> m_Context;
 
-		std::vector<VulkanBufferCopyOp> m_DeferredCopyBufferToBufferSubmissions;
+		std::vector<VulkanBufferToBufferCopyOp> m_DeferredCopyBufferToBufferSubmissions;
+		std::vector<VulkanBufferToImageCopyOp> m_DeferredCopyBufferToImageSubmissions;
 
 	};
 }

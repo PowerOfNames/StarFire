@@ -11,6 +11,7 @@ namespace Aurora::GPU {
 	using vec4 = glm::vec4;
 	using mat3 = glm::mat3;
 	using mat4 = glm::mat4;
+	using uint = uint32_t;
 #else
 layout(buffer_reference) readonly buffer VertexBufferReference;
 layout(buffer_reference) readonly buffer MaterialBufferReference;
@@ -53,6 +54,7 @@ struct BindlessGlobalState
 struct BindlessMaterial
 {
 	vec3 Tint;
+	uint AlbedoId;
 };
 
 #ifdef __cplusplus

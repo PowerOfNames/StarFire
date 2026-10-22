@@ -294,4 +294,25 @@ namespace Aurora::VK::Convert {
 		}
 		return aspects;
 	}
+
+	inline uint32_t GetBytesFromFormat(VkFormat format)
+	{
+		VkImageAspectFlags aspects = 0;
+		switch (format)
+		{
+			// 4 bytes
+			case VK_FORMAT_R8G8B8A8_SRGB:
+			case VK_FORMAT_R8G8B8A8_UNORM:
+			case VK_FORMAT_B8G8R8A8_SRGB:
+			case VK_FORMAT_B8G8R8A8_UNORM: 
+			case VK_FORMAT_D32_SFLOAT:
+			case VK_FORMAT_D24_UNORM_S8_UINT: return 4;
+			// 5 bytes
+			case VK_FORMAT_D32_SFLOAT_S8_UINT: return 5;
+			default:
+				AURORA_VALIDATE(false, "Unhandled VK_FORMAT {} detected. Falling back to 4", FormatToString(format).c_str());
+				return 4;
+		}
+		return aspects;
+	}
 }

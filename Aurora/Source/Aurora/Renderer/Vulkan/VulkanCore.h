@@ -5,7 +5,6 @@
 #include "Aurora/Renderer/DeletionQueue.h"
 #include "Aurora/Renderer/Handles.h"
 #include "Aurora/Renderer/Types.h"
-#include "Aurora/Renderer/SubmissionOps.h"
 
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -109,11 +108,12 @@ namespace Aurora::VK {
 		}
 	};
 
-	struct PendingResourceUpload
+	template<typename T>
+	struct PendingUpload
 	{
 		VkSemaphore SignalSemaphore = VK_NULL_HANDLE;
 		uint64_t SignalValue = 0;
-		BufferHandle Handle = BufferHandle::INVALID_HANDLE;
+		T Handle = BufferHandle::INVALID_HANDLE;
 	};
 
 	enum class QueueOwner : uint8_t
@@ -131,9 +131,8 @@ namespace Aurora::VK {
 
 	struct DeviceRequirements
 	{
-		bool BufferDeviceAddress = true;
 		bool TimelineSemaphores = true;
-		bool ScalarBlockLayout = true;
+		bool Bindless = true;
 	};
 
 	struct SwapchainSupportDetails
@@ -171,7 +170,7 @@ namespace Aurora::VK {
 		bool TimelineSemaphores = false;
 	};
 
-	struct VulkanBufferCopyOp : public SubmissionOp
+	struct VulkanBufferToBufferCopyOp
 	{
 		VkBuffer SrcBuffer;
 		VkBuffer DstBuffer;
@@ -191,26 +190,48 @@ namespace Aurora::VK {
 		bool DestroySrc;
 	};
 
+	struct VulkanBufferToImageCopyOp
+	{
+		VkBuffer SrcBuffer;
+		VkImage DstImage;
+		VkDeviceSize Size;
+		VkDeviceSize SrcOffset;
+		VkDeviceSize DstOffset;
+
+		BufferUsageFlags SrcUsage;
+		ImageUsageFlags DstUsage;
+		VkImageLayout NewLayout;
+
+		//We only keep these for housekeeping. If the Handle gets destroyed while this submission is still pending, we will just early out. It is a valid state
+		BufferHandle SrcHandle;
+		ImageHandle DstHandle;
+
+		QueueOwner DstNextOwner;
+
+		bool DestroySrc;
+	};
+
 
 	struct VulkanImageData
 	{
-		VkImage Image = VK_NULL_HANDLE;						//8  - must have
-		VkImageView ImageView = VK_NULL_HANDLE;				//16 - must have
-		VmaAllocation Allocation = VK_NULL_HANDLE;			//24 - must have
-		VkFormat Format = VK_FORMAT_UNDEFINED;				//28 - must have
-		VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;	//32 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now
-		VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;		//36 - might be extractable by context
+		VkImage Image = VK_NULL_HANDLE;
+		VkImageView ImageView = VK_NULL_HANDLE;
+		VmaAllocation Allocation = VK_NULL_HANDLE;
+		VkFormat Format = VK_FORMAT_UNDEFINED;
+		VkImageLayout Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;
 
+		uint32_t Width = 0;
+		uint32_t Height = 0;
+		uint32_t TextureIndex = 0;
 		ImageUsageFlags Usage = ImageUsageFlags::NONE;
-
-		uint32_t Width = 0;									//40 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes (renderpass should know sizes of all targets)
-		uint32_t Height = 0;								//44 - could be stored in a per-renderpass data struct, but for simplicity we just store it here for now -> could be skipped if context knows sizes
-		uint8_t MipLevels = 1;								//45 -> aligned to !!! 48 !!! bytes - should potentially be optional as well, but for simplicity we just store it here for now
+		uint8_t MipLevels = 1;
 
 		//Used to track ownership transferring
-		QueueOwner LastOwner = QueueOwner::UNKNOWN;			//46 - aligned to 48 bytes
-		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;		//47 - aligned to 48 bytes
-		QueueOwner NextOwner = QueueOwner::UNKNOWN;			//48 - aligned to 48 bytes
+		QueueOwner LastOwner = QueueOwner::UNKNOWN;
+		QueueOwner CurrentOwner = QueueOwner::UNKNOWN;
+		QueueOwner NextOwner = QueueOwner::UNKNOWN;
+		bool IsReady = true;
 	};
 
 	struct VulkanBufferData

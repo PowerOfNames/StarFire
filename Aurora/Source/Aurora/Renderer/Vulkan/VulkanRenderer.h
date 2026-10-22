@@ -34,9 +34,16 @@ namespace Aurora::VK {
 		inline const BindlessSetData& GetBindlessSetData() const { return m_BindlessSetData; }
 
 	private:
+		bool CreateDefaultSamplers();
 		bool CreateBindlessHandles();
+		void WriteDefaultSamplers();
 
 	private:
 		BindlessSetData m_BindlessSetData{};
+
+		std::vector<VkSampler> m_DefaultSamplers;
+
+		inline static constexpr int SAMPLER_BINDING = 0;
+		inline static constexpr int IMAGE_BINDING = 1;
 	};
 }

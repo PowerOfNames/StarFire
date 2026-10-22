@@ -10,6 +10,8 @@ namespace Aurora {
 	struct ImageSpecification
 	{
 		std::string Name = "Image";
+		const void* Data = nullptr;
+		size_t Size = 0;
 		uint32_t Width = 1;
 		uint32_t Height = 1;
 
