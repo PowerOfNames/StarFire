@@ -45,7 +45,7 @@ Disclaimer: The branches in GLFW were a test. There is no difference between the
 
 
 ### Additional Information
-####About using Claude
+#### About using Claude
 Claude is being used to increase my productivity.
 I do this by letting Claude maintain a (non-public) Obsidian vault next to my project that currently contains coarser Documentation, a DevLog/History and a Bug/Gap and open task tracker.
 It is mainly being used for house-keeping of this vault, which helps me extremely staying focused, not ending up in rabbit holes.
