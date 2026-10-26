@@ -4,14 +4,12 @@
 #include "Aurora/Renderer/RenderContextSpecification.h"
 #include "Aurora/Renderer/Handles.h"
 
-#include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanQueries.h"
 
 #include "Substrate/RefCounted.h"
 
 #include <vector>
-#include <array>
 
 namespace Aurora::VK {
 
@@ -29,7 +27,7 @@ namespace Aurora::VK {
 		VulkanContext(const InitializationSpecification& specs);
 		~VulkanContext() = default;
 
-		bool Init();
+		bool Init();	
 		bool BeginFrame();
 		void Render();
 		void EndFrame();
@@ -54,6 +52,7 @@ namespace Aurora::VK {
 		void AddDeferredBufferToBufferCopySubmissionOps(const std::vector<VulkanBufferToBufferCopyOp>& ops, bool forceNow = false);
 		void AddDeferredBufferToImageCopySubmissionOps(const std::vector<VulkanBufferToImageCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
+		inline const std::vector<ImageHandle>& GetReadyImageUploads() const { return m_UploadReadyImages; }
 
 		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
 		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
@@ -93,7 +92,6 @@ namespace Aurora::VK {
 		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
 		
 		inline Ref<VulkanSwapchain> GetSwapchain() const { return m_Swapchain; }
-		inline Ref<VulkanRenderer> GetRenderer() const { return m_Renderer; }
 
 
 		static Ref<VulkanContext> Create(const InitializationSpecification& specs);
@@ -120,8 +118,8 @@ namespace Aurora::VK {
 
 		// ===== SubmissionHelper =====
 		// TODO: refactor out - needs to be public atm to grant access to SubmissionScheduler for immediate submit
-		void HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op);
-		void HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op);
+		void HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op, bool forceNow = false);
+		void HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op, bool forceNow = false);
 		TimelineSemaphore& GetSubmissionSemaFromQueueOwner(QueueOwner owner);
 		TransferCmdBuffer& GetCommandBufferFromQueueOwner(QueueOwner owner);
 		
@@ -183,6 +181,7 @@ namespace Aurora::VK {
 		std::vector<VulkanBufferToImageCopyOp> m_DeferredBufferToImageCopyOps;
 		std::vector<PendingUpload<BufferHandle>> m_PendingBufferUploads;
 		std::vector<PendingUpload<ImageHandle>> m_PendingImageUploads;
+		std::vector<ImageHandle> m_UploadReadyImages;
 
 
 		VkApplicationInfo m_AppInfo{};
@@ -195,8 +194,6 @@ namespace Aurora::VK {
 		std::vector<VulkanFrame> m_FramesInFlight;
 
 		DeletionQueue m_MainDeletionQueue{};
-
-		Ref<VulkanRenderer> m_Renderer = nullptr;
 
 		struct RendererStatistics
 		{

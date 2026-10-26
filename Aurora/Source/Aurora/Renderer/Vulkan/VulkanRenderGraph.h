@@ -67,12 +67,12 @@ namespace Aurora::VK {
 
 		virtual bool Compile() override;
 
-		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, float deltaTime) override;
+		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle texture, float deltaTime) override;
 
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
 
 	private:
-		void DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, float deltaTime);
+		void DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, float deltaTime);
 		bool CreateDataBuffers();
 		void ClearCompilations();
 		void CompileCopyRequest(std::string_view request);

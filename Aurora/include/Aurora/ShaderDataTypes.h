@@ -21,6 +21,9 @@ layout(buffer_reference) readonly buffer DrawDataBufferReference;
 #endif
 
 #define AURORA_GPU_REF_ALIGN 8
+#define AURORA_GPU_SAMPLERS_REPEAT_ID 0
+#define AURORA_GPU_SAMPLER_BINDING 0
+#define AURORA_GPU_IMAGE_BINDING 1
 
 struct BindlessPushConstant
 {
@@ -54,7 +57,7 @@ struct BindlessGlobalState
 struct BindlessMaterial
 {
 	vec3 Tint;
-	uint AlbedoId;
+	uint AlbedoSlot;
 };
 
 #ifdef __cplusplus

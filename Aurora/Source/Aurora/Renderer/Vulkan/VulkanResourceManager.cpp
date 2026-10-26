@@ -35,7 +35,7 @@ namespace Aurora::VK {
 		m_ResourceManagerDestroyed = true;
 	}
 
-	void VulkanResourceManager::UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t dstOffsetInBytes /*= 0*/)
+	void VulkanResourceManager::UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t dstOffsetInBytes /*= 0*/, bool forceNow /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -83,10 +83,10 @@ namespace Aurora::VK {
 		}
 		Memory::WriteMapped(vmaAllocator, *stagingBuffer, 0, data, sizeInBytes);
 
-		m_VulkanContext->CopyBufferToBuffer(stagingHandle, handle, false, true);
+		m_VulkanContext->CopyBufferToBuffer(stagingHandle, handle, forceNow, true);
 	}
 
-	void VulkanResourceManager::UploadImageData(ImageHandle handle, const void* data, size_t sizeInBytes, size_t dstOffsetInBytes /*= 0*/)
+	void VulkanResourceManager::UploadImageData(ImageHandle handle, const void* data, size_t sizeInBytes, size_t dstOffsetInBytes /*= 0*/, bool forceNow /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -126,7 +126,7 @@ namespace Aurora::VK {
 		}
 		Memory::WriteMapped(vmaAllocator, *stagingBuffer, 0, data, sizeInBytes);
 
-		m_VulkanContext->CopyBufferToImage(stagingHandle, handle, false, true);
+		m_VulkanContext->CopyBufferToImage(stagingHandle, handle, forceNow, true);
 	}
 
 
@@ -153,6 +153,7 @@ namespace Aurora::VK {
 
 		VulkanImageData* data = m_ImageAllocator.GetPointerFromHandle(handle);
 		*data = Convert::MakeImageData(imageSpecs);
+		data->Usage |= ImageUsageFlags::TRANSFER_DST;
 		bool success = Creators::CreateImage(m_VulkanContext->GetVmaAllocator(), *data, Convert::ToVmaMemoryUsage(imageSpecs.MemUsage));
 		if (!success)
 		{
@@ -180,7 +181,8 @@ namespace Aurora::VK {
 		if (imageSpecs.Data)
 		{
 			data->IsReady = false; // mark image as not ready until the upload is finished
-			UploadImageData(handle.As<ImageHandle>(), imageSpecs.Data, imageSpecs.Size);
+			//will transition image layout from unkowon to SHADER_READ_ONLY for now			
+			UploadImageData(handle.As<ImageHandle>(), imageSpecs.Data, imageSpecs.Size, 0, imageSpecs.ForceImmediateUpload);
 		}
 
 		return handle;
@@ -267,7 +269,7 @@ namespace Aurora::VK {
 		if (bufferSpecs.Data)
 		{
 			data->IsReady = false; // mark buffer as not ready until the upload is finished
-			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size, bufferSpecs.Offset, bufferSpecs.ForceImmediateUpload);
 		}
 
 		return handle;
@@ -358,7 +360,7 @@ namespace Aurora::VK {
 		if (bufferSpecs.Data)
 		{
 			data->IsReady = false; // mark buffer as not ready until the upload is finished
-			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size, bufferSpecs.Offset, bufferSpecs.ForceImmediateUpload);
 		}
 
 
@@ -458,7 +460,7 @@ namespace Aurora::VK {
 		if (bufferSpecs.Data)
 		{
 			data->IsReady = false; // mark buffer as not ready until the upload is finished
-			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size);
+			UploadBufferData(handle.As<BufferHandle>(), bufferSpecs.Data, data->Size, bufferSpecs.Offset, bufferSpecs.ForceImmediateUpload);
 		}
 
 		return handle;

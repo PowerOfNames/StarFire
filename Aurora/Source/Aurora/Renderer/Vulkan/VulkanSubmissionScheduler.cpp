@@ -75,7 +75,8 @@ namespace Aurora::VK {
 		op.DstImage= dstData->Image;
 		op.Size = srcData->Size;
 		op.SrcOffset = srcData->Offset;
-		op.NewLayout = dstData->Layout;
+		//TODO: might need to be function input
+		op.NewLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
 
 		op.SrcUsage = srcData->Usage;
 		op.DstUsage = dstData->Usage;
@@ -96,10 +97,16 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
-		m_Context->AddDeferredBufferToBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions, forceNow);
-		m_DeferredCopyBufferToBufferSubmissions.clear();
+		if (m_DeferredCopyBufferToBufferSubmissions.size() > 0)
+		{
+			m_Context->AddDeferredBufferToBufferCopySubmissionOps(m_DeferredCopyBufferToBufferSubmissions, forceNow);
+			m_DeferredCopyBufferToBufferSubmissions.clear();
+		}
 
-		m_Context->AddDeferredBufferToImageCopySubmissionOps(m_DeferredCopyBufferToImageSubmissions, forceNow);
-		m_DeferredCopyBufferToImageSubmissions.clear();
+		if (m_DeferredCopyBufferToImageSubmissions.size() > 0)
+		{
+			m_Context->AddDeferredBufferToImageCopySubmissionOps(m_DeferredCopyBufferToImageSubmissions, forceNow);
+			m_DeferredCopyBufferToImageSubmissions.clear();
+		}
 	}
 }

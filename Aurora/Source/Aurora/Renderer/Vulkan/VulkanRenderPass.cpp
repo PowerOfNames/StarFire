@@ -33,18 +33,18 @@ namespace Aurora::VK {
 
 		for (auto& colorAttachment : m_ColorAttachments)
 		{
-			for (const auto& handle : colorAttachment.ImageHandlesPerFiF)
-			{
+			for (const auto& handle : colorAttachment.ImageHandlesPerFiF)			
 				DestroyImage(handle);
-			}
+			
 			colorAttachment.ImageHandlesPerFiF.clear();
 		}
 		m_ColorAttachmentIndices.clear();
 		m_ColorAttachments.clear();
 		if (m_HasDepthAttachment)
 		{
-			for (const auto& handle : m_DepthAttachment.ImageHandlesPerFiF)
+			for (const auto& handle : m_DepthAttachment.ImageHandlesPerFiF)			
 				DestroyImage(handle);
+			
 			m_DepthAttachment.ImageHandlesPerFiF.clear();
 			m_HasDepthAttachment = false;
 		}
@@ -119,7 +119,14 @@ namespace Aurora::VK {
 		ImageHandle handle = CreateImage(attachmentSpecs);
 		if (AURORA_REQUIRE_FAILS(GetResourceManager()->IsHandleValid(handle), "Failed to create image for render pass attachment {}!", attachmentSpecs.Name))		
 			return ImageHandle::INVALID_HANDLE;
-		
+
+		//Only support color for now. Depth requires a secondary view when format is depth,stentil, (view that only looks at depth) which is not supported yet
+		if (attachmentSpecs.Format != Format::DEPTH24_STENCIL8
+			&& attachmentSpecs.Format != Format::DEPTH32_SFLOAT)
+		{
+			Ref<VulkanRenderer> renderer = GetRenderer();
+			renderer->RegisterTexture(handle);
+		}
 		return handle;
 	}
 

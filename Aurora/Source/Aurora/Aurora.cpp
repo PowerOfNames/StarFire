@@ -5,11 +5,13 @@
 
 #include "Aurora/Renderer/Vulkan/VulkanContext.h"
 #include "Aurora/Renderer/Vulkan/VulkanResourceManager.h"
+#include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 
 namespace Aurora {
 	namespace {
 		Ref<VK::VulkanContext> g_RenderContext = nullptr;
 		Ref<VK::VulkanResourceManager> g_ResourceManager = nullptr;
+		Ref<VK::VulkanRenderer> g_Renderer = nullptr;
 	}
 	Ref<VK::VulkanContext> GetRenderContext()
 	{
@@ -25,8 +27,8 @@ namespace Aurora {
 
 	Ref<VK::VulkanRenderer> GetRenderer()
 	{
-		AURORA_ASSERT(g_RenderContext != nullptr, "ResourceContext not initialized. Cant reach Renderer.");
-		return g_RenderContext->GetRenderer();
+		AURORA_ASSERT(g_Renderer != nullptr, "Renderer not initialized.");
+		return g_Renderer;
 	}
 
 	// ========== Setup ==========
@@ -51,6 +53,7 @@ namespace Aurora {
 						
 		AURORA_ASSERT(g_RenderContext == nullptr, "RenderContext already initialized.");
 
+
 		g_RenderContext = CreateRef<VK::VulkanContext>(contextSpecs);
 		if (AURORA_REQUIRE_FAILS(g_RenderContext != nullptr, "Failed to create RenderContext."))
 			return false;
@@ -58,10 +61,36 @@ namespace Aurora {
 			return false;
 
 		g_ResourceManager = CreateRef<VK::VulkanResourceManager>(g_RenderContext);
+		if (AURORA_REQUIRE_FAILS(g_ResourceManager != nullptr, "Failed to create VulkanResourceManager."))
+			return false;
+		
+		g_Renderer = CreateRef<VK::VulkanRenderer>();
+		if (AURORA_REQUIRE_FAILS(g_Renderer != nullptr, "Failed to create VulkanRenderer."))
+			return false;
+		if (AURORA_REQUIRE_FAILS(g_Renderer->Init(), "Failed to initialize renderer."))
+			return false;
+
 		return true;
 	}
 
-	// ========== Context ==========
+	bool Shutdown()
+	{
+		PROFILE_FUNCTION;
+
+		if (g_Renderer)
+			g_Renderer->Destroy();
+		g_Renderer = nullptr;
+
+		if (g_ResourceManager)
+			g_ResourceManager->Destroy();
+		g_ResourceManager = nullptr;
+
+		if (g_RenderContext)
+			g_RenderContext->Destroy();
+		g_RenderContext = nullptr;
+		return true;
+	}
+
 	uint64_t GetTotalFrameCount()
 	{
 		return g_RenderContext->GetTotalFrameCount();
@@ -71,20 +100,13 @@ namespace Aurora {
 	{
 		PROFILE_FUNCTION;
 
-		return g_RenderContext->BeginFrame();
-	}
+		if (!g_RenderContext->BeginFrame())
+			return false;
 
-	bool Shutdown()
-	{
-		PROFILE_FUNCTION;
+		const auto& readyUploads = g_RenderContext->GetReadyImageUploads();
+		for (const ImageHandle handle : readyUploads)
+			g_Renderer->RegisterTexture(handle);
 
-		if (g_ResourceManager)
-			g_ResourceManager->Destroy();
-		g_ResourceManager = nullptr;
-
-		if (g_RenderContext)
-			g_RenderContext->Destroy();
-		g_RenderContext = nullptr;
 		return true;
 	}
 
@@ -129,6 +151,7 @@ namespace Aurora {
 	{
 		PROFILE_FUNCTION;
 
+		g_Renderer->UnregisterTexture(handle);
 		g_ResourceManager->DestroyImage(handle);
 	}
 

@@ -76,18 +76,7 @@ namespace Aurora::VK {
 
 		if (AURORA_REQUIRE_FAILS(CreateSwapchain(m_Specification.SurfaceSpecs),
 								 "Failed to create swapchain. VulkanContext could not be initialized."))
-			return false;
-		
-
-		m_Renderer = CreateRef<VulkanRenderer>();
-		if (AURORA_REQUIRE_FAILS(m_Renderer != nullptr, "Failed to create renderer. VulkanContext could not be initialized."))
-			return false;
-
-		
-		if (AURORA_REQUIRE_FAILS(m_Renderer->Init(),
-								 "Failed to initialize renderer. VulkanContext could not be initialized."))
-			return false;	
-
+			return false;		
 
 		//This initializes FIF, such that the very first rendered frame still is index 0;
 		m_RendererStatistics.FramesInFlightIdx = m_Specification.SurfaceSpecs.FramesPerFlight - 1;
@@ -96,7 +85,6 @@ namespace Aurora::VK {
 		return true;
 	}
 
-
 	void VulkanContext::Destroy()
 	{
 		PROFILE_FUNCTION;
@@ -104,8 +92,6 @@ namespace Aurora::VK {
 		if (m_Device != VK_NULL_HANDLE)
 			AURORA_VK_CHECK(vkDeviceWaitIdle(m_Device), VK_SUCCESS, "RenderContext::Destroy: Failed to wait for device idle!");
 
-		if(m_Renderer)
-			m_Renderer->Destroy();
 		for (uint8_t fif = 0; fif < static_cast<uint8_t>(m_FramesInFlight.size()); fif++)
 		{
 			StampFrameDeletionQueueWaitValues(fif);
@@ -126,7 +112,6 @@ namespace Aurora::VK {
 		AURORA_INFO("Destroyed all vulkan context objects.");
 	}
 
-
 	bool VulkanContext::BeginFrame()
 	{
 		PROFILE_FUNCTION;
@@ -142,7 +127,7 @@ namespace Aurora::VK {
 		
 		//Cleanup frame -> this should definitely be done now.
 		FlushFrameDeletionQueue(m_RendererStatistics.FramesInFlightIdx);
-			
+		
 
 		VkCommandBufferBeginInfo cmdInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		cmdInfo.pNext = nullptr;
@@ -897,6 +882,7 @@ namespace Aurora::VK {
 			m_PendingBufferUploads.pop_back();
 		}
 
+		m_UploadReadyImages.clear();
 		for (size_t i = 0; i < m_PendingImageUploads.size();)
 		{
 			auto res = m_PendingImageUploads[i];
@@ -911,6 +897,8 @@ namespace Aurora::VK {
 			if (VulkanImageData* data = GetResourceManager()->GetImageData(res.Handle))
 			{
 				data->IsReady = true;
+				m_UploadReadyImages.push_back(res.Handle);
+
 				AURORA_INFO("Resource upload completed for image handle {}.", (uint16_t)res.Handle);
 			}
 
@@ -936,7 +924,7 @@ namespace Aurora::VK {
 			m_DeferredBufferToBufferCopyOps.insert(m_DeferredBufferToBufferCopyOps.end(), ops.begin(), ops.end());
 		else
 			for (const VulkanBufferToBufferCopyOp& op : ops)
-				HandleBufferToBufferCopySubmissionOp(op);
+				HandleBufferToBufferCopySubmissionOp(op, true);
 	}
 	void VulkanContext::AddDeferredBufferToImageCopySubmissionOps(const std::vector<VulkanBufferToImageCopyOp>& ops, bool forceNow /*= false*/)
 	{
@@ -946,10 +934,10 @@ namespace Aurora::VK {
 			m_DeferredBufferToImageCopyOps.insert(m_DeferredBufferToImageCopyOps.end(), ops.begin(), ops.end());
 		else
 			for (const VulkanBufferToImageCopyOp& op : ops)
-				HandleBufferToImageCopySubmissionOp(op);
+				HandleBufferToImageCopySubmissionOp(op, true);
 	}
 
-	void VulkanContext::HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op)
+	void VulkanContext::HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op, bool forceNow /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -985,9 +973,9 @@ namespace Aurora::VK {
 
 		std::vector<TimelineSemaphore> additionalWaits;
 		//We need to realase them on their current queue if they are currently in an owned state (current != unknown) and if current differs from copyQueue
-		if (srcCurrentOwner != QueueOwner::UNKNOWN && srcCurrentOwner != copyQueue)
+		uint32_t srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcCurrentOwner);
+		if (srcCurrentOwner != QueueOwner::UNKNOWN && srcCurQueueIndex != copyQueueIndex)
 		{
-			uint32_t srcQueueIndex = GetQueueFamilyIndexFromOwner(srcCurrentOwner);
 			SubmitSpecifications submitSpecs{ srcCurrentOwner };
 			//6.1 transfer src ownership - release
 			ImmediateSubmit([
@@ -995,7 +983,7 @@ namespace Aurora::VK {
 				buffer = op.SrcBuffer,
 				offset = op.SrcOffset,
 				size = op.Size,
-				srcQIndex = srcQueueIndex,
+				srcQIndex = srcCurQueueIndex,
 				dstQIndex = copyQueueIndex,
 				lastUsage = op.SrcUsage,
 				queue = srcCurrentOwner
@@ -1030,9 +1018,9 @@ namespace Aurora::VK {
 		}
 
 		//we cant handle both resources in one submit because they might be used in different pipeline stages, as well as different queues (src.CurrentOwner != dst.CurrentOwner) and we need to release them on their current queue
-		if (dstCurrentOwner != QueueOwner::UNKNOWN && dstCurrentOwner != copyQueue)
+		uint32_t dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstCurrentOwner);
+		if (dstCurrentOwner != QueueOwner::UNKNOWN && dstCurQueueIndex != copyQueueIndex)
 		{
-			uint32_t dstQueueIndex = GetQueueFamilyIndexFromOwner(dstCurrentOwner);
 			SubmitSpecifications submitSpecs{ dstCurrentOwner };
 			//6.1 transfer dst ownership - release
 			ImmediateSubmit([
@@ -1040,7 +1028,7 @@ namespace Aurora::VK {
 				buffer = op.DstBuffer,
 				offset = op.DstOffset,
 				size = op.Size,
-				srcQIndex = dstQueueIndex,
+				srcQIndex = dstCurQueueIndex,
 				dstQIndex = copyQueueIndex,
 				lastUsage = op.DstUsage,
 				queue = dstCurrentOwner
@@ -1070,19 +1058,25 @@ namespace Aurora::VK {
 
 			dstLastOwner = dstCurrentOwner;
 			dstCurrentOwner = QueueOwner::UNKNOWN;
-			dstNextOwner = copyQueue;
 			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstLastOwner));
 		}
+		else if (dstCurrentOwner != QueueOwner::UNKNOWN && dstCurrentOwner != copyQueue)
+		{
+			// We do this, because both queue indices could be the same. But, we still have two different queues (same family, different slots) so, transfer != graphics queue
+			// -> We therefore (if owned) need to wait in the other queue before other operations (transfer (copy) needs to happen on the last graphics op)
+			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstCurrentOwner));
+		}
+		
 
 		//No sure if we need to check if current is UNKNOWN, because we set current owner to UNKNOWN after releasing, so technically we need to check if last was unknown as well
-		bool srcNeedsAcquire = srcCurrentOwner != copyQueue && srcLastOwner != QueueOwner::UNKNOWN;
-		bool dstNeedsAcquire = dstCurrentOwner != copyQueue && dstLastOwner != QueueOwner::UNKNOWN;
-		bool srcNeedsRelease = !op.DestroySrc && srcNextOwner != copyQueue;
-		bool dstNeedsRelease = dstNextOwner != copyQueue;
-		uint32_t srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcLastOwner);
-		uint32_t dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstLastOwner);
+		srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcLastOwner);
+		dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstLastOwner);
 		uint32_t dstTarQueueIndex = GetQueueFamilyIndexFromOwner(dstNextOwner);
-		
+		uint32_t srcTarQueueIndex = GetQueueFamilyIndexFromOwner(srcNextOwner);
+		bool srcNeedsAcquire = srcCurQueueIndex != copyQueueIndex && srcLastOwner != QueueOwner::UNKNOWN;
+		bool dstNeedsAcquire = dstCurQueueIndex != copyQueueIndex && dstLastOwner != QueueOwner::UNKNOWN;
+		bool srcNeedsRelease = !op.DestroySrc && srcTarQueueIndex != copyQueueIndex;
+		bool dstNeedsRelease = dstTarQueueIndex != copyQueueIndex;
 		SubmitSpecifications submitSpecs{ copyQueue };
 		submitSpecs.AdditionalWaitSemaphores = additionalWaits;
 		ImmediateSubmit([
@@ -1218,7 +1212,7 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 
 				vkCmdPipelineBarrier2(cmd, &dependency);
-			}, submitSpecs);
+			}, submitSpecs);			
 		}
 
 		dstData->LastOwner = copyQueue;
@@ -1232,10 +1226,21 @@ namespace Aurora::VK {
 		{
 			res->DestroyBuffer(op.SrcHandle);
 		}
-		
+
+		if (forceNow)
+		{
+			const TimelineSemaphore& sema = dstNeedsRelease ? GetSubmissionSemaFromQueueOwner(dstNextOwner) : uploadSignalSema;
+			VkSemaphoreWaitInfo semaWait{ VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+			semaWait.pNext = nullptr;
+			semaWait.semaphoreCount = 1;
+			semaWait.pSemaphores = &sema.Semaphore;
+			semaWait.pValues = &sema.Value;
+			AURORA_VK_CHECK(vkWaitSemaphores(m_Device, &semaWait, UINT64_MAX), VK_SUCCESS, "Failed to wait on semaphore");
+			dstData->IsReady = true;
+		}
 	}
 
-	void VulkanContext::HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op)
+	void VulkanContext::HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op, bool forceNow /*= false*/)
 	{
 		PROFILE_FUNCTION;
 
@@ -1272,7 +1277,7 @@ namespace Aurora::VK {
 		dstSubresourceRange.baseArrayLayer = 0;
 		dstSubresourceRange.baseMipLevel = 0;
 		dstSubresourceRange.layerCount = 1;
-		dstSubresourceRange.levelCount = 0;
+		dstSubresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 		VkImageSubresourceLayers dstSubresourceLayers{};
 		dstSubresourceLayers.aspectMask = dstAspectMask;
 		dstSubresourceLayers.baseArrayLayer = dstSubresourceRange.baseArrayLayer;
@@ -1284,9 +1289,9 @@ namespace Aurora::VK {
 
 		std::vector<TimelineSemaphore> additionalWaits;
 		//We need to realase them on their current queue if they are currently in an owned state (current != unknown) and if current differs from copyQueue
-		if (srcCurrentOwner != QueueOwner::UNKNOWN && srcCurrentOwner != copyQueue)
+		uint32_t srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcCurrentOwner);
+		if (srcCurrentOwner != QueueOwner::UNKNOWN && srcCurQueueIndex != copyQueueIndex)
 		{
-			uint32_t srcQueueIndex = GetQueueFamilyIndexFromOwner(srcCurrentOwner);
 			SubmitSpecifications submitSpecs{ srcCurrentOwner };
 			//6.1 transfer src ownership - release
 			ImmediateSubmit([
@@ -1294,7 +1299,7 @@ namespace Aurora::VK {
 				buffer = op.SrcBuffer,
 				offset = op.SrcOffset,
 				size = op.Size,
-				srcQIndex = srcQueueIndex,
+				srcQIndex = srcCurQueueIndex,
 				dstQIndex = copyQueueIndex,
 				lastUsage = op.SrcUsage,
 				queue = srcCurrentOwner
@@ -1325,13 +1330,16 @@ namespace Aurora::VK {
 			srcLastOwner = srcCurrentOwner;
 			srcCurrentOwner = QueueOwner::UNKNOWN;
 			srcNextOwner = copyQueue;
-			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(srcLastOwner));
+			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(srcLastOwner));			
 		}
 
 		//we cant handle both resources in one submit because they might be used in different pipeline stages, as well as different queues (src.CurrentOwner != dst.CurrentOwner) and we need to release them on their current queue
-		if (dstCurrentOwner != QueueOwner::UNKNOWN && dstCurrentOwner != copyQueue)
+		uint32_t dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstCurrentOwner);
+		// We only transfer ownership here and ignore different layouts. They will be handed here if the owners differ. The copy submit will do both as well.
+		// That way, we wont trigger double transitions for resources that have no differing owners. (for same owner, only one barrier is needed for the transition)
+		if (dstCurrentOwner != QueueOwner::UNKNOWN 
+			&& dstCurQueueIndex != copyQueueIndex)
 		{
-			uint32_t dstQueueIndex = GetQueueFamilyIndexFromOwner(dstCurrentOwner);
 			SubmitSpecifications submitSpecs{ dstCurrentOwner };
 			//6.1 transfer dst ownership - release
 			ImmediateSubmit([
@@ -1340,7 +1348,8 @@ namespace Aurora::VK {
 				range = dstSubresourceRange,
 				offset = op.DstOffset,
 				size = op.Size,
-				srcQIndex = dstQueueIndex,
+				oldLayout = dstData->Layout,
+				srcQIndex = dstCurQueueIndex,
 				dstQIndex = copyQueueIndex,
 				lastUsage = op.DstUsage,
 				queue = dstCurrentOwner
@@ -1349,7 +1358,7 @@ namespace Aurora::VK {
 				VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 				barrier.pNext = nullptr;
 				barrier.image = image;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.oldLayout = oldLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.subresourceRange = range;
 				barrier.srcQueueFamilyIndex = srcQIndex;
@@ -1362,27 +1371,42 @@ namespace Aurora::VK {
 
 				VkDependencyInfo dependency{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
 				dependency.pNext = nullptr;
-				dependency.bufferMemoryBarrierCount = 1;
+				dependency.imageMemoryBarrierCount = 1;
 				dependency.pImageMemoryBarriers = &barrier;
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 
 				vkCmdPipelineBarrier2(cmd, &dependency);
 			}, submitSpecs);
 
+			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstCurrentOwner));
 			dstLastOwner = dstCurrentOwner;
 			dstCurrentOwner = QueueOwner::UNKNOWN;
-			dstNextOwner = copyQueue;
-			additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstLastOwner));
+		}
+		else if(dstCurrentOwner != QueueOwner::UNKNOWN && dstCurrentOwner != copyQueue)
+		{
+			// We do this, because both queue indices could be the same. But, we still have two different queues (same family, different slots) so, transfer != graphics queue
+			// -> We therefore (if owned) need to wait in the other queue before other operations (transfer (copy) needs to happen on the last graphics op)
+				additionalWaits.push_back(GetSubmissionSemaFromQueueOwner(dstCurrentOwner));
+		}
+
+		// Check if its a fresh image. The first owner will be the transfer queue anyways, and we make the Last Owner also Transfer to trigger a noop for the ownership transfer.
+		if (dstCurrentOwner == QueueOwner::UNKNOWN && dstData->Layout == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			dstLastOwner = QueueOwner::TRANSFER;
+			dstCurrentOwner = QueueOwner::TRANSFER;
 		}
 
 		//No sure if we need to check if current is UNKNOWN, because we set current owner to UNKNOWN after releasing, so technically we need to check if last was unknown as well
-		bool srcNeedsAcquire = srcCurrentOwner != copyQueue && srcLastOwner != QueueOwner::UNKNOWN;
-		bool dstNeedsAcquire = dstCurrentOwner != copyQueue && dstLastOwner != QueueOwner::UNKNOWN;
-		bool srcNeedsRelease = !op.DestroySrc && srcNextOwner != copyQueue;
-		bool dstNeedsRelease = dstNextOwner != copyQueue;
-		uint32_t srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcLastOwner);
-		uint32_t dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstLastOwner);
+		srcCurQueueIndex = GetQueueFamilyIndexFromOwner(srcLastOwner);
+		dstCurQueueIndex = GetQueueFamilyIndexFromOwner(dstLastOwner);
 		uint32_t dstTarQueueIndex = GetQueueFamilyIndexFromOwner(dstNextOwner);
+		uint32_t srcTarQueueIndex = GetQueueFamilyIndexFromOwner(srcNextOwner);
+		bool srcNeedsAcquire = srcCurQueueIndex != copyQueueIndex && srcLastOwner != QueueOwner::UNKNOWN;
+		bool dstNeedsAcquire = (dstCurQueueIndex != copyQueueIndex && dstLastOwner != QueueOwner::UNKNOWN);
+		bool dstCurNeedsTransition = dstData->Layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		bool srcNeedsRelease = !op.DestroySrc && srcTarQueueIndex != copyQueueIndex;
+		bool dstNeedsRelease = dstTarQueueIndex != copyQueueIndex;
+		bool dstTarNeedsTransition = op.NewLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 		SubmitSpecifications submitSpecs{ copyQueue };
 		submitSpecs.AdditionalWaitSemaphores = additionalWaits;
@@ -1396,9 +1420,12 @@ namespace Aurora::VK {
 			dstOffset = op.DstOffset,
 			srcNeedsRelease = srcNeedsRelease,
 			dstNeedsRelease = dstNeedsRelease,
+			dstCurNeedsTransition = dstCurNeedsTransition,
+			dstTarNeedsTransition = dstTarNeedsTransition,
 			size = op.Size,
 			width = dstData->Width,
 			height = dstData->Height,
+			oldLayout = dstData->Layout,
 			newLayout = op.NewLayout,
 			range = dstSubresourceRange,
 			layers = dstSubresourceLayers,
@@ -1425,9 +1452,9 @@ namespace Aurora::VK {
 					Convert::GetStageFromBufferUsage(BufferUsageFlags::TRANSFER_SRC),
 					Convert::GetAccessFromBufferUsage(BufferUsageFlags::TRANSFER_SRC));
 
-			if (dstNeedsAcquire)
+			if (dstNeedsAcquire || dstCurNeedsTransition)
 				acquireImageBarriers[acquireImageBarrierCount++] = Commands::EmitAcquireBarrier(dstImage,
-					VK_IMAGE_LAYOUT_UNDEFINED,
+					oldLayout,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					range,
 					dstCurQueueIndex,
@@ -1452,7 +1479,7 @@ namespace Aurora::VK {
 			}
 
 			// Copy
-			VkBufferImageCopy2 region{ VK_STRUCTURE_TYPE_BUFFER_COPY_2 };
+			VkBufferImageCopy2 region{ VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2 };
 			region.pNext = nullptr;
 			region.bufferOffset = srcOffset;
 			region.imageOffset = { 0, 0, 0 };
@@ -1471,7 +1498,7 @@ namespace Aurora::VK {
 
 			vkCmdCopyBufferToImage2(cmd, &copy);
 
-			if (dstNeedsRelease)
+			if (dstNeedsRelease || dstTarNeedsTransition)
 			{
 				VkImageMemoryBarrier2 releaseBarrier = Commands::EmitReleaseBarrier(dstImage,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1536,12 +1563,13 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 
 				vkCmdPipelineBarrier2(cmd, &dependency);
-			}, submitSpecs);
+			}, submitSpecs);			
 		}
 
 		dstData->LastOwner = copyQueue;
 		dstData->CurrentOwner = dstNextOwner;
 		dstData->NextOwner = QueueOwner::UNKNOWN;
+		dstData->Layout = op.NewLayout;
 
 		srcData->LastOwner = srcLastOwner;
 		srcData->CurrentOwner = copyQueue;
@@ -1550,7 +1578,17 @@ namespace Aurora::VK {
 		{
 			res->DestroyBuffer(op.SrcHandle);
 		}
-
+		if (forceNow)
+		{
+			const TimelineSemaphore& sema = dstNeedsRelease ? GetSubmissionSemaFromQueueOwner(dstNextOwner) : uploadSignalSema;
+			VkSemaphoreWaitInfo semaWait{ VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+			semaWait.pNext = nullptr;
+			semaWait.semaphoreCount = 1;
+			semaWait.pSemaphores = &sema.Semaphore;
+			semaWait.pValues = &sema.Value;
+			AURORA_VK_CHECK(vkWaitSemaphores(m_Device, &semaWait, UINT64_MAX), VK_SUCCESS, "Failed to wait for semaphore");
+			dstData->IsReady = true;
+		}
 	}
 
 
@@ -1580,8 +1618,6 @@ namespace Aurora::VK {
 	void VulkanContext::CopyBufferToImage(BufferHandle src, ImageHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/)
 	{
 		PROFILE_FUNCTION;
-
-		AURORA_VALIDATE(src != dst, "Source handle must not be destination handle.");
 
 		VulkanSubmissionScheduler(CreateRefFromThis<VulkanContext>())
 			.CopyBufferToImage(src, dst, destroySrc, QueueOwner::GRAPHICS)

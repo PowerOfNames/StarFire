@@ -99,6 +99,17 @@ namespace Sandbox {
 		indexBufferSpecs.SpecializationType = Aurora::BufferSpecializationType::STATIC_INDEX_BUFFER;
 		indexBufferSpecs.Data = (void*)StarFire::TriangleIndices.data();
 		m_TriangleIndexBufferHandle = Aurora::CreateIndexBuffer(indexBufferSpecs);
+
+		Aurora::ImageSpecification checkerBoardSpecs{};
+		checkerBoardSpecs.Name = "CheckerBoard";
+		checkerBoardSpecs.Data = &m_CheckerBoard;
+		checkerBoardSpecs.Size = sizeof(uint32_t) * 4;
+		checkerBoardSpecs.Width = 2;
+		checkerBoardSpecs.Height = 2;
+		checkerBoardSpecs.Format = Aurora::Format::RGBA8_UNORM;
+		checkerBoardSpecs.MemUsage = Aurora::MemoryUsage::GPU_ONLY;
+		checkerBoardSpecs.Usage = Aurora::ImageUsageFlags::SAMPLED;
+		m_CheckerBoardTexture = Aurora::CreateImage(checkerBoardSpecs);
 	}
 
 
@@ -110,6 +121,8 @@ namespace Sandbox {
 		m_DefaultRenderGraph = nullptr;
 		m_TrianglePass = nullptr;
 		m_BindlessPipeline = nullptr;
+		Aurora::DestroyImage(m_CheckerBoardTexture);
+		m_CheckerBoardTexture = Aurora::ImageHandle::INVALID_HANDLE;
 		Aurora::DestroyVertexBuffer(m_TriangleVertexBufferHandle);
 		m_TriangleVertexBufferHandle = Aurora::VertexBufferHandle::INVALID_HANDLE;
 		Aurora::DestroyIndexBuffer(m_TriangleIndexBufferHandle);
@@ -143,7 +156,7 @@ namespace Sandbox {
 		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
 
 		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
-		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, deltaTime.InMilli());
+		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, deltaTime.InMilli());
 
 	}
 

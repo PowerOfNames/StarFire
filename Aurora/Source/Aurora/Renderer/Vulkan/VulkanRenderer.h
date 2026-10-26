@@ -30,20 +30,32 @@ namespace Aurora::VK {
 		void BindPipeline(VkCommandBuffer cmd, Ref<GraphicsPipeline> pipeline) const;
 		void Draw(VkCommandBuffer cmd, uint32_t vertexCount);
 		void DrawIndexed(VkCommandBuffer cmd, const IndexedDrawData& drawData);
+		
+		bool RegisterTexture(ImageHandle textureHandle, VkImageLayout sampledLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		void UnregisterTexture(ImageHandle textureHandle);
+		uint32_t GetTextureSlot(ImageHandle textureHandle) const;
 
 		inline const BindlessSetData& GetBindlessSetData() const { return m_BindlessSetData; }
 
 	private:
+		bool InitializeBindlessImageSlots();
+		bool CreateFallbackTexture();
 		bool CreateDefaultSamplers();
 		bool CreateBindlessHandles();
-		void WriteDefaultSamplers();
 
 	private:
 		BindlessSetData m_BindlessSetData{};
 
 		std::vector<VkSampler> m_DefaultSamplers;
 
-		inline static constexpr int SAMPLER_BINDING = 0;
-		inline static constexpr int IMAGE_BINDING = 1;
+		inline static constexpr uint32_t FALLBACK_IMAGE_SLOT_IDX = 0;
+		inline static constexpr uint32_t MAX_IMAGE_REGISTER_COUNT = AURORA_MAX_IMAGE_ALLOCATIONS - 1;
+
+		uint32_t m_FallbackCheckerBoardData[4] = { 0xFF000000, 0xFFFF00FF, 0xFFFF00FF, 0xFF000000 };
+		ImageHandle m_FallbackTexture = ImageHandle::INVALID_HANDLE;
+
+		std::unordered_map<ImageHandle, uint32_t> m_BindlessImageSlots;
+		std::array<uint32_t, MAX_IMAGE_REGISTER_COUNT> m_BindlessImageSlotsFreeList;
+		uint32_t m_FreeCount = MAX_IMAGE_REGISTER_COUNT;
 	};
 }

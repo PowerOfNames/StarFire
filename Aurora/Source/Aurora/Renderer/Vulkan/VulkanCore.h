@@ -223,7 +223,6 @@ namespace Aurora::VK {
 
 		uint32_t Width = 0;
 		uint32_t Height = 0;
-		uint32_t TextureIndex = 0;
 		ImageUsageFlags Usage = ImageUsageFlags::NONE;
 		uint8_t MipLevels = 1;
 
