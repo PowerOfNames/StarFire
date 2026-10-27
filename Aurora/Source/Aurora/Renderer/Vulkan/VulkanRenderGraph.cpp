@@ -279,7 +279,7 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, float deltaTime)
+	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, float deltaTime)
 	{
 		PROFILE_FUNCTION;
 
@@ -364,7 +364,7 @@ namespace Aurora::VK {
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 
-			DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, deltaTime);
+			DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle, deltaTime);
 
 			vkCmdEndRendering(cmd);
 
@@ -392,7 +392,7 @@ namespace Aurora::VK {
 		}
 	}
 
-	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, float deltaTime)
+	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, float deltaTime)
 	{
 		Ref<VulkanContext> renderContext = GetRenderContext();
 		Ref<VulkanRenderer> renderer = GetRenderer();
@@ -408,8 +408,7 @@ namespace Aurora::VK {
 		VulkanBufferData* vertexBufferData = resManager->GetBufferData(vertices);
 		VulkanBufferData* indexBufferData = resManager->GetBufferData(indices);
 		if (!CheckObjectDataAvailability(vertexBufferData, indexBufferData))
-			return;
-		
+			return;		
 
 		GPU::BindlessGlobalState globals{};
 		globals.DeltaTime = deltaTime;
@@ -418,6 +417,7 @@ namespace Aurora::VK {
 		
 		GPU::BindlessMaterial materials{};
 		materials.Tint = glm::vec3(1.0f, 1.0f, 0.0f); //Yellow
+		materials.AlbedoSlot = renderer->GetTextureSlot(textureHandle);
 		size_t materialsOffset = MATERIAL_BYTES * frameIdx;
 		Memory::WriteMapped(vmaAllocator, *materialsBufferData, materialsOffset, materials);
 
@@ -430,7 +430,7 @@ namespace Aurora::VK {
 		GPU::BindlessPushConstant pc{};
 		pc.GlobalStateBufferAddress = globalsBufferData->DeviceAddress + globalsOffset;
 		pc.DrawDataBufferAddress = drawDataBufferData->DeviceAddress + drawDataOffset;
-		vkCmdPushConstants(cmd, GetRenderer()->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPU::BindlessPushConstant), &pc);
+		vkCmdPushConstants(cmd, renderer->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPU::BindlessPushConstant), &pc);
 
 		IndexedDrawData indexedDraw{};
 		indexedDraw.IndexBuffer = indexBufferData->Buffer;

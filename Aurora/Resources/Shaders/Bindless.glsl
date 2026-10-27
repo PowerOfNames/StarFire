@@ -1,5 +1,6 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
 
 #include "../../Include/Aurora/ShaderDataTypes.h"
 
@@ -28,3 +29,7 @@ layout(push_constant, scalar) uniform PushConstantBlock
 {
 	BindlessPushConstant BindlessPC;
 }pcb;
+
+
+layout(set = 0, binding = AURORA_GPU_SAMPLER_BINDING) uniform sampler u_Samplers[];
+layout(set = 0, binding = AURORA_GPU_IMAGE_BINDING) uniform texture2D u_Textures[];

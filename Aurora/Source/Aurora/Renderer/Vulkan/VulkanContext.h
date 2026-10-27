@@ -4,14 +4,12 @@
 #include "Aurora/Renderer/RenderContextSpecification.h"
 #include "Aurora/Renderer/Handles.h"
 
-#include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 #include "Aurora/Renderer/Vulkan/VulkanSwapchain.h"
 #include "Aurora/Renderer/Vulkan/Utility/VulkanQueries.h"
 
 #include "Substrate/RefCounted.h"
 
 #include <vector>
-#include <array>
 
 namespace Aurora::VK {
 
@@ -29,7 +27,7 @@ namespace Aurora::VK {
 		VulkanContext(const InitializationSpecification& specs);
 		~VulkanContext() = default;
 
-		bool Init();
+		bool Init();	
 		bool BeginFrame();
 		void Render();
 		void EndFrame();
@@ -51,13 +49,14 @@ namespace Aurora::VK {
 			GetCurrentFrameData().DeletionQueue.SubmitWaitingDeletion(func);
 		}
 
-		void AddDeferredBufferCopySubmissionOps(const std::vector<VulkanBufferCopyOp>& ops, bool forceNow = false);
+		void AddDeferredBufferToBufferCopySubmissionOps(const std::vector<VulkanBufferToBufferCopyOp>& ops, bool forceNow = false);
+		void AddDeferredBufferToImageCopySubmissionOps(const std::vector<VulkanBufferToImageCopyOp>& ops, bool forceNow = false);
 		void FlushDeferredSubmissionOps();
-
-
+		inline const std::vector<ImageHandle>& GetReadyImageUploads() const { return m_UploadReadyImages; }
 
 		void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& func, const SubmitSpecifications& specs = {});
 		void CopyBufferToBuffer(BufferHandle src, BufferHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
+		void CopyBufferToImage(BufferHandle src, ImageHandle dst, bool forceNow/* = false*/, bool destroySrc/* =true*/);
 
 		
 		inline const InitializationSpecification& GetSpecification() const { return m_Specification; }
@@ -93,7 +92,6 @@ namespace Aurora::VK {
 		inline VkSurfaceKHR GetSurface() const { return m_Surface; }
 		
 		inline Ref<VulkanSwapchain> GetSwapchain() const { return m_Swapchain; }
-		inline Ref<VulkanRenderer> GetRenderer() const { return m_Renderer; }
 
 
 		static Ref<VulkanContext> Create(const InitializationSpecification& specs);
@@ -120,7 +118,8 @@ namespace Aurora::VK {
 
 		// ===== SubmissionHelper =====
 		// TODO: refactor out - needs to be public atm to grant access to SubmissionScheduler for immediate submit
-		void HandleBufferCopySubmissionOp(const VulkanBufferCopyOp& op);
+		void HandleBufferToBufferCopySubmissionOp(const VulkanBufferToBufferCopyOp& op, bool forceNow = false);
+		void HandleBufferToImageCopySubmissionOp(const VulkanBufferToImageCopyOp& op, bool forceNow = false);
 		TimelineSemaphore& GetSubmissionSemaFromQueueOwner(QueueOwner owner);
 		TransferCmdBuffer& GetCommandBufferFromQueueOwner(QueueOwner owner);
 		
@@ -128,10 +127,11 @@ namespace Aurora::VK {
 
 		// == Frame management ==
 		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, BufferHandle handle);
+		void AddPendingUpload(VkSemaphore semaphore, uint64_t signalValue, ImageHandle handle);
 		void FlushFrameDeletionQueue(uint8_t frameIdx);
 		void StampFrameDeletionQueueWaitValues(uint8_t frameIdx);
 		void PollPendingResourceUploads();
-		void IncrementFramesInFlightIdx();		
+		void IncrementFramesInFlightIdx();
 
 		
 		//keep scoring up-to-date later (#76)
@@ -173,12 +173,15 @@ namespace Aurora::VK {
 		VkCommandPool m_ComputeTransferCmdPool = VK_NULL_HANDLE;
 		CommandBufferRing m_ComputeTransferCmdBuffers;
 		TimelineSemaphore m_ComputeSubmitSemaphore{};
-
+		
 		QueueFamilies m_QueueFamilies{};
 		std::unordered_map<QueueOwner, uint32_t> m_QueueOwnerIndices;
 		std::unordered_map<QueueOwner, VkQueue> m_QueueOwnerQueues;
-		std::vector<VulkanBufferCopyOp> m_DeferredBufferCopySubmissionOps;
-		std::vector<PendingResourceUpload> m_PendingResourceUploads;
+		std::vector<VulkanBufferToBufferCopyOp> m_DeferredBufferToBufferCopyOps;
+		std::vector<VulkanBufferToImageCopyOp> m_DeferredBufferToImageCopyOps;
+		std::vector<PendingUpload<BufferHandle>> m_PendingBufferUploads;
+		std::vector<PendingUpload<ImageHandle>> m_PendingImageUploads;
+		std::vector<ImageHandle> m_UploadReadyImages;
 
 
 		VkApplicationInfo m_AppInfo{};
@@ -191,8 +194,6 @@ namespace Aurora::VK {
 		std::vector<VulkanFrame> m_FramesInFlight;
 
 		DeletionQueue m_MainDeletionQueue{};
-
-		Ref<VulkanRenderer> m_Renderer = nullptr;
 
 		struct RendererStatistics
 		{

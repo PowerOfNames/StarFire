@@ -49,6 +49,9 @@ namespace Sandbox {
 		Aurora::IndexBufferHandle m_TriangleIndexBufferHandle;
 		Ref<Aurora::GraphicsPipeline> m_BindlessPipeline;
 
+		uint32_t m_CheckerBoard[4] = { 0xFF00FF00, 0xFFFF00FF, 0xFF00FFFF, 0xFF00FF00 };
+		Aurora::ImageHandle m_CheckerBoardTexture;
+
 		const std::string c_DefaultPassName = "TrianglePass";
 		const std::string c_DefaultColorAttachmentName = "TriangleColorAttachment";
 		const std::string c_CopyColorTargetName = "TriangleColorAttachmentCopy";

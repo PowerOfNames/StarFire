@@ -32,9 +32,13 @@ namespace Aurora {
 		void* Data = nullptr;
 		//In bytes
 		uint64_t Size = 0;
+		uint64_t Offset = 0;
 		BufferUsageFlags Usage = BufferUsageFlags::NONE;
 		MemoryUsage MemUsage = MemoryUsage::GPU_ONLY;
 		BufferSpecializationType SpecializationType = BufferSpecializationType::UNKNOWN;
+
+		//Setting this to true will stall the CPU until the upload is finished! Use with caution.
+		bool ForceImmediateUpload = false;
 	};	
 
 	struct VertexBufferSpecification : BufferSpecification

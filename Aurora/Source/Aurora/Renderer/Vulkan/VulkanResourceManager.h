@@ -43,13 +43,14 @@ namespace Aurora::VK {
 		VulkanBufferData* GetBufferData(IndexBufferHandle handle);
 
 	private:
-		void UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0);
+		void UploadBufferData(BufferHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0, bool forceNow = false);
+		void UploadImageData(ImageHandle handle, const void* data, size_t sizeInBytes, size_t offsetInBytes = 0, bool forceNow = false);
 
 	private:
 		Ref<VulkanContext> m_VulkanContext = nullptr;
 		bool m_ResourceManagerDestroyed = false;
 
-		Substrate::PoolAllocator<VulkanImageData, ImageHandle::Type, 1024 * sizeof(VulkanImageData)> m_ImageAllocator; // we store up to 1024 images in the pool, which should be more than enough for now, but we can always add more pools with different sizes if needed or implement resize functionality
+		Substrate::PoolAllocator<VulkanImageData, ImageHandle::Type, AURORA_MAX_IMAGE_ALLOCATIONS * sizeof(VulkanImageData)> m_ImageAllocator; // we store up to AURORA_MAX_IMAGE_ALLOCATIONS images in the pool, which should be more than enough for now, but we can always add more pools with different sizes if needed or implement resize functionality
 		Substrate::PoolAllocator<VulkanBufferData, BufferHandle::Type, 1024 * sizeof(VulkanBufferData)> m_BufferAllocator; // we store up to 1024 buffers in the pool, which should be more than enough for now, but we can always add more pools with different sizes if needed or implement resize functionality
 	};
 

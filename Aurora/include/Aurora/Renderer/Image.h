@@ -10,6 +10,8 @@ namespace Aurora {
 	struct ImageSpecification
 	{
 		std::string Name = "Image";
+		const void* Data = nullptr;
+		size_t Size = 0;
 		uint32_t Width = 1;
 		uint32_t Height = 1;
 
@@ -20,5 +22,7 @@ namespace Aurora {
 
 		uint8_t MipLevels = 1;
 		bool AllowResize = true;
+		//Setting this to true will stall the CPU until the upload is finished! Use with caution.
+		bool ForceImmediateUpload = false;
 	};
 }

@@ -11,6 +11,7 @@ namespace Aurora::GPU {
 	using vec4 = glm::vec4;
 	using mat3 = glm::mat3;
 	using mat4 = glm::mat4;
+	using uint = uint32_t;
 #else
 layout(buffer_reference) readonly buffer VertexBufferReference;
 layout(buffer_reference) readonly buffer MaterialBufferReference;
@@ -20,6 +21,9 @@ layout(buffer_reference) readonly buffer DrawDataBufferReference;
 #endif
 
 #define AURORA_GPU_REF_ALIGN 8
+#define AURORA_GPU_SAMPLERS_REPEAT_ID 0
+#define AURORA_GPU_SAMPLER_BINDING 0
+#define AURORA_GPU_IMAGE_BINDING 1
 
 struct BindlessPushConstant
 {
@@ -53,6 +57,7 @@ struct BindlessGlobalState
 struct BindlessMaterial
 {
 	vec3 Tint;
+	uint AlbedoSlot;
 };
 
 #ifdef __cplusplus
