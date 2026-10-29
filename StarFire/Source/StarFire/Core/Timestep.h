@@ -3,7 +3,7 @@
 namespace StarFire {
 
 	//This class is a thin wrapper around a double time duration to provide simple functionality
-	//for conversion from seconds (inuput) to milli, micro or nano seconds
+	//for conversion from seconds (input) to milli, micro or nano seconds
 	class Timestep
 	{
 	public:

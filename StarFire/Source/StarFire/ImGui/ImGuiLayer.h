@@ -23,6 +23,8 @@ namespace StarFire {
 		void BeginFrame() const;
 		void EndFrame() const;
 
+		void BlockEvents(bool state) { m_BlockEvents = state; }
+
 		const Ref<Aurora::ImGuiRenderer> GetImGuiRenderer() const { return m_ImGuiRenderer;	}
 
 	private:

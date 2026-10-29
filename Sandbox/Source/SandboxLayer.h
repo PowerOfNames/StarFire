@@ -1,6 +1,7 @@
 #pragma once
 #include "StarFire.h"
 #include "Substrate/RefPtr.h"
+#include "CrudeCamera.h"
 
 #include <glm/glm.hpp>
 
@@ -20,11 +21,14 @@ namespace Sandbox {
 		virtual void OnEvent(StarFire::Event& e) override;
 
 	private:
-		virtual bool OnFramebufferResize(StarFire::FramebufferResizeEvent& e);
+		bool OnFramebufferResize(StarFire::FramebufferResizeEvent& e);
 
 	private:
 		bool m_OpenDemoWindow = true;
 
+		CrudeCamera m_Camera;
+
+		double m_CumulativeTimeInMS = 0.0;
 		uint32_t m_FramebufferWidth = 0;
 		uint32_t m_FramebufferHeight = 0;
 		bool m_FramebufferResized = false;

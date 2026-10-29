@@ -13,6 +13,8 @@ namespace Aurora::VK {
 		: m_Specification(specs)
 	{
 		PROFILE_FUNCTION;
+
+		m_Specification.GlobalDataSize = Substrate::Utility::AlignUpToMultipleOfMinAlignment(specs.GlobalDataSize, AURORA_GPU_REF_ALIGN);
 	}
 
 	void VulkanRenderGraph::Destroy()
@@ -223,7 +225,7 @@ namespace Aurora::VK {
 			globalsDataSpecs.MemUsage = MemoryUsage::CPU_TO_GPU;
 			globalsDataSpecs.SpecializationType = BufferSpecializationType::GLOBALS_BUFFER;
 			globalsDataSpecs.Usage = BufferUsageFlags::SHADER_DEVICE_ADDRESS | BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_DST;
-			globalsDataSpecs.Size = GLOBALS_BYTES * fif;
+			globalsDataSpecs.Size = m_Specification.GlobalDataSize * fif;
 			m_BindlessGlobalsBuffer = resManager->CreateBuffer(globalsDataSpecs);
 
 			VulkanBufferData* globals = resManager->GetBufferData(m_BindlessGlobalsBuffer);
@@ -279,12 +281,12 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, float deltaTime)
+	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const void* globalData, size_t globalDataSize)
 	{
 		PROFILE_FUNCTION;
 
 		if (m_NeedsResize && Compile())
-			m_NeedsResize = false;		
+			m_NeedsResize = false;
 
 		if (AURORA_REQUIRE_FAILS(m_Compiled, "RenderGraph {} needs to be properly compiled before Execution!", m_Specification.Name))
 			return;
@@ -309,6 +311,19 @@ namespace Aurora::VK {
 		//TODO: Once materials and PipelineStates are in, this changes
 		if (m_BindlessPipeline)
 			renderer->BindPipeline(cmd, m_BindlessPipeline);
+
+		VulkanBufferData* globalsBufferData = resManager->GetBufferData(m_BindlessGlobalsBuffer);
+		size_t globalsBufferAddress = 0;
+		if (globalsBufferData && globalsBufferData->MappedPtr != nullptr)
+		{
+			if (AURORA_REQUIRE(m_Specification.GlobalDataSize == Substrate::Utility::AlignUpToMultipleOfMinAlignment(globalDataSize, AURORA_GPU_REF_ALIGN), "Global data size must match with specification."))
+			{
+				VmaAllocator vmaAllocator = renderContext->GetVmaAllocator();
+				size_t globalsOffset = m_Specification.GlobalDataSize * frameData.FrameIndex;
+				globalsBufferAddress = globalsBufferData->DeviceAddress + globalsOffset;
+				Memory::WriteMapped(vmaAllocator, *globalsBufferData, globalsOffset, globalData, globalDataSize);
+			}
+		}
 
 		for (const auto& pass : m_CompiledPasses)
 		{
@@ -356,15 +371,17 @@ namespace Aurora::VK {
 
 			VkViewport viewport{};
 			viewport.width = static_cast<float>(pass.RenderArea.extent.width);
-			viewport.height = static_cast<float>(pass.RenderArea.extent.height);
+			viewport.height = -static_cast<float>(pass.RenderArea.extent.height);
 			viewport.x = static_cast<float>(pass.RenderArea.offset.x);
-			viewport.y = static_cast<float>(pass.RenderArea.offset.y);
+			viewport.y = static_cast<float>(pass.RenderArea.offset.y) + static_cast<float>(pass.RenderArea.extent.height);
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 			vkCmdSetViewport(cmd, 0, 1, &viewport);
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 
-			DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle, deltaTime);
+			//We skip the draw for now if there is no globals buffer address.
+			if(AURORA_REQUIRE(globalsBufferData != nullptr, "Globals buffer must be set correctly!"))
+				DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle, globalsBufferAddress);
 
 			vkCmdEndRendering(cmd);
 
@@ -392,7 +409,7 @@ namespace Aurora::VK {
 		}
 	}
 
-	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, float deltaTime)
+	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, size_t globalsAddress)
 	{
 		Ref<VulkanContext> renderContext = GetRenderContext();
 		Ref<VulkanRenderer> renderer = GetRenderer();
@@ -400,21 +417,15 @@ namespace Aurora::VK {
 		VmaAllocator vmaAllocator = renderContext->GetVmaAllocator();
 
 		VulkanBufferData* drawDataBufferData = resManager->GetBufferData(m_BindlessDrawDataBuffer);
-		VulkanBufferData* globalsBufferData = resManager->GetBufferData(m_BindlessGlobalsBuffer);
 		VulkanBufferData* materialsBufferData = resManager->GetBufferData(m_BindlessMaterialBuffer);
-		if (AURORA_REQUIRE_FAILS(CheckBindlessAvailability(globalsBufferData, drawDataBufferData, materialsBufferData), "Some bindless buffers are unavailable!"))
+		if (AURORA_REQUIRE_FAILS(CheckBindlessAvailability(drawDataBufferData, materialsBufferData), "Some bindless buffers are unavailable!"))
 			return;
 		
 		VulkanBufferData* vertexBufferData = resManager->GetBufferData(vertices);
 		VulkanBufferData* indexBufferData = resManager->GetBufferData(indices);
 		if (!CheckObjectDataAvailability(vertexBufferData, indexBufferData))
 			return;		
-
-		GPU::BindlessGlobalState globals{};
-		globals.DeltaTime = deltaTime;
-		size_t globalsOffset = GLOBALS_BYTES * frameIdx;
-		Memory::WriteMapped(vmaAllocator, *globalsBufferData, globalsOffset, globals);
-		
+				
 		GPU::BindlessMaterial materials{};
 		materials.Tint = glm::vec3(1.0f, 1.0f, 0.0f); //Yellow
 		materials.AlbedoSlot = renderer->GetTextureSlot(textureHandle);
@@ -428,7 +439,7 @@ namespace Aurora::VK {
 		Memory::WriteMapped(vmaAllocator, *drawDataBufferData, drawDataOffset, drawData);
 
 		GPU::BindlessPushConstant pc{};
-		pc.GlobalStateBufferAddress = globalsBufferData->DeviceAddress + globalsOffset;
+		pc.GlobalStateBufferAddress = globalsAddress;
 		pc.DrawDataBufferAddress = drawDataBufferData->DeviceAddress + drawDataOffset;
 		vkCmdPushConstants(cmd, renderer->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPU::BindlessPushConstant), &pc);
 
@@ -627,11 +638,8 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	bool VulkanRenderGraph::CheckBindlessAvailability(VulkanBufferData* globals, VulkanBufferData* drawData, VulkanBufferData* materials)
+	bool VulkanRenderGraph::CheckBindlessAvailability(VulkanBufferData* drawData, VulkanBufferData* materials)
 	{
-		if (AURORA_REQUIRE_FAILS(globals != nullptr && globals->MappedPtr != nullptr, "BindlessGlobalsBuffer not available!"))
-			return false;
-
 		if (AURORA_REQUIRE_FAILS(drawData != nullptr && drawData->MappedPtr != nullptr, "BindlessDrawDataBuffer not available!"))
 			return false;
 

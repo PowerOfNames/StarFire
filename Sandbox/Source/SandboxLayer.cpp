@@ -1,4 +1,6 @@
 #include "SandboxLayer.h"
+#include "Defines.h"
+#include "GlobalsData.h"
 #include "Profiling/Profiling.h"
 
 #include "StarFire.h"
@@ -14,17 +16,20 @@
 
 namespace Sandbox {
 
-	SandboxLayer::SandboxLayer() : StarFire::Layer("SandboxLayer")
+	SandboxLayer::SandboxLayer() 
+		: StarFire::Layer("SandboxLayer")
+		, m_Camera( 800, 600, 1.0f, 1.0f, 0.0f )
 	{
 		PROFILE_FUNCTION;
+		
+		uint32_t width = 800;
+		uint32_t height = 600;
 
 		Aurora::RenderGraphSpecification rgSpecs{};
 		rgSpecs.Name = "Triangle Test RG";
+		rgSpecs.GlobalDataSize = sizeof(GlobalsData);
 		m_DefaultRenderGraph = Aurora::RenderGraph::Create(rgSpecs);
 
-
-		uint32_t width = 800;
-		uint32_t height = 600;
 		// == Simple 2D pass for triangle rendering as test ==
 		{
 			Aurora::RenderPassSpecification specs{};
@@ -135,15 +140,26 @@ namespace Sandbox {
 	{
 		PROFILE_FUNCTION;
 
+		m_CumulativeTimeInMS += deltaTime.InMilli();
+
 		if (m_ViewportResized)
 		{
+			m_Camera.OnResize(m_ViewportPanel.Width, m_ViewportPanel.Height);
 			m_DefaultRenderGraph->OnResize(static_cast<uint32_t>(m_ViewportPanel.Width), static_cast<uint32_t>(m_ViewportPanel.Height));
 			m_ViewportResized = false;
 		}
 
 		// == 2. Update Scene ==
+		m_Camera.OnUpdate(deltaTime.InMilli());
 
+		GlobalsData globals{};
+		globals.ViewMatrix = m_Camera.GetView();
+		globals.ProjectionMatrix = m_Camera.GetProjection();
+		globals.ViewProjectionMatrix = m_Camera.GetViewProjection();
+		globals.CumulativeTimeInMS = static_cast<float>(fmod(m_CumulativeTimeInMS / 1000.0, SANDBOX_ANIMATION_WARP));
 		//StarFire::RendererAPI::DrawSprite(m_TriangleShapeHandle, m_TriangleTransform, m_TriangleColorMaterialHandle);
+
+
 
 		// == 3. Update Physics ==
 
@@ -156,7 +172,7 @@ namespace Sandbox {
 		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
 
 		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
-		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, deltaTime.InMilli());
+		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, &globals, sizeof(GlobalsData));
 
 	}
 
@@ -236,14 +252,18 @@ namespace Sandbox {
 			m_ViewportPanel.IsFocused = ImGui::IsWindowFocused();
 			m_ViewportPanel.IsHovered = ImGui::IsWindowHovered();
 
+			StarFire::ImGuiLayer* imGuiLayer = StarFire::Application::Get()->GetImGuiLayer();
+			//Block app events while viewport not in use
+			imGuiLayer->BlockEvents(!(m_ViewportPanel.IsFocused && m_ViewportPanel.IsHovered));
+
 			float width = glm::max(m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, 1.0f);
-			float height = glm::max(m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y, 1.0f);
-			
+			float height = glm::max(m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y, 1.0f);			
+
 			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
 			Aurora::ImageHandle viewportImage = m_DefaultRenderGraph->GetCopyTarget(c_CopyColorTargetName);
 			if(viewportImage != Aurora::ImageHandle::INVALID_HANDLE)
 			{
-				uint64_t textureId = StarFire::Application::Get()->GetImGuiLayer()->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
+				uint64_t textureId = imGuiLayer->GetImGuiRenderer()->GetTextureIDFromHandle(viewportImage);
 
 				if (m_ViewportPanel.Width != width || m_ViewportPanel.Height != height)
 				{
@@ -269,6 +289,8 @@ namespace Sandbox {
 
 		StarFire::EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<StarFire::FramebufferResizeEvent>(STARFIRE_BIND_EVENT_FN(SandboxLayer::OnFramebufferResize));
+		
+		m_Camera.OnEvent(e);
 	}
 
 	bool SandboxLayer::OnFramebufferResize(StarFire::FramebufferResizeEvent& e)
