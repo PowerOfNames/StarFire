@@ -6,6 +6,9 @@
 //    2. creates/destroys a Vk/VMA object?     -> VulkanCreators
 //    3. interrogates a VkPhysicalDevice
 //       or VkSurfaceKHR?                      -> VulkanQueries
+//    3b. reads or writes the contents of an
+//        existing allocation (map, write,
+//        flush, invalidate)?                  -> VulkanMemory
 //    4. otherwise, pure function of enums
 //       and PODs                              -> VulkanConvert
 //       ...returning a string for logging?    -> VulkanToString

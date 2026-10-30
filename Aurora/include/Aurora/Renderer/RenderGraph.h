@@ -13,6 +13,7 @@ namespace Aurora {
 	struct RenderGraphSpecification
 	{
 		std::string Name = "Default Render Graph";
+		size_t GlobalDataSize = 0;
 	};
 
 
@@ -54,7 +55,7 @@ namespace Aurora {
 		virtual bool Compile() = 0;
 
 		// This will take in the scene data in a data driven way (either already culled, or the render graph will do the culling itself)
-		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle texture, float deltaTime) = 0;
+		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle texture, const void* globalData, size_t globalDataSize) = 0;
 
 		virtual const RenderGraphSpecification& GetSpecification() const = 0;
 	};

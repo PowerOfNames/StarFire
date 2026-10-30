@@ -46,10 +46,19 @@ struct Vertex
 };
 
 
+// GLSL only: the shader-side mirror of the app's globals struct (Sandbox: GlobalsData.h).
+// Aurora never reads these fields; it copies the bytes the app hands to RenderGraph::Execute.
+// Keep member order and types in sync with the app struct by hand - Execute checks only the size.
+#ifndef __cplusplus
 struct BindlessGlobalState
 {
-	float DeltaTime;
+	mat4 View;
+	mat4 Projection;
+	mat4 ViewProjection;
+	//in Seconds, wraps with 3600
+	float AnimationTime;
 };
+#endif
 
 /// <summary>
 /// TODO: materials are different, because objects have different material compositions -> they will probably need a proper buffer abstraction that tracks where each material address is or how large the stride is

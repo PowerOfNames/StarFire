@@ -12,8 +12,7 @@ void main()
 	BindlessMaterial material = pDrawData.MaterialBufferAddress.Materials[gl_InstanceIndex];
 	BindlessGlobalState globalState = pcb.BindlessPC.GlobalStateBufferAddress.Globals;
 
-
-	gl_Position = vec4(vertex.Position, 1.0);
+	gl_Position = globalState.ViewProjection * vec4(vertex.Position, 1.0);
 	v_Color = vertex.Color;
 	v_TexCoord = vertex.TexCoord;
 	v_TexID = material.AlbedoSlot;
