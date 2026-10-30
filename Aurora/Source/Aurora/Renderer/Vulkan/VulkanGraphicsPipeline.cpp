@@ -4,7 +4,11 @@
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 
-#include "Shaders/ShaderByteCodes.h"
+#if __has_include ("Shaders/ShaderByteCodes.h")
+#	include "Shaders/ShaderByteCodes.h"
+#else
+#	error "ShaderByteCodes.h is missing: run Aurora/Scripts/CompileShaders.bat once after cloning."
+#endif
 
 namespace Aurora::VK {
 	
@@ -54,22 +58,22 @@ namespace Aurora::VK {
 		VkShaderModuleCreateInfo vertInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 		vertInfo.pNext = nullptr;
 		vertInfo.flags = 0;
-		vertInfo.codeSize = Shaders::BindlessTest_vert_size;
-		vertInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessTest_vert);
+		vertInfo.codeSize = Shaders::BindlessBasic_vert_size;
+		vertInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessBasic_vert);
 
 		VkShaderModule vertModule = VK_NULL_HANDLE;
-		AURORA_VK_CHECK(vkCreateShaderModule(device, &vertInfo, nullptr, &vertModule), VK_SUCCESS, "Failed to create bindlessTest vertex shader module.");
+		AURORA_VK_CHECK(vkCreateShaderModule(device, &vertInfo, nullptr, &vertModule), VK_SUCCESS, "Failed to create bindlessBasic vertex shader module.");
 		if (vertModule == VK_NULL_HANDLE)
 			return false;
 
 		VkShaderModuleCreateInfo fragInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 		fragInfo.pNext = nullptr;
 		fragInfo.flags = 0;
-		fragInfo.codeSize = Shaders::BindlessTest_frag_size;
-		fragInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessTest_frag);
+		fragInfo.codeSize = Shaders::BindlessBasic_frag_size;
+		fragInfo.pCode = reinterpret_cast<const uint32_t*>(&Shaders::BindlessBasic_frag);
 
 		VkShaderModule fragModule = VK_NULL_HANDLE;
-		AURORA_VK_CHECK(vkCreateShaderModule(device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create bindlessTest fragment shader module.");
+		AURORA_VK_CHECK(vkCreateShaderModule(device, &fragInfo, nullptr, &fragModule), VK_SUCCESS, "Failed to create bindlessBasic fragment shader module.");
 		if (vertModule == VK_NULL_HANDLE)
 			return false;
 

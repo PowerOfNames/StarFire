@@ -136,9 +136,6 @@ namespace Aurora::VK {
 
 		AURORA_VK_CHECK(vkBeginCommandBuffer(frame.CommandBuffer, &cmdInfo), VK_SUCCESS, "Failed to begin command buffer (frame index: {}).", frame.FrameIndex);
 
-		//TEMP:
-		//m_Swapchain->RecordFallbackSwapchainRenderPass(frame);
-
 		return true;
 	}
 

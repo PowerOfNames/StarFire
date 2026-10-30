@@ -3,8 +3,6 @@
 #include "Aurora/Renderer/Vulkan/VulkanCore.h"
 
 
-#include <vector>
-
 namespace Aurora::VK {
 
 	class VulkanGraphicsPipeline : public GraphicsPipeline
