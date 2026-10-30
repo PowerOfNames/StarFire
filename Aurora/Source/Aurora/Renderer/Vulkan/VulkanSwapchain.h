@@ -60,14 +60,6 @@ namespace Aurora::VK {
 
 		static Ref<VulkanSwapchain> Create(const SwapchainSpecification& spec);
 
-		// Fallback 
-
-		/// <summary>
-		/// Use this function as fallback if something breaks down somewhere else during development.
-		/// Draws just the clear color.
-		/// </summary>
-		void RecordFallbackSwapchainRenderPass(const VulkanFrame& frame);
-
 	private:
 		void CleanupSwapchain();
 
