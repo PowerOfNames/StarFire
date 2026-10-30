@@ -66,13 +66,10 @@ namespace Aurora::VK {
 		bool CreateSwapchain(uint32_t width, uint32_t height);
 		bool CreateImageViews();
 		bool CreateImageSemaphores();
-		bool CreateRenderPass();
-		bool CreateFramebuffers();
 
 	private:
 		SwapchainSpecification m_Specification{};
 		VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
-		VkRenderPass m_RenderPass = VK_NULL_HANDLE;
 
 		bool m_NeedsResize = false;
 
@@ -83,7 +80,6 @@ namespace Aurora::VK {
 		uint32_t m_ImageIndex = 0;
 		std::vector<VkImage> m_Images;
 		std::vector<VkImageView> m_ImageViews;
-		std::vector<VkFramebuffer> m_Framebuffers;
 		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
 		std::vector<VkSemaphore> m_ImageRenderFinishedSemaphores;
 	};

@@ -25,15 +25,9 @@ namespace Aurora::VK {
 			return false;
 
 		if (AURORA_REQUIRE_FAILS(CreateImageViews(), "Failed to create swapchain image view."))		
-			return false;		
+			return false;
 
 		if (AURORA_REQUIRE_FAILS(CreateImageSemaphores(), "Failed to create swapchain image semaphores"))		
-			return false;		
-
-		if (AURORA_REQUIRE_FAILS(CreateRenderPass(), "Failed to create swapchain render pass handle."))
-			return false;		
-
-		if (AURORA_REQUIRE_FAILS(CreateFramebuffers(), "Failed to create swapchain framebuffers"))
 			return false;
 
 		return true;
@@ -45,10 +39,6 @@ namespace Aurora::VK {
 
 		AURORA_TRACE("Cleaning up swapchain.");
 		vkDeviceWaitIdle(m_Specification.Device);
-
-		for (auto framebuffer : m_Framebuffers)
-			vkDestroyFramebuffer(m_Specification.Device, framebuffer, m_Specification.AllocationCallbacks);
-		m_Framebuffers.clear();
 
 		for (auto imageView : m_ImageViews)
 			vkDestroyImageView(m_Specification.Device, imageView, m_Specification.AllocationCallbacks);
@@ -75,10 +65,6 @@ namespace Aurora::VK {
 		for (auto sema : m_ImageRenderFinishedSemaphores)
 			vkDestroySemaphore(m_Specification.Device, sema, m_Specification.AllocationCallbacks);
 		m_ImageRenderFinishedSemaphores.clear();
-
-		vkDestroyRenderPass(m_Specification.Device, m_RenderPass, m_Specification.AllocationCallbacks);
-		m_RenderPass = VK_NULL_HANDLE;
-
 
 		AURORA_INFO("Destroyed swapchain.");
 	}
@@ -239,12 +225,9 @@ namespace Aurora::VK {
 		CleanupSwapchain();
 
 		if (AURORA_REQUIRE_FAILS(CreateSwapchain(width, height), "Failed to create(resize) swapchain."))		
-			return;		
+			return;
 
 		if (AURORA_REQUIRE_FAILS(CreateImageViews(), "Failed to create(resize) swapchain image view."))
-			return;		
-
-		if (AURORA_REQUIRE_FAILS(CreateFramebuffers(), "Failed to create(resize) swapchain framebuffers"))
 			return;
 		
 		AURORA_INFO("Resized swapchain to [{}|{}] (Forced: {})", width, height, force);
@@ -382,90 +365,4 @@ namespace Aurora::VK {
 
 		return true;
 	}
-
-	bool VulkanSwapchain::CreateRenderPass()
-	{
-		PROFILE_FUNCTION;
-
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.flags = 0;
-		colorAttachment.format = m_ImageFormat;
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentReference colorRef{};
-		colorRef.attachment = 0;
-		colorRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.flags = 0;
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorRef;
-		subpass.inputAttachmentCount = 0;
-		subpass.pInputAttachments = nullptr;
-		subpass.pDepthStencilAttachment = nullptr;
-		subpass.pPreserveAttachments = nullptr;
-		subpass.preserveAttachmentCount = 0;
-		subpass.pResolveAttachments = nullptr;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo passInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-		passInfo.pNext = nullptr;
-		passInfo.flags = 0;
-		passInfo.attachmentCount = 1;
-		passInfo.pAttachments = &colorAttachment;
-		passInfo.dependencyCount = 1;
-		passInfo.pDependencies = &dependency;
-		passInfo.subpassCount = 1;
-		passInfo.pSubpasses = &subpass;
-
-		AURORA_VK_CHECK(vkCreateRenderPass(m_Specification.Device, &passInfo, m_Specification.AllocationCallbacks, &m_RenderPass), VK_SUCCESS, "Failed to create swapchain render pass");
-		if (m_RenderPass == VK_NULL_HANDLE)
-			return false;
-		AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)m_RenderPass, "Swapchain_RenderPass");
-
-		return true;
-	}
-
-	bool VulkanSwapchain::CreateFramebuffers()
-	{
-		PROFILE_FUNCTION;
-
-		m_Framebuffers.resize(m_ImageViews.size());
-		for (size_t i = 0; i < m_ImageViews.size(); i++)
-		{
-			VkImageView attachments[] =
-			{
-				m_ImageViews[i]
-			};
-
-			VkFramebufferCreateInfo fbInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-			fbInfo.pNext = nullptr;
-			fbInfo.flags = 0;
-			fbInfo.attachmentCount = 1;
-			fbInfo.pAttachments = attachments;
-			fbInfo.height = m_Extent.height;
-			fbInfo.width = m_Extent.width;
-			fbInfo.layers = 1;
-			fbInfo.renderPass = m_RenderPass;
-			AURORA_VK_CHECK(vkCreateFramebuffer(m_Specification.Device, &fbInfo, m_Specification.AllocationCallbacks, &m_Framebuffers[i]), VK_SUCCESS, "Failed to create swapchain framebuffer");
-			if (m_Framebuffers[i] == VK_NULL_HANDLE)
-				return false;
-			AURORA_VK_ATTACH_DEBUG_NAME(m_Specification.Device, VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)m_Framebuffers[i], "Swapchain_Framebuffer");
-		}
-		return true;
-	}	
 }
