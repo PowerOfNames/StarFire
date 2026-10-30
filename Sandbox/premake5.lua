@@ -18,7 +18,11 @@ project "Sandbox"
 	{
 		"%{wks.location}/StarFire/Source",
 		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.Substrate}",		
+	}
+	
+	externalincludedirs
+	{
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.ImGui}",
@@ -89,7 +93,7 @@ project "Sandbox"
 		runtime "Release"
 		optimize "on"
 		
-		includedirs
+		externalincludedirs
 		{			
 			"%{IncludeDir.Tracy}",
 		}

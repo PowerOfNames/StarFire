@@ -31,14 +31,17 @@ filter{}
 	{
 		"Source",
 		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.Substrate}",
-		
-		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.Substrate}",		
+	}
+	
+	externalincludedirs
+	{
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.GLFW}",
 		
-		"Dependencies/moodycamel",
+		"Dependencies/moodycamel",		
 	}
 	
 	links
@@ -106,7 +109,7 @@ filter{}
 		runtime "Release"
 		optimize "on"
 		
-		includedirs
+		externalincludedirs
 		{			
 			"%{IncludeDir.Tracy}",
 		}

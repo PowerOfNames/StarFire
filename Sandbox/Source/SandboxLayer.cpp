@@ -148,7 +148,7 @@ namespace Sandbox {
 
 		if (m_ViewportResized)
 		{
-			m_Camera.OnResize(m_ViewportPanel.Width, m_ViewportPanel.Height);
+			m_Camera.OnResize(static_cast<uint32_t>(m_ViewportPanel.Width), static_cast<uint32_t>(m_ViewportPanel.Height));
 			m_DefaultRenderGraph->OnResize(static_cast<uint32_t>(m_ViewportPanel.Width), static_cast<uint32_t>(m_ViewportPanel.Height));
 			m_ViewportResized = false;
 		}
