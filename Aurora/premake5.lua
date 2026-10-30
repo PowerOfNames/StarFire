@@ -36,16 +36,19 @@ filter{}
 		"Include",
 		"Resources",
 		
-		"%{IncludeDir.Substrate}",		
-		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.Substrate}",				
+	}
+	
+	externalincludedirs
+	{
 		"%{IncludeDir.glm}",
+		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.VulkanSDK}",
 		
 		"Dependencies/VulkanMemoryAllocator/include",
-		"Dependencies/Spirv_Reflect",
+		"Dependencies/SPIRV-Reflect",
 		"Dependencies/xxHash",
-		
 	}
 	
 	links
@@ -99,7 +102,7 @@ filter{}
 			"TRACY_ENABLE",		
 		}
 		
-		includedirs
+		externalincludedirs
 		{			
 			"%{IncludeDir.Tracy}",
 		}

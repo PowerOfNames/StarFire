@@ -77,7 +77,7 @@ project "Substrate"
 			"TRACY_ENABLE",
 		}
 		
-		includedirs
+		externalincludedirs
 		{			
 			"%{IncludeDir.Tracy}",
 		}

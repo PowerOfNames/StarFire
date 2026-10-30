@@ -1,4 +1,5 @@
 include "./Premake/customization/solution_items.lua"
+include "./Premake/customization/analyze_external.lua"
 include "Dependencies.lua"
 
 newoption {
@@ -10,6 +11,9 @@ workspace "StarFire"
 	architecture "x86_64"
 	startproject "Sandbox"
 	multiprocessorcompile "On"
+	externalwarnings "Off"
+	analyzeexternal "Off"
+
 	defines
 	{
 		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
@@ -29,6 +33,13 @@ workspace "StarFire"
 		".editorconfig"
 	}
 
+	-- Third-party sources compiled inside a project (e.g. Aurora's SPIRV-Reflect and xxHash).
+	-- Must stay in workspace scope: after the first include, premake is inside that project.
+	filter "files:**/Dependencies/**"
+		warnings "Off"
+		enablepch "Off"
+	filter {}
+
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
@@ -36,13 +47,11 @@ group "Dependencies"
 	include "Dependencies/ImGui"
 group ""
 
-filter {"files/Dependencies/**.cpp"}
+-- The vendored projects are third-party in full. Re-opening them by name keeps their own scripts untouched.
+project "GLFW"
 	warnings "Off"
-filter {}
-
-filter {"files/Dependencies/**.cpp"}
-	enablepch "Off"
-filter{}
+project "ImGui"
+	warnings "Off"
 
 if _OPTIONS["with-tests"] then
 include "Substrate"

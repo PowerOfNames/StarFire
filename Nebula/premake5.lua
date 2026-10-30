@@ -23,10 +23,14 @@ project "Nebula"
 	{
 		"%{wks.location}/StarFire/Source",
 		"%{IncludeDir.Aurora}",
-		"%{IncludeDir.Substrate}",
+		"%{IncludeDir.Substrate}",	
+	}
+	
+	externalincludedirs
+	{
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.ImGui}",	
+		"%{IncludeDir.ImGui}",
 	}
 	
 	links
@@ -93,7 +97,7 @@ project "Nebula"
 		runtime "Release"
 		optimize "on"
 		
-		includedirs
+		externalincludedirs
 		{			
 			"%{IncludeDir.Tracy}",
 		}

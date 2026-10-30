@@ -1074,8 +1074,8 @@ namespace Aurora::VK {
 		bool dstNeedsAcquire = dstCurQueueIndex != copyQueueIndex && dstLastOwner != QueueOwner::UNKNOWN;
 		bool srcNeedsRelease = !op.DestroySrc && srcTarQueueIndex != copyQueueIndex;
 		bool dstNeedsRelease = dstTarQueueIndex != copyQueueIndex;
-		SubmitSpecifications submitSpecs{ copyQueue };
-		submitSpecs.AdditionalWaitSemaphores = additionalWaits;
+		SubmitSpecifications copySubmitSpecs{ copyQueue };
+		copySubmitSpecs.AdditionalWaitSemaphores = additionalWaits;
 		ImmediateSubmit([
 			this,
 			srcNeedsAcquire = srcNeedsAcquire,
@@ -1166,7 +1166,7 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 				vkCmdPipelineBarrier2(cmd, &dependency);
 			}
-		}, submitSpecs);
+		}, copySubmitSpecs);
 				
 
 		dstLastOwner = copyQueue;
@@ -1405,8 +1405,8 @@ namespace Aurora::VK {
 		bool dstNeedsRelease = dstTarQueueIndex != copyQueueIndex;
 		bool dstTarNeedsTransition = op.NewLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-		SubmitSpecifications submitSpecs{ copyQueue };
-		submitSpecs.AdditionalWaitSemaphores = additionalWaits;
+		SubmitSpecifications copySubmitSpecs{ copyQueue };
+		copySubmitSpecs.AdditionalWaitSemaphores = additionalWaits;
 		ImmediateSubmit([
 			this,
 			srcNeedsAcquire = srcNeedsAcquire,
@@ -1516,7 +1516,7 @@ namespace Aurora::VK {
 				dependency.dependencyFlags = VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR;
 				vkCmdPipelineBarrier2(cmd, &dependency);
 			}
-		}, submitSpecs);
+		}, copySubmitSpecs);
 
 
 		dstLastOwner = copyQueue;
@@ -1646,14 +1646,14 @@ namespace Aurora::VK {
 		waits.push_back(semaphore);
 
 		std::vector<VkSemaphoreSubmitInfo> waitSemaphoreInfos;
-		for (const TimelineSemaphore& semaphore : waits)
+		for (const TimelineSemaphore& waitSema : waits)
 		{
 			VkSemaphoreSubmitInfo waitSemaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
 			waitSemaphoreInfo.pNext = nullptr;
-			waitSemaphoreInfo.semaphore = semaphore.Semaphore;
+			waitSemaphoreInfo.semaphore = waitSema.Semaphore;
 			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 			waitSemaphoreInfo.deviceIndex = 0;
-			waitSemaphoreInfo.value = semaphore.Value;
+			waitSemaphoreInfo.value = waitSema.Value;
 			waitSemaphoreInfos.push_back(waitSemaphoreInfo);
 		}
 

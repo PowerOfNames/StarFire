@@ -40,7 +40,7 @@ namespace Sandbox {
 
 		struct ViewportPanel
 		{
-			glm::vec2 Bounds[2];
+			glm::vec2 Bounds[2] = { {0.0f, 0.0f,}, {1.0f, 1.0f} };
 			float Width = 0.0f;
 			float Height = 0.0f;
 			bool IsFocused = false;

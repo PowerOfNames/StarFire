@@ -29,8 +29,12 @@ filter {"configurations:Tests"}
 	{
 		"Tests/",
 		"%{IncludeDir.Substrate}",
-		"%{IncludeDir.Catch2}"
 	}
+	
+	externalincludedirs
+	{
+		"%{IncludeDir.Catch2}",	
+	}	
 	
 	links
 	{	
