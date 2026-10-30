@@ -10,6 +10,11 @@ workspace "StarFire"
 	architecture "x86_64"
 	startproject "Sandbox"
 	multiprocessorcompile "On"
+	defines
+	{
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"GLM_FORCE_INTRINSICS"
+	}
 	
 	configurations 
 	{

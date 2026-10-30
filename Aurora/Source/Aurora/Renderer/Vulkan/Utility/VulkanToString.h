@@ -102,6 +102,22 @@ namespace Aurora::VK {
 		return result.substr(0, result.size() - 3); // Remove the trailing " | "
 	}
 
+	inline constexpr std::string CompareOpToString(VkCompareOp op)
+	{
+		switch (op)
+		{
+			case VK_COMPARE_OP_NEVER: return "Never";
+			case VK_COMPARE_OP_LESS: return "Less";
+			case VK_COMPARE_OP_EQUAL: return "Equal";
+			case VK_COMPARE_OP_LESS_OR_EQUAL: return "Less Or Equal";
+			case VK_COMPARE_OP_GREATER: return "Greater";
+			case VK_COMPARE_OP_NOT_EQUAL: return "Not Equal";
+			case VK_COMPARE_OP_GREATER_OR_EQUAL: return "Greater Or Equal";
+			case VK_COMPARE_OP_ALWAYS: return "Always";
+			default: return "Unknown Compare Op";
+		}
+	}
+
 	inline constexpr std::string QueueOwnerToString(QueueOwner owner)
 	{
 		switch (owner)

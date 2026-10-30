@@ -52,6 +52,15 @@ namespace Aurora::VK::Convert {
 	static_assert(static_cast<int>(WindingOrder::COUNTER_CLOCKWISE) == VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	static_assert(static_cast<int>(WindingOrder::CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
 
+	static_assert(static_cast<int>(CompareMode::NEVER) == VK_COMPARE_OP_NEVER);
+	static_assert(static_cast<int>(CompareMode::LESS) == VK_COMPARE_OP_LESS);
+	static_assert(static_cast<int>(CompareMode::EQUAL) == VK_COMPARE_OP_EQUAL);
+	static_assert(static_cast<int>(CompareMode::LESS_OR_EQUAL) == VK_COMPARE_OP_LESS_OR_EQUAL);
+	static_assert(static_cast<int>(CompareMode::GREATER) == VK_COMPARE_OP_GREATER);
+	static_assert(static_cast<int>(CompareMode::NOT_EQUAL) == VK_COMPARE_OP_NOT_EQUAL);
+	static_assert(static_cast<int>(CompareMode::GREATER_OR_EQUAL) == VK_COMPARE_OP_GREATER_OR_EQUAL);
+	static_assert(static_cast<int>(CompareMode::ALWAYS) == VK_COMPARE_OP_ALWAYS);
+
 	static_assert(static_cast<int>(PrimitiveTopology::POINT_LIST) == VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
 	static_assert(static_cast<int>(PrimitiveTopology::LINE_LIST) == VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
 	static_assert(static_cast<int>(PrimitiveTopology::LINE_STRIP) == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
@@ -110,6 +119,11 @@ namespace Aurora::VK::Convert {
 	[[nodiscard]] inline constexpr VkFrontFace ToVkWindingOrder(WindingOrder order)
 	{
 		return static_cast<VkFrontFace>(order);
+	}
+
+	[[nodiscard]] inline constexpr VkCompareOp ToVkCompareOp(CompareMode mode)
+	{
+		return static_cast<VkCompareOp>(mode);
 	}
 
 	[[nodiscard]] inline constexpr VkFormat ToVkFormat(Format format)

@@ -6,10 +6,10 @@
 
 namespace StarFire {
 
-	inline constexpr std::array<Aurora::GPU::Vertex, 3> TriangleVertices{ {
+	inline const std::array<Aurora::GPU::Vertex, 3> TriangleVertices{ {
 		{.Position = { 0.0f, 0.5f, 0.0f }, .Color = {1.0f, 0.0f, 0.0f}, .TexCoord = {0.0f, 0.0f} },
 		{.Position = { -0.5f, -0.5f, 0.0f }, .Color = {0.0f, 1.0f, 0.0f}, .TexCoord = {1.0f, 0.0f} },
 		{.Position = { 0.5f, -0.5f, 0.0f }, .Color = {0.0f, 0.0f, 1.0f}, .TexCoord = {0.0f, 1.0f} },
 	} };
-	inline constexpr std::array<uint16_t, 3> TriangleIndices = { 0, 1, 2 };
+	inline const std::array<uint16_t, 3> TriangleIndices = { 0, 1, 2 };
 }

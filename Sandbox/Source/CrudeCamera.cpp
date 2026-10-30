@@ -1,4 +1,5 @@
 #include "CrudeCamera.h"
+#include "Aurora/Conventions.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -99,7 +100,9 @@ namespace Sandbox {
 	{
 		PROFILE_FUNCTION;
 
-		m_ProjectionMatrix = glm::orthoRH_ZO(m_Bounds.Left, m_Bounds.Right, m_Bounds.Bottom, m_Bounds.Top, m_NearClip, m_FarClip);
+		m_ProjectionMatrix = Aurora::Conventions::REVERSE_Z 
+			? glm::ortho(m_Bounds.Left, m_Bounds.Right, m_Bounds.Bottom, m_Bounds.Top, m_FarClip, m_NearClip) 
+			: glm::ortho(m_Bounds.Left, m_Bounds.Right, m_Bounds.Bottom, m_Bounds.Top, m_NearClip, m_FarClip);
 	}
 
 }

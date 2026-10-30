@@ -71,6 +71,18 @@ TEST_CASE("Convert: Aurora enums alias their Vulkan counterparts", "[convert][ty
 		CHECK(Cv::ToVkWindingOrder(WindingOrder::CLOCKWISE) == VK_FRONT_FACE_CLOCKWISE);
 	}
 
+	SECTION("CompareMode")
+	{
+		CHECK(Cv::ToVkCompareOp(CompareMode::NEVER) == VK_COMPARE_OP_NEVER);
+		CHECK(Cv::ToVkCompareOp(CompareMode::LESS) == VK_COMPARE_OP_LESS);
+		CHECK(Cv::ToVkCompareOp(CompareMode::EQUAL) == VK_COMPARE_OP_EQUAL);
+		CHECK(Cv::ToVkCompareOp(CompareMode::LESS_OR_EQUAL) == VK_COMPARE_OP_LESS_OR_EQUAL);
+		CHECK(Cv::ToVkCompareOp(CompareMode::GREATER) == VK_COMPARE_OP_GREATER);
+		CHECK(Cv::ToVkCompareOp(CompareMode::NOT_EQUAL) == VK_COMPARE_OP_NOT_EQUAL);
+		CHECK(Cv::ToVkCompareOp(CompareMode::GREATER_OR_EQUAL) == VK_COMPARE_OP_GREATER_OR_EQUAL);
+		CHECK(Cv::ToVkCompareOp(CompareMode::ALWAYS) == VK_COMPARE_OP_ALWAYS);
+	}
+
 	SECTION("PrimitiveTopology")
 	{
 		CHECK(Cv::ToVkPrimitiveTopology(PrimitiveTopology::POINT_LIST) == VK_PRIMITIVE_TOPOLOGY_POINT_LIST);

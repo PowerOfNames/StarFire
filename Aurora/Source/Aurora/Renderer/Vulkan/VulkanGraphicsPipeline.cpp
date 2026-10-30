@@ -179,7 +179,7 @@ namespace Aurora::VK {
 		depthStencilInfo.flags = 0;
 		//Depth
 		depthStencilInfo.depthTestEnable = VK_TRUE;
-		depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL; //TODO GREATER_OR_EQUAL for infinite depth
+		depthStencilInfo.depthCompareOp = Convert::ToVkCompareOp(m_Specification.DepthCompare);
 		depthStencilInfo.depthWriteEnable = VK_TRUE;
 		//Stencil
 		depthStencilInfo.stencilTestEnable = VK_FALSE;

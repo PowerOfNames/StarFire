@@ -1,5 +1,6 @@
 #pragma once
 #include "Aurora/Renderer/Types.h"
+#include "Aurora/Conventions.h"
 
 #include "Substrate/RefCounted.h"
 #include "Substrate/RefPtr.h"
@@ -12,10 +13,11 @@ namespace Aurora {
 	{
 		std::string Name;
 
-		WindingOrder WindingOrder = WindingOrder::COUNTER_CLOCKWISE;
+		WindingOrder WindingOrder = Conventions::FRONT_FACE;
 		PrimitiveTopology PrimitiveTopology = PrimitiveTopology::TRIANGLE_LIST;
 		PolygonMode PolygonMode = PolygonMode::FILL;
 		VertexInputRate VertexInputRate = VertexInputRate::VERTEX;
+		CompareMode DepthCompare = Conventions::Z_COMPARE;
 		bool IsBindless = false;
 	};
 
