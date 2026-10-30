@@ -274,8 +274,8 @@ namespace Aurora::VK {
 		PROFILE_FUNCTION;
 
 		// slots n-1 .. 1, 0 reserved for fallback image
-		for (uint32_t i = 0; i < m_BindlessImageSlotsFreeList.size(); i++)		
-			m_BindlessImageSlotsFreeList[i] = m_BindlessImageSlotsFreeList.size() - i; // skip zero (fallback)
+		for (size_t i = 0; i < m_BindlessImageSlotsFreeList.size(); i++)		
+			m_BindlessImageSlotsFreeList[i] = static_cast<uint32_t>(m_BindlessImageSlotsFreeList.size() - i); // skip zero (fallback)
 		m_FreeCount = MAX_IMAGE_REGISTER_COUNT;
 
 		if (AURORA_REQUIRE_FAILS(CreateFallbackTexture(), "Failed to create fallback texture"))
