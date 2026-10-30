@@ -4,7 +4,11 @@
 #include "Aurora/Renderer/Vulkan/Utility/VulkanConvert.h"
 #include "Aurora/Renderer/Vulkan/VulkanRenderer.h"
 
-#include "Shaders/ShaderByteCodes.h"
+#if __has_include ("Shaders/ShaderByteCodes.h")
+#	include "Shaders/ShaderByteCodes.h"
+#else
+#	error "ShaderByteCodes.h is missing: run Aurora/Scripts/CompileShaders.bat once after cloning."
+#endif
 
 namespace Aurora::VK {
 	
