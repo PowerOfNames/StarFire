@@ -1,3 +1,3 @@
 #pragma once
 
-#define SANDBOX_ANIMATION_WARP 3600
+#define SANDBOX_ANIMATION_WRAP 3600

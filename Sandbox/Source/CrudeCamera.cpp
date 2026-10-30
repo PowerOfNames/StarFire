@@ -4,8 +4,8 @@
 
 namespace Sandbox {
 
-	CrudeCamera::CrudeCamera(uint32_t width, uint32_t height, float zoomLevel /*= 1.0f*/, float nearClip /*= 0.0f*/, float farClip /*= 1.0f*/)
-		: m_Width(width), m_Height(height), m_ZoomLevel(zoomLevel), m_NearClip(nearClip), m_FarClip(farClip)
+	CrudeCamera::CrudeCamera(uint32_t width, uint32_t height, float zoomLevel /*= 1.0f*/)
+		: m_Width(width), m_Height(height), m_ZoomLevel(zoomLevel)
 	{
 		PROFILE_FUNCTION;
 		
@@ -64,31 +64,7 @@ namespace Sandbox {
 		PROFILE_FUNCTION;
 
 		StarFire::EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<StarFire::KeyPressedEvent>(STARFIRE_BIND_EVENT_FN(CrudeCamera::OnKeyPressedEvent));
-		dispatcher.Dispatch<StarFire::KeyReleasedEvent>(STARFIRE_BIND_EVENT_FN(CrudeCamera::OnKeyReleasedEvent));
 		dispatcher.Dispatch<StarFire::MouseScrolledEvent>(STARFIRE_BIND_EVENT_FN(CrudeCamera::OnMouseScrollEvent));
-		dispatcher.Dispatch<StarFire::MousePressEvent>(STARFIRE_BIND_EVENT_FN(CrudeCamera::OnMousePressEvent));
-	}
-
-	bool CrudeCamera::OnKeyPressedEvent(StarFire::KeyPressedEvent& e)
-	{
-		PROFILE_FUNCTION;
-
-		return true;
-	}
-
-	bool CrudeCamera::OnKeyReleasedEvent(StarFire::KeyReleasedEvent& e)
-	{
-		PROFILE_FUNCTION;
-
-		return false;
-	}
-
-	bool CrudeCamera::OnMousePressEvent(StarFire::MousePressEvent& e)
-	{
-		PROFILE_FUNCTION;
-
-		return false;
 	}
 
 	bool CrudeCamera::OnMouseScrollEvent(StarFire::MouseScrolledEvent& e)
@@ -123,7 +99,7 @@ namespace Sandbox {
 	{
 		PROFILE_FUNCTION;
 
-		m_ProjectionMatrix = glm::ortho(m_Bounds.Left, m_Bounds.Right, m_Bounds.Bottom, m_Bounds.Top, m_NearClip, m_FarClip);
+		m_ProjectionMatrix = glm::orthoRH_ZO(m_Bounds.Left, m_Bounds.Right, m_Bounds.Bottom, m_Bounds.Top, m_NearClip, m_FarClip);
 	}
 
 }

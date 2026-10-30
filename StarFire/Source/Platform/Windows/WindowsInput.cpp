@@ -36,24 +36,6 @@ namespace StarFire {
 		return !IsMouseDown(mouseCode);
 	}
 
-	int Input::IsKeyRepeating(KeyCode keyCode)
-	{
-		PROFILE_FUNCTION;
-
-		GLFWwindow* window = static_cast<GLFWwindow*>(Application::Get()->GetMainWindowPtr()->GetNativeWindow());
-		int state = glfwGetKey(window, keyCode);
-		return state == GLFW_REPEAT ? 1 : 0;
-	}
-
-	int Input::IsMouseRepeating(MouseCode mouseCode)
-	{
-		PROFILE_FUNCTION;
-
-		GLFWwindow* window = static_cast<GLFWwindow*>(Application::Get()->GetMainWindowPtr()->GetNativeWindow());
-		int state = glfwGetMouseButton(window, mouseCode);
-		return state == GLFW_REPEAT ? 1 : 0;
-	}
-
 	MousePosition Input::GetMousePos()
 	{
 		PROFILE_FUNCTION;

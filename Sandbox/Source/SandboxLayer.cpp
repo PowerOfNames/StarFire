@@ -18,7 +18,7 @@ namespace Sandbox {
 
 	SandboxLayer::SandboxLayer() 
 		: StarFire::Layer("SandboxLayer")
-		, m_Camera( 800, 600, 1.0f, 1.0f, 0.0f )
+		, m_Camera( 800, 600, 1.0f )
 	{
 		PROFILE_FUNCTION;
 		
@@ -150,13 +150,14 @@ namespace Sandbox {
 		}
 
 		// == 2. Update Scene ==
-		m_Camera.OnUpdate(deltaTime.InMilli());
+		if(m_ViewportPanel.IsFocused)
+			m_Camera.OnUpdate(deltaTime.InMilli());
 
 		GlobalsData globals{};
 		globals.ViewMatrix = m_Camera.GetView();
 		globals.ProjectionMatrix = m_Camera.GetProjection();
 		globals.ViewProjectionMatrix = m_Camera.GetViewProjection();
-		globals.CumulativeTimeInMS = static_cast<float>(fmod(m_CumulativeTimeInMS / 1000.0, SANDBOX_ANIMATION_WARP));
+		globals.AnimationTime = static_cast<float>(fmod(m_CumulativeTimeInMS / 1000.0, SANDBOX_ANIMATION_WRAP));
 		//StarFire::RendererAPI::DrawSprite(m_TriangleShapeHandle, m_TriangleTransform, m_TriangleColorMaterialHandle);
 
 
@@ -259,7 +260,6 @@ namespace Sandbox {
 			float width = glm::max(m_ViewportPanel.Bounds[1].x - m_ViewportPanel.Bounds[0].x, 1.0f);
 			float height = glm::max(m_ViewportPanel.Bounds[1].y - m_ViewportPanel.Bounds[0].y, 1.0f);			
 
-			//TODO: Use the viewport's focused/hovered state to control whether the camera controller should receive input, etc.
 			Aurora::ImageHandle viewportImage = m_DefaultRenderGraph->GetCopyTarget(c_CopyColorTargetName);
 			if(viewportImage != Aurora::ImageHandle::INVALID_HANDLE)
 			{

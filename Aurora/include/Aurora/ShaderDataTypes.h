@@ -55,6 +55,7 @@ struct BindlessGlobalState
 	mat4 View;
 	mat4 Projection;
 	mat4 ViewProjection;
+	//in Seconds, wraps with 3600
 	float AnimationTime;
 };
 #endif

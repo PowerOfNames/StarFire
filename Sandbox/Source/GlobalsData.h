@@ -11,6 +11,9 @@ namespace Sandbox {
 		glm::mat4 ViewMatrix;
 		glm::mat4 ProjectionMatrix;
 		glm::mat4 ViewProjectionMatrix;
-		float CumulativeTimeInMS;
+		/// <summary>
+		/// In Seconds. Usage wraps with SANDBOX_ANIMATION_WRAP
+		/// </summary>
+		float AnimationTime;
 	};
 }

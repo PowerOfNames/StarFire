@@ -18,8 +18,6 @@ namespace StarFire {
 		static bool IsKeyUp(KeyCode keyCode);
 		static bool IsMouseDown(MouseCode mouseCode);
 		static bool IsMouseUp(MouseCode mouseCode);
-		static int IsKeyRepeating(KeyCode keyCode);
-		static int IsMouseRepeating(MouseCode mouseCode);
 		static MousePosition GetMousePos();
 		static float GetMousePosX();
 		static float GetMousePosY();

@@ -314,7 +314,12 @@ namespace Aurora::VK {
 
 		VulkanBufferData* globalsBufferData = resManager->GetBufferData(m_BindlessGlobalsBuffer);
 		size_t globalsBufferAddress = 0;
-		if (globalsBufferData && globalsBufferData->MappedPtr != nullptr)
+		bool skipDraw = false;
+		// TODO: Only do this once, once the RenderGraph separates new resources from already validated ones. 
+		// Ready resources should be promoted in the RenderGraph and only in the promoted state taken into Execute
+		// Before that, (maybe) resources are waited on in a separate loop (threaded or before execute)
+		// Alternatively (PREFERRED), resources ony ever get injected into the RenderGraph when they are ready and get ejected before the are being invalidated
+		if (AURORA_REQUIRE(globalsBufferData && globalsBufferData->MappedPtr != nullptr, "Globals data is not available for bindless."))
 		{
 			if (AURORA_REQUIRE(m_Specification.GlobalDataSize == Substrate::Utility::AlignUpToMultipleOfMinAlignment(globalDataSize, AURORA_GPU_REF_ALIGN), "Global data size must match with specification."))
 			{
@@ -323,7 +328,12 @@ namespace Aurora::VK {
 				globalsBufferAddress = globalsBufferData->DeviceAddress + globalsOffset;
 				Memory::WriteMapped(vmaAllocator, *globalsBufferData, globalsOffset, globalData, globalDataSize);
 			}
+			else
+				skipDraw = true;
 		}
+		else
+			skipDraw = true;
+		
 
 		for (const auto& pass : m_CompiledPasses)
 		{
@@ -380,7 +390,7 @@ namespace Aurora::VK {
 			vkCmdSetScissor(cmd, 0, 1, &pass.RenderArea);
 
 			//We skip the draw for now if there is no globals buffer address.
-			if(AURORA_REQUIRE(globalsBufferData != nullptr, "Globals buffer must be set correctly!"))
+			if(AURORA_REQUIRE(!skipDraw, "Setup flawed. Skipping draw."))
 				DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle, globalsBufferAddress);
 
 			vkCmdEndRendering(cmd);
