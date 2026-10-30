@@ -1,6 +1,7 @@
 #pragma once
 #include "Aurora/Renderer/Handles.h"
 #include "Aurora/Renderer/Image.h"
+#include "Aurora/Conventions.h"
 
 #include "Substrate/RefCounted.h"
 #include "Substrate/RefPtr.h"
@@ -22,7 +23,7 @@ namespace Aurora {
 	{
 		std::string Name = "Depth attachment name";
 		ImageSpecification ImageSpecs{};
-		float ClearDepth = 1.0f;
+		float ClearDepth = Conventions::Z_CLEAR;
 	};
 
 	struct RenderPassSpecification

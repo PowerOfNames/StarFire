@@ -5,6 +5,7 @@
 
 #include "StarFire.h"
 #include "Aurora/Aurora.h"
+#include "Aurora/Conventions.h"
 #include "Aurora/Renderer/RenderGraph.h"
 #include "Aurora/Renderer/RenderPass.h"
 #include "Aurora/ShaderDataTypes.h"
@@ -50,7 +51,7 @@ namespace Sandbox {
 			specs.DepthAttachment.ImageSpecs.Format = Aurora::Format::DEPTH32_SFLOAT;
 			specs.DepthAttachment.ImageSpecs.Width = width;
 			specs.DepthAttachment.ImageSpecs.Height = height;
-			specs.DepthAttachment.ClearDepth = 1.0f; //needs to be 0.0 if we do infinite far plane, but for now we do a finite far plane so 1.0 is correct
+			specs.DepthAttachment.ClearDepth = Aurora::Conventions::Z_CLEAR;
 			specs.RenderArea = { width, height };
 			m_TrianglePass = Aurora::RenderPass::Create(specs);
 
@@ -58,7 +59,10 @@ namespace Sandbox {
 			pipSpecs.Name = "Triangle Test Pipeline";
 			pipSpecs.PolygonMode = Aurora::PolygonMode::FILL;
 			pipSpecs.PrimitiveTopology = Aurora::PrimitiveTopology::TRIANGLE_LIST;
-			pipSpecs.WindingOrder = Aurora::WindingOrder::COUNTER_CLOCKWISE;
+			
+			//Just for reference -> these hsould be replaces with a IsReverseInfDepth boolean and automatically set the fields in ::Create
+			//pipSpecs.WindingOrder = Aurora::FRONT_FACE;
+			//pipSpecs.DepthCompare = Aurora::INF_REVERSE_Z_COMPARE;
 			pipSpecs.IsBindless = true;
 			m_BindlessPipeline = Aurora::GraphicsPipeline::Create(pipSpecs);
 		}

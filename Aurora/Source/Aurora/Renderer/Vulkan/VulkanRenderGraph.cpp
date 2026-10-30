@@ -381,8 +381,9 @@ namespace Aurora::VK {
 
 			VkViewport viewport{};
 			viewport.width = static_cast<float>(pass.RenderArea.extent.width);
-			viewport.height = -static_cast<float>(pass.RenderArea.extent.height);
 			viewport.x = static_cast<float>(pass.RenderArea.offset.x);
+			//viewport flip to match Conventions.h UP (+Y)
+			viewport.height = -static_cast<float>(pass.RenderArea.extent.height);
 			viewport.y = static_cast<float>(pass.RenderArea.offset.y) + static_cast<float>(pass.RenderArea.extent.height);
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
