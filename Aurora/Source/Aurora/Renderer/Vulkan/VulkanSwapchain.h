@@ -77,9 +77,6 @@ namespace Aurora::VK {
 		bool CreateRenderPass();
 		bool CreateFramebuffers();
 
-		//For Fallback:
-		bool CreateFallbackPipeline();
-
 	private:
 		SwapchainSpecification m_Specification{};
 		VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
@@ -97,12 +94,6 @@ namespace Aurora::VK {
 		std::vector<VkFramebuffer> m_Framebuffers;
 		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
 		std::vector<VkSemaphore> m_ImageRenderFinishedSemaphores;
-				
-		//per frame data
-				
-		//Fallback rendering only
-		VkPipelineLayout m_FallbackPipelineLayout = VK_NULL_HANDLE;
-		VkPipeline m_FallbackPipeline = VK_NULL_HANDLE;
 	};
 
 
