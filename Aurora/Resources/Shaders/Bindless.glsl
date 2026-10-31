@@ -1,4 +1,5 @@
 #extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
@@ -15,10 +16,11 @@ layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) 
 	BindlessMaterial Materials[];
 };
 
-layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer GlobalStateBufferReference
+layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer RendererGlobalsBufferReference
 {
-	BindlessGlobalState Globals;
+	RendererGlobals Globals;
 };
+
 
 layout(scalar, buffer_reference, buffer_reference_align = AURORA_GPU_REF_ALIGN) readonly buffer DrawDataBufferReference
 {

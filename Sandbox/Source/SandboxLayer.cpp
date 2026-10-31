@@ -28,7 +28,7 @@ namespace Sandbox {
 
 		Aurora::RenderGraphSpecification rgSpecs{};
 		rgSpecs.Name = "Triangle Test RG";
-		rgSpecs.GlobalDataSize = sizeof(GlobalsData);
+		rgSpecs.AppGlobalsSize = sizeof(GlobalsData);
 		m_DefaultRenderGraph = Aurora::RenderGraph::Create(rgSpecs);
 
 		// == Simple 2D pass for triangle rendering as test ==
@@ -60,9 +60,9 @@ namespace Sandbox {
 			pipSpecs.PolygonMode = Aurora::PolygonMode::FILL;
 			pipSpecs.PrimitiveTopology = Aurora::PrimitiveTopology::TRIANGLE_LIST;
 			
-			//Just for reference -> these hsould be replaces with a IsReverseInfDepth boolean and automatically set the fields in ::Create
-			//pipSpecs.WindingOrder = Aurora::FRONT_FACE;
-			//pipSpecs.DepthCompare = Aurora::INF_REVERSE_Z_COMPARE;
+			//Just for reference. Defaults come from Conventions. Change only for override
+			//pipSpecs.WindingOrder = Aurora::Conventions::FRONT_FACE;
+			//pipSpecs.DepthCompare = Aurora::Conventions::Z_COMPARE;
 			pipSpecs.IsBindless = true;
 			m_BindlessPipeline = Aurora::GraphicsPipeline::Create(pipSpecs);
 		}
@@ -157,10 +157,12 @@ namespace Sandbox {
 		if(m_ViewportPanel.IsFocused)
 			m_Camera.OnUpdate(deltaTime.InMilli());
 
+		Aurora::GPU::RendererGlobals rendererGlobals{};
+		rendererGlobals.View = m_Camera.GetView();
+		rendererGlobals.Projection = m_Camera.GetProjection();
+		rendererGlobals.ViewProjection = m_Camera.GetViewProjection();
+
 		GlobalsData globals{};
-		globals.ViewMatrix = m_Camera.GetView();
-		globals.ProjectionMatrix = m_Camera.GetProjection();
-		globals.ViewProjectionMatrix = m_Camera.GetViewProjection();
 		globals.AnimationTime = static_cast<float>(fmod(m_CumulativeTimeInMS / 1000.0, SANDBOX_ANIMATION_WRAP));
 		//StarFire::RendererAPI::DrawSprite(m_TriangleShapeHandle, m_TriangleTransform, m_TriangleColorMaterialHandle);
 
@@ -177,7 +179,7 @@ namespace Sandbox {
 		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
 
 		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
-		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, &globals, sizeof(GlobalsData));
+		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, rendererGlobals, globals);
 
 	}
 

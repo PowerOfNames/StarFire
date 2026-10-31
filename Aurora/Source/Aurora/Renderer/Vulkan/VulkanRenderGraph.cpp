@@ -13,8 +13,6 @@ namespace Aurora::VK {
 		: m_Specification(specs)
 	{
 		PROFILE_FUNCTION;
-
-		m_Specification.GlobalDataSize = Substrate::Utility::AlignUpToMultipleOfMinAlignment(specs.GlobalDataSize, AURORA_GPU_REF_ALIGN);
 	}
 
 	void VulkanRenderGraph::Destroy()
@@ -225,7 +223,8 @@ namespace Aurora::VK {
 			globalsDataSpecs.MemUsage = MemoryUsage::CPU_TO_GPU;
 			globalsDataSpecs.SpecializationType = BufferSpecializationType::GLOBALS_BUFFER;
 			globalsDataSpecs.Usage = BufferUsageFlags::SHADER_DEVICE_ADDRESS | BufferUsageFlags::STORAGE_BUFFER | BufferUsageFlags::TRANSFER_DST;
-			globalsDataSpecs.Size = m_Specification.GlobalDataSize * fif;
+			globalsDataSpecs.Size = (RENDERER_GLOBALS_BYTES 
+				+ Substrate::Utility::AlignUpToMultipleOfMinAlignment(m_Specification.AppGlobalsSize, AURORA_GPU_REF_ALIGN)) * fif;
 			m_BindlessGlobalsBuffer = resManager->CreateBuffer(globalsDataSpecs);
 
 			VulkanBufferData* globals = resManager->GetBufferData(m_BindlessGlobalsBuffer);
@@ -281,7 +280,7 @@ namespace Aurora::VK {
 		return true;
 	}
 
-	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const void* globalData, size_t globalDataSize)
+	void VulkanRenderGraph::Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const GPU::RendererGlobals& rendererGlobals, std::span<const std::byte> appGlobals)
 	{
 		PROFILE_FUNCTION;
 
@@ -313,7 +312,6 @@ namespace Aurora::VK {
 			renderer->BindPipeline(cmd, m_BindlessPipeline);
 
 		VulkanBufferData* globalsBufferData = resManager->GetBufferData(m_BindlessGlobalsBuffer);
-		size_t globalsBufferAddress = 0;
 		bool skipDraw = false;
 		// TODO: Only do this once, once the RenderGraph separates new resources from already validated ones. 
 		// Ready resources should be promoted in the RenderGraph and only in the promoted state taken into Execute
@@ -321,15 +319,29 @@ namespace Aurora::VK {
 		// Alternatively (PREFERRED), resources ony ever get injected into the RenderGraph when they are ready and get ejected before the are being invalidated
 		if (AURORA_REQUIRE(globalsBufferData && globalsBufferData->MappedPtr != nullptr, "Globals data is not available for bindless."))
 		{
-			if (AURORA_REQUIRE(m_Specification.GlobalDataSize == Substrate::Utility::AlignUpToMultipleOfMinAlignment(globalDataSize, AURORA_GPU_REF_ALIGN), "Global data size must match with specification."))
+			VmaAllocator vmaAllocator = renderContext->GetVmaAllocator();
+			size_t rendererGlobalsOffset = (RENDERER_GLOBALS_BYTES
+											+ Substrate::Utility::AlignUpToMultipleOfMinAlignment(m_Specification.AppGlobalsSize, AURORA_GPU_REF_ALIGN)) * frameData.FrameIndex;
+			size_t rendererGlobalsBufferAddress = globalsBufferData->DeviceAddress + rendererGlobalsOffset;
+			Memory::WriteMapped(vmaAllocator, *globalsBufferData, rendererGlobalsOffset, &rendererGlobals, sizeof(GPU::RendererGlobals));
+			
+			size_t appGlobalsBufferAddress = 0;
+			if (AURORA_REQUIRE(m_Specification.AppGlobalsSize == appGlobals.size_bytes(), "Global data size must match with specification."))
 			{
-				VmaAllocator vmaAllocator = renderContext->GetVmaAllocator();
-				size_t globalsOffset = m_Specification.GlobalDataSize * frameData.FrameIndex;
-				globalsBufferAddress = globalsBufferData->DeviceAddress + globalsOffset;
-				Memory::WriteMapped(vmaAllocator, *globalsBufferData, globalsOffset, globalData, globalDataSize);
+				if (m_Specification.AppGlobalsSize > 0)
+				{
+					size_t appGlobalsOffset = rendererGlobalsOffset + RENDERER_GLOBALS_BYTES;
+					appGlobalsBufferAddress = globalsBufferData->DeviceAddress + appGlobalsOffset;
+					Memory::WriteMapped(vmaAllocator, *globalsBufferData, appGlobalsOffset, appGlobals.data(), appGlobals.size_bytes());
+				}
 			}
 			else
 				skipDraw = true;
+
+			GPU::BindlessPushConstant pc{};
+			pc.RendererGlobalsBufferAddress = rendererGlobalsBufferAddress;
+			pc.AppGlobalsBufferAddress = appGlobalsBufferAddress;
+			vkCmdPushConstants(cmd, renderer->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, offsetof(GPU::BindlessPushConstant, GPU::BindlessPushConstant::DrawDataBufferAddress), &pc);
 		}
 		else
 			skipDraw = true;
@@ -392,7 +404,7 @@ namespace Aurora::VK {
 
 			//We skip the draw for now if there is no globals buffer address.
 			if(AURORA_REQUIRE(!skipDraw, "Setup flawed. Skipping draw."))
-				DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle, globalsBufferAddress);
+				DrawObjects(cmd, vbHandle, ibHandle, frameData.FrameIndex, textureHandle);
 
 			vkCmdEndRendering(cmd);
 
@@ -420,7 +432,7 @@ namespace Aurora::VK {
 		}
 	}
 
-	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, size_t globalsAddress)
+	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle)
 	{
 		Ref<VulkanContext> renderContext = GetRenderContext();
 		Ref<VulkanRenderer> renderer = GetRenderer();
@@ -449,10 +461,8 @@ namespace Aurora::VK {
 		size_t drawDataOffset = DRAW_DATA_BYTES * frameIdx;
 		Memory::WriteMapped(vmaAllocator, *drawDataBufferData, drawDataOffset, drawData);
 
-		GPU::BindlessPushConstant pc{};
-		pc.GlobalStateBufferAddress = globalsAddress;
-		pc.DrawDataBufferAddress = drawDataBufferData->DeviceAddress + drawDataOffset;
-		vkCmdPushConstants(cmd, renderer->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPU::BindlessPushConstant), &pc);
+		size_t drawDataBufferAddress = drawDataBufferData->DeviceAddress + drawDataOffset;
+		vkCmdPushConstants(cmd, renderer->GetBindlessSetData().PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, offsetof(GPU::BindlessPushConstant, GPU::BindlessPushConstant::DrawDataBufferAddress), sizeof(GPU::BindlessPushConstant::DrawDataBufferAddress), &drawDataBufferAddress);
 
 		IndexedDrawData indexedDraw{};
 		indexedDraw.IndexBuffer = indexBufferData->Buffer;
