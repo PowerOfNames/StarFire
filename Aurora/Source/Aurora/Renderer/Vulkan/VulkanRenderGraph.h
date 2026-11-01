@@ -67,12 +67,12 @@ namespace Aurora::VK {
 
 		virtual bool Compile() override;
 
-		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle texture, const void* globalData, size_t globalDataSize) override;
+		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const GPU::RendererGlobals& rendererGlobals, std::span<const std::byte> appGlobals) override;
 
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
 
 	private:
-		void DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle, size_t globalsAddress);
+		void DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle);
 		bool CreateDataBuffers();
 		void ClearCompilations();
 		void CompileCopyRequest(std::string_view request);
@@ -92,6 +92,7 @@ namespace Aurora::VK {
 		bool m_NeedsResize = false;
 		bool m_Compiled = false;
 
+
 		std::vector<Ref<RenderPass>> m_RenderPasses;
 		std::unordered_map<std::string, AttachmentCopyRequest> m_CopyRequests;
 
@@ -101,6 +102,7 @@ namespace Aurora::VK {
 
 		Ref<GraphicsPipeline> m_BindlessPipeline;
 
+		static constexpr size_t RENDERER_GLOBALS_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::RendererGlobals), AURORA_GPU_REF_ALIGN);
 		static constexpr size_t DRAW_DATA_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::BindlessDrawData), AURORA_GPU_REF_ALIGN) * MAX_DRAWS_PER_FRAME;
 		static constexpr size_t MATERIAL_BYTES = Substrate::Utility::AlignUpToMultipleOfMinAlignment(sizeof(GPU::BindlessMaterial) * MAX_DRAWS_PER_FRAME, AURORA_GPU_REF_ALIGN);
 		BufferHandle m_BindlessGlobalsBuffer = BufferHandle::INVALID_HANDLE;

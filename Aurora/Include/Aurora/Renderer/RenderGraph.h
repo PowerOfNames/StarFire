@@ -2,18 +2,23 @@
 #include "Aurora/Renderer/RenderPass.h"
 #include "Aurora/Renderer/GraphicsPipeline.h"
 #include "Aurora/Renderer/Handles.h"
+#include "Aurora/ShaderDataTypes.h"
 
 #include "Substrate/RefCounted.h"
 #include "Substrate/RefPtr.h"
 
+#include <cstddef>
+#include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
+
 namespace Aurora {
 
 	struct RenderGraphSpecification
 	{
 		std::string Name = "Default Render Graph";
-		size_t GlobalDataSize = 0;
+		size_t AppGlobalsSize = 0;
 	};
 
 
@@ -54,8 +59,16 @@ namespace Aurora {
 
 		virtual bool Compile() = 0;
 
+		//TODO: create a builder like pattern for execution (Update/SetGlobals->Execute(stuff).
 		// This will take in the scene data in a data driven way (either already culled, or the render graph will do the culling itself)
-		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle texture, const void* globalData, size_t globalDataSize) = 0;
+		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const GPU::RendererGlobals& rendererGlobals, std::span<const std::byte> appGlobals) = 0;
+		template<typename TAppGlobals>
+		void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const GPU::RendererGlobals& rendererGlobals, const TAppGlobals& appGlobals)
+		{
+			static_assert(std::is_trivially_copyable_v<TAppGlobals>);
+			static_assert(!std::is_pointer_v<TAppGlobals>);
+			Execute(vbHandle, ibHandle, textureHandle, rendererGlobals, std::as_bytes(std::span(&appGlobals, 1)));
+		}
 
 		virtual const RenderGraphSpecification& GetSpecification() const = 0;
 	};
