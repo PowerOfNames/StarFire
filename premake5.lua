@@ -40,6 +40,15 @@ workspace "StarFire"
 		enablepch "Off"
 	filter {}
 
+	-- EnTT stamps this into every object file (detect_mismatch), so it must match across all projects of a configuration.
+	-- Debug keeps EnTT's exception rollback; Release and Profiling drop it.
+	filter "configurations:Release or Profiling"
+		defines
+		{
+			"ENTT_NO_EXCEPTION"
+		}
+	filter {}
+
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
