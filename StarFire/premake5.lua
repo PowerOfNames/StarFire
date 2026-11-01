@@ -40,6 +40,7 @@ filter{}
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.GLFW}",
+		"%{IncludeDir.entt}",
 		
 		"Dependencies/moodycamel",		
 	}

@@ -31,6 +31,7 @@ project "Nebula"
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.entt}",
 	}
 	
 	links
