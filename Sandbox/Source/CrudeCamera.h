@@ -20,7 +20,7 @@ namespace Sandbox {
 		CrudeCamera(uint32_t width, uint32_t height, float zoomLevel = 1.0f);
 		~CrudeCamera() = default;
 
-		void OnUpdate(double deltaTimeMs);
+		void OnUpdate(double deltaTimeS);
 		void OnResize(uint32_t width, uint32_t height);
 		void OnEvent(StarFire::Event& e);
 
