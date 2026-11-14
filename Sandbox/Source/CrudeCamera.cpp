@@ -15,29 +15,29 @@ namespace Sandbox {
 		UpdateProjection();
 	}
 
-	void CrudeCamera::OnUpdate(float deltaTimeMs)
+	void CrudeCamera::OnUpdate(double deltaTimeS)
 	{
 		PROFILE_FUNCTION;
 
 		//Up
 		if (StarFire::Input::IsKeyDown(StarFire::Key::W))
 		{
-			m_Position = glm::vec3(m_Position.x, m_Position.y + m_PanSpeed * deltaTimeMs, 0.0f);
+			m_Position = glm::vec3(m_Position.x, m_Position.y + m_PanSpeed * deltaTimeS, 0.0f);
 		}
 		//Left
 		if (StarFire::Input::IsKeyDown(StarFire::Key::A))
 		{
-			m_Position = glm::vec3(m_Position.x - m_PanSpeed * deltaTimeMs, m_Position.y, 0.0f);
+			m_Position = glm::vec3(m_Position.x - m_PanSpeed * deltaTimeS, m_Position.y, 0.0f);
 		}
 		//Down
 		if (StarFire::Input::IsKeyDown(StarFire::Key::S))
 		{
-			m_Position = glm::vec3(m_Position.x, m_Position.y - m_PanSpeed * deltaTimeMs, 0.0f);
+			m_Position = glm::vec3(m_Position.x, m_Position.y - m_PanSpeed * deltaTimeS, 0.0f);
 		}
 		//Right
 		if (StarFire::Input::IsKeyDown(StarFire::Key::D))
 		{
-			m_Position = glm::vec3(m_Position.x + m_PanSpeed * deltaTimeMs, m_Position.y, 0.0f);
+			m_Position = glm::vec3(m_Position.x + m_PanSpeed * deltaTimeS, m_Position.y, 0.0f);
 		}
 
 		UpdateView();

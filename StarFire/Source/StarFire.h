@@ -5,6 +5,7 @@
 #include "StarFire/Core/ApplicationArgumentParser.h"
 #include "StarFire/Core/Core.h"
 #include "StarFire/Core/Input.h"
+#include "StarFire/Core/Identifier.h"
 #include "StarFire/Core/KeyCodes.h"
 #include "StarFire/Core/Layer.h"
 #include "StarFire/Core/Logging.h"
@@ -20,7 +21,11 @@
 
 // ===== Renderer =====
 #include "StarFire/Renderer/Primitives.h"
-#include "StarFire/Renderer/Renderer.h"
+
+// ===== Scene =====
+#include "StarFire/Scene/Scene.h"
+#include "StarFire/Scene/Entity.h"
+#include "StarFire/Scene/Components.h"
 
 // ===== ImGui =====
 #include "StarFire/ImGui/ImGuiLayer.h"

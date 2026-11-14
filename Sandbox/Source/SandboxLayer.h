@@ -1,5 +1,7 @@
 #pragma once
 #include "StarFire.h"
+#include "Aurora/Renderer/RenderGraph.h"
+#include "Aurora/Renderer/RenderPass.h"
 #include "Substrate/RefPtr.h"
 #include "CrudeCamera.h"
 
@@ -28,6 +30,9 @@ namespace Sandbox {
 
 		CrudeCamera m_Camera;
 
+		Scope<StarFire::Scene> m_Scene;
+		StarFire::Entity m_TriangleEntity;
+
 		double m_CumulativeTimeInMS = 0.0;
 		uint32_t m_FramebufferWidth = 0;
 		uint32_t m_FramebufferHeight = 0;
@@ -35,8 +40,6 @@ namespace Sandbox {
 
 		Ref<Aurora::RenderGraph> m_DefaultRenderGraph;
 		Ref<Aurora::RenderPass> m_TrianglePass;
-		Aurora::Shape2DHandle m_TriangleShapeHandle;
-		Aurora::MaterialHandle m_TriangleColorMaterialHandle;
 
 		struct ViewportPanel
 		{
