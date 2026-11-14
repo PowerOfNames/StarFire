@@ -26,6 +26,7 @@ namespace Sandbox {
 		uint32_t width = 800;
 		uint32_t height = 600;
 
+
 		Aurora::RenderGraphSpecification rgSpecs{};
 		rgSpecs.Name = "Triangle Test RG";
 		rgSpecs.AppGlobalsSize = sizeof(GlobalsData);
@@ -68,7 +69,7 @@ namespace Sandbox {
 		}
 
 		m_DefaultRenderGraph->AddRenderPass(m_TrianglePass);
-		m_DefaultRenderGraph->SetBindlessPipeline(m_BindlessPipeline);
+		m_DefaultRenderGraph->SetBindlessPipeline(m_BindlessPipeline);			
 	}
 
 	void SandboxLayer::OnAttach()
@@ -119,12 +120,25 @@ namespace Sandbox {
 		checkerBoardSpecs.MemUsage = Aurora::MemoryUsage::GPU_ONLY;
 		checkerBoardSpecs.Usage = Aurora::ImageUsageFlags::SAMPLED;
 		m_CheckerBoardTexture = Aurora::CreateImage(checkerBoardSpecs);
+
+		// == ECS ==
+		m_Scene = CreateScope<StarFire::Scene>();
+		m_TriangleEntity = m_Scene->CreateEntity(StarFire::UniversalID(), "Triangle");
+		m_TriangleEntity.AddComponent<StarFire::SpriteComponent>();
+
+		StarFire::SpriteComponent& triangleSprite = m_TriangleEntity.GetComponent<StarFire::SpriteComponent>();
+		triangleSprite.VertexBufferHandle = m_TriangleVertexBufferHandle;
+		triangleSprite.IndexBufferHandle = m_TriangleIndexBufferHandle;
+		triangleSprite.TextureHandle = m_CheckerBoardTexture;
 	}
 
 
 	void SandboxLayer::OnDetach()
 	{
 		PROFILE_FUNCTION;
+
+		m_TriangleEntity = {};
+		m_Scene.reset();
 
 		m_DefaultRenderGraph->Destroy();
 		m_DefaultRenderGraph = nullptr;
@@ -155,7 +169,10 @@ namespace Sandbox {
 
 		// == 2. Update Scene ==
 		if(m_ViewportPanel.IsFocused)
-			m_Camera.OnUpdate(deltaTime.InMilli());
+			m_Camera.OnUpdate(deltaTime.InSec());
+
+		if (m_Scene)
+			m_Scene->OnUpdate(deltaTime.InSec());
 
 		Aurora::GPU::RendererGlobals rendererGlobals{};
 		rendererGlobals.View = m_Camera.GetView();
@@ -164,9 +181,6 @@ namespace Sandbox {
 
 		GlobalsData globals{};
 		globals.AnimationTime = static_cast<float>(fmod(m_CumulativeTimeInMS / 1000.0, SANDBOX_ANIMATION_WRAP));
-		//StarFire::RendererAPI::DrawSprite(m_TriangleShapeHandle, m_TriangleTransform, m_TriangleColorMaterialHandle);
-
-
 
 		// == 3. Update Physics ==
 
@@ -179,8 +193,8 @@ namespace Sandbox {
 		// Here we should probably just call the render graph to execute and it should take care of everything. We might need to do some per-frame setup for the render graph here (like culling), but that should be it.
 
 		//Temp call, this should later consume the finished scene data and either do culling OR take the already culled scene
-		m_DefaultRenderGraph->Execute(m_TriangleVertexBufferHandle, m_TriangleIndexBufferHandle, m_CheckerBoardTexture, rendererGlobals, globals);
-
+		StarFire::SpriteComponent& triangleSprite = m_TriangleEntity.GetComponent<StarFire::SpriteComponent>();
+		m_DefaultRenderGraph->Execute(triangleSprite.VertexBufferHandle, triangleSprite.IndexBufferHandle, triangleSprite.TextureHandle, rendererGlobals, globals);
 	}
 
 	void SandboxLayer::OnGuiRender()

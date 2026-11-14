@@ -21,7 +21,6 @@
 
 // ===== Renderer =====
 #include "StarFire/Renderer/Primitives.h"
-#include "StarFire/Renderer/Renderer.h"
 
 // ===== Scene =====
 #include "StarFire/Scene/Scene.h"
