@@ -17,15 +17,15 @@
 
 namespace Sandbox {
 
-	SandboxLayer::SandboxLayer() 
+	SandboxLayer::SandboxLayer(const SandboxLayerSpecification& specs)
 		: StarFire::Layer("SandboxLayer")
-		, m_Camera( 800, 600, 1.0f )
+		, m_Specification(specs)
+		, m_Camera(specs.ViewportWidth, specs.ViewportHeight, 1.0f)
 	{
 		PROFILE_FUNCTION;
-		
-		uint32_t width = 800;
-		uint32_t height = 600;
 
+		m_FramebufferWidth = m_ViewportPanel.Width = specs.ViewportWidth;
+		m_FramebufferHeight = m_ViewportPanel.Height = specs.ViewportHeight;
 
 		Aurora::RenderGraphSpecification rgSpecs{};
 		rgSpecs.Name = "Triangle Test RG";
@@ -34,27 +34,27 @@ namespace Sandbox {
 
 		// == Simple 2D pass for triangle rendering as test ==
 		{
-			Aurora::RenderPassSpecification specs{};
-			specs.Name = c_DefaultPassName;
+			Aurora::RenderPassSpecification rpSpecs{};
+			rpSpecs.Name = c_DefaultPassName;
 			Aurora::ColorAttachmentSpecification colorAttachment{};
 			colorAttachment.Name = c_DefaultColorAttachmentName;
 			colorAttachment.ImageSpecs.Name = colorAttachment.Name + "_Image";
 			colorAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::COLOR_ATTACHMENT | Aurora::ImageUsageFlags::SAMPLED | Aurora::ImageUsageFlags::TRANSFER_SRC;
 			colorAttachment.ImageSpecs.Format = Aurora::Format::RGBA8_UNORM;
-			colorAttachment.ImageSpecs.Width = width;
-			colorAttachment.ImageSpecs.Height = height;
+			colorAttachment.ImageSpecs.Width = m_ViewportPanel.Width;
+			colorAttachment.ImageSpecs.Height = m_ViewportPanel.Height;
 			colorAttachment.ClearColor = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
-			specs.ColorAttachments.push_back(std::move(colorAttachment));
+			rpSpecs.ColorAttachments.push_back(std::move(colorAttachment));
 
-			specs.DepthAttachment.Name = "Depth";
-			specs.DepthAttachment.ImageSpecs.Name = specs.DepthAttachment.Name + "_Image";
-			specs.DepthAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | Aurora::ImageUsageFlags::TRANSFER_SRC;
-			specs.DepthAttachment.ImageSpecs.Format = Aurora::Format::DEPTH32_SFLOAT;
-			specs.DepthAttachment.ImageSpecs.Width = width;
-			specs.DepthAttachment.ImageSpecs.Height = height;
-			specs.DepthAttachment.ClearDepth = Aurora::Conventions::Z_CLEAR;
-			specs.RenderArea = { width, height };
-			m_TrianglePass = Aurora::RenderPass::Create(specs);
+			rpSpecs.DepthAttachment.Name = "Depth";
+			rpSpecs.DepthAttachment.ImageSpecs.Name = rpSpecs.DepthAttachment.Name + "_Image";
+			rpSpecs.DepthAttachment.ImageSpecs.Usage = Aurora::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | Aurora::ImageUsageFlags::TRANSFER_SRC;
+			rpSpecs.DepthAttachment.ImageSpecs.Format = Aurora::Format::DEPTH32_SFLOAT;
+			rpSpecs.DepthAttachment.ImageSpecs.Width = m_ViewportPanel.Width;
+			rpSpecs.DepthAttachment.ImageSpecs.Height = m_ViewportPanel.Height;
+			rpSpecs.DepthAttachment.ClearDepth = Aurora::Conventions::Z_CLEAR;
+			rpSpecs.RenderArea = { m_ViewportPanel.Width, m_ViewportPanel.Height };
+			m_TrianglePass = Aurora::RenderPass::Create(rpSpecs);
 
 			Aurora::GraphicsPipelineSpecification pipSpecs{};
 			pipSpecs.Name = "Triangle Test Pipeline";
@@ -80,11 +80,8 @@ namespace Sandbox {
 		
 		//This compiles the architecture given during creation and sets up everything. This should contain the complete capability of this render graph
 		m_DefaultRenderGraph->Compile();
-
-		Aurora::AttachmentCopyRequest colorAttachmentCopy{};
-		colorAttachmentCopy.PassName = c_DefaultPassName;
-		colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
-		m_DefaultRenderGraph->AddAttachmentCopy(c_CopyColorTargetName, colorAttachmentCopy);
+		StarFire::ImGuiLayer* imGuiLayer = StarFire::Application::Get()->GetImGuiLayer();
+		HandleImGuiRenderTargetLogic(imGuiLayer != nullptr, imGuiLayer && imGuiLayer->IsActive());
 
 		// == 2. Build scene ==
 		// We do initial scene building here probably. Not sure if this is also the place to load assets etc for the given scene
@@ -200,6 +197,11 @@ namespace Sandbox {
 	void SandboxLayer::OnGuiRender()
 	{
 		PROFILE_FUNCTION;
+	}
+
+	void SandboxLayer::OnImGuiRender()
+	{
+		PROFILE_FUNCTION;
 
 		static bool dockspaceOpen = true;
 		static bool opt_fullscreen_persistant = true;
@@ -287,12 +289,12 @@ namespace Sandbox {
 
 				if (m_ViewportPanel.Width != width || m_ViewportPanel.Height != height)
 				{
-					m_ViewportPanel.Width = width;
-					m_ViewportPanel.Height = height;
+					m_ViewportPanel.Width = static_cast<uint32_t>(width);
+					m_ViewportPanel.Height = static_cast<uint32_t>(height);
 					m_ViewportResized = true;
 				}
 
-				ImGui::Image(textureId, ImVec2{ m_ViewportPanel.Width, m_ViewportPanel.Height }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
+				ImGui::Image(textureId, ImVec2{ static_cast<float>(m_ViewportPanel.Width), static_cast<float>(m_ViewportPanel.Height) }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
 			}
 
 			ImGui::End();
@@ -309,6 +311,7 @@ namespace Sandbox {
 
 		StarFire::EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<StarFire::FramebufferResizeEvent>(STARFIRE_BIND_EVENT_FN(SandboxLayer::OnFramebufferResize));
+		dispatcher.Dispatch<StarFire::KeyPressedEvent>(STARFIRE_BIND_EVENT_FN(SandboxLayer::OnKeyPressed));
 		
 		m_Camera.OnEvent(e);
 	}
@@ -327,7 +330,77 @@ namespace Sandbox {
 		m_FramebufferHeight = e.GetHeight();
 		m_FramebufferResized = true;
 
+		StarFire::ImGuiLayer* layer = StarFire::Application::Get()->GetImGuiLayer();
+		if (layer == nullptr || !layer->IsActive())
+		{
+			m_ViewportPanel.Width = m_FramebufferWidth;
+			m_ViewportPanel.Height = m_FramebufferHeight;
+			m_ViewportResized = true;
+		}
 
 		return false;
 	}
+
+	bool SandboxLayer::OnKeyPressed(StarFire::KeyPressedEvent& e)
+	{
+		PROFILE_FUNCTION;
+		if (e.GetRepeatCount() > 0)
+			return false;
+		if (e.GetKeyCode() == StarFire::Key::F1)
+		{
+			StarFire::ImGuiLayer* imGuiLayer = StarFire::Application::Get()->GetImGuiLayer();
+			if (!imGuiLayer)
+			{
+				APP_ERROR("F1 pressed, but ImGui is not enabled for this app. Enable it in the ApplicationSpecification or via --imGui command line argument to use ImGui.");
+				return false;
+			}
+
+			bool imGuiActive = imGuiLayer->IsActive();
+			imGuiLayer->SetActive(!imGuiActive);
+			imGuiActive = imGuiLayer->IsActive();
+			HandleImGuiRenderTargetLogic(imGuiLayer, imGuiActive);
+
+			if (imGuiActive)
+			{
+				APP_INFO("F1 pressed, ImGui overlay opened.");
+
+				m_ViewportResized = true;
+			}
+			else
+			{
+				APP_INFO("F1 pressed, ImGui overlay closed.");
+
+				m_ViewportPanel.Width = m_FramebufferWidth;
+				m_ViewportPanel.Height = m_FramebufferHeight;
+				m_ViewportResized = true;
+			}
+
+			return true;
+		}
+		return false;
+	}
+
+	void SandboxLayer::HandleImGuiRenderTargetLogic(bool imGuiAvailable, bool imGuiActive)
+	{
+		PROFILE_FUNCTION;
+
+		if (imGuiActive)
+		{
+			m_DefaultRenderGraph->RemoveRenderTarget();
+
+			Aurora::AttachmentOpRequest colorAttachmentCopy{};
+			colorAttachmentCopy.PassName = c_DefaultPassName;
+			colorAttachmentCopy.AttachmentName = c_DefaultColorAttachmentName;
+			m_DefaultRenderGraph->AddAttachmentCopy(c_CopyColorTargetName, colorAttachmentCopy);
+		}
+		else
+		{
+			//Check this, otherwise we try to remove the copy upon startup without it ever being added, which will throw an error
+			if (imGuiAvailable)
+				m_DefaultRenderGraph->RemoveAttachmentCopy(c_CopyColorTargetName);
+						
+			m_DefaultRenderGraph->SetRenderTarget({ c_DefaultPassName, c_DefaultColorAttachmentName });
+		}		
+	}
+
 }

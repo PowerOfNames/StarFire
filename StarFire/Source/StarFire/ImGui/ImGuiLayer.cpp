@@ -20,7 +20,8 @@ namespace StarFire {
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;        // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;			// Enable multiple viewports
-
+		
+		io.ConfigNavCaptureKeyboard = false;
 		io.ConfigDpiScaleFonts = true; // Enable DPI scaling for fonts - automatically scales the font size based on DPpi of current display
 
 		ImGui::StyleColorsDark();
@@ -43,7 +44,7 @@ namespace StarFire {
 
 	void ImGuiLayer::OnEvent(Event& e)
 	{
-		if (m_BlockEvents)
+		if (m_BlockEvents && m_IsActive)
 		{
 			ImGuiIO& io = ImGui::GetIO();
 			e.Handled |= e.IsInCategory(EventCategory::MOUSE) & io.WantCaptureMouse;
@@ -71,6 +72,11 @@ namespace StarFire {
 
 	void ImGuiLayer::BeginFrame() const
 	{
+		PROFILE_FUNCTION;
+
+		if (!m_IsActive)
+			return;
+
 		m_ImGuiRenderer->BeginFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -78,6 +84,11 @@ namespace StarFire {
 
 	void ImGuiLayer::EndFrame() const
 	{
+		PROFILE_FUNCTION;
+
+		if (!m_IsActive)
+			return;
+
 		ImGui::Render();
 		m_ImGuiRenderer->EndFrame();
 		ImGui::EndFrame();

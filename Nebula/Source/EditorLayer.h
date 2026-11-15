@@ -13,6 +13,7 @@ namespace Nebula {
 		virtual void OnDetach() override;
 		virtual void OnUpdate(StarFire::Timestep deltaTime) override;
 		virtual void OnGuiRender() override;
+		virtual void OnImGuiRender() override;
 
 		virtual void OnEvent(StarFire::Event& e) override;
 

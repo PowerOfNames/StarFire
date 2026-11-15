@@ -139,6 +139,25 @@ namespace Aurora::VK {
 		return true;
 	}
 
+	void VulkanContext::FinalizeRenderTarget(VulkanImageData* renderTargetSrc, VkImageLayout finalSrcLayout)
+	{
+		PROFILE_FUNCTION;
+
+		VkFormat swapchainImageFormat = m_Swapchain->GetImageFormat();
+		VulkanFrame& frame = GetCurrentFrameData();
+
+		if (renderTargetSrc->Layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+			renderTargetSrc->Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTargetSrc->Image, renderTargetSrc->Format, renderTargetSrc->Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		if (frame.TargetLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, true);
+
+		VK::Commands::BlitImageToImage(frame.CommandBuffer, renderTargetSrc->Image, renderTargetSrc->Width, renderTargetSrc->Height, frame.TargetImage, frame.Extent.width, frame.Extent.height);
+
+		renderTargetSrc->Layout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, renderTargetSrc->Image, renderTargetSrc->Format, renderTargetSrc->Layout, finalSrcLayout);
+		frame.TargetLayout = VK::Commands::TransitionImageLayout(frame.CommandBuffer, frame.TargetImage, swapchainImageFormat, frame.TargetLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true);		
+	}
+
 	void VulkanContext::EndFrame()
 	{
 		PROFILE_FUNCTION;
@@ -146,18 +165,6 @@ namespace Aurora::VK {
 
 		VulkanFrame& frame = GetCurrentFrameData();
 		AURORA_VK_CHECK(vkEndCommandBuffer(frame.CommandBuffer), VK_SUCCESS, "Failed to end command buffer (frame index: {}).", frame.FrameIndex);		
-	}
-
-	void VulkanContext::Render()
-	{
-		PROFILE_FUNCTION;
-
-
-		VkCommandBuffer cmd = GetCurrentFrameData().CommandBuffer;
-		/*for (const RenderCommand& command : RenderCommandQueue)
-		{
-			command(cmd);
-		}*/
 	}
 
 	void VulkanContext::SwapFrame()
@@ -1775,7 +1782,6 @@ namespace Aurora::VK {
 
 
 	// ========== Privat helper ==========
-
 	int VulkanContext::EvaluatePhysicalDevice(VkPhysicalDevice phDevice, const DeviceRequirements& deviceRequirements) const
 	{
 		PROFILE_FUNCTION;

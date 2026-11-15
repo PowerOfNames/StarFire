@@ -33,6 +33,7 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 	StarFire::ApplicationSpecification specs;
 	specs.Name = "Nebula";
+	specs.EnableImGui = true;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string_view token = std::string_view(argv[i]);

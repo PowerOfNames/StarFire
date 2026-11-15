@@ -28,7 +28,11 @@ namespace Sandbox {
 		{
 			if (m_Options.ThrowsInOnInit)
 				throw std::runtime_error("Intentional test throw ");
-			PushLayer(new SandboxLayer());
+
+			SandboxLayerSpecification layerSpecs{};
+			layerSpecs.ViewportWidth = m_Specification.WindowSpecs.Width;
+			layerSpecs.ViewportHeight = m_Specification.WindowSpecs.Height;
+			PushLayer(new SandboxLayer(layerSpecs));
 		}
 
 		~SandboxApp()
@@ -47,7 +51,6 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 
 	StarFire::ApplicationSpecification specs;
 	specs.Name = "StarFire - Sandbox";
-	specs.UseImGui = true;
 
 	Sandbox::SandboxOptions options{};
 	for (int i = 1; i < argc; i++)
@@ -70,6 +73,10 @@ StarFire::Application* StarFire::CreateApplication(int argc, char** argv)
 		else if (token == "--fullscreen")
 		{
 			specs.WindowSpecs.Fullscreen = true;
+		}
+		else if (token == "--imGui")
+		{
+			specs.EnableImGui = true;
 		}
 		else if (token == "--frames" && i + 1 < argc)
 		{

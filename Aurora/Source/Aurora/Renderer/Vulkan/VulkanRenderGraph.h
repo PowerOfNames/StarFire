@@ -58,7 +58,7 @@ namespace Aurora::VK {
 		virtual void OnResize(uint32_t width, uint32_t height) override;
 
 		virtual void AddRenderPass(const Ref<RenderPass>& renderPass) override;
-		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo) override;
+		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentOpRequest& copyInfo) override;
 		virtual void RemoveAttachmentCopy(std::string_view copyRequestName) override;
 		virtual ImageHandle GetCopyTarget(std::string_view copyRequestName) override;
 
@@ -68,6 +68,9 @@ namespace Aurora::VK {
 		virtual bool Compile() override;
 
 		virtual void Execute(const VertexBufferHandle vbHandle, const IndexBufferHandle ibHandle, const ImageHandle textureHandle, const GPU::RendererGlobals& rendererGlobals, std::span<const std::byte> appGlobals) override;
+		
+		virtual void SetRenderTarget(const AttachmentOpRequest& finalTargetRequest) override;
+		virtual void RemoveRenderTarget() override;
 
 		virtual inline const RenderGraphSpecification& GetSpecification() const override { return m_Specification; }
 
@@ -94,11 +97,14 @@ namespace Aurora::VK {
 
 
 		std::vector<Ref<RenderPass>> m_RenderPasses;
-		std::unordered_map<std::string, AttachmentCopyRequest> m_CopyRequests;
+		std::unordered_map<std::string, AttachmentOpRequest> m_CopyRequests;
 
 		//Matched passes with copy requests
 		std::unordered_map<std::string, CompiledAttachmentCopy> m_CompiledCopies;
 		std::vector<CompiledPass> m_CompiledPasses;
+
+		AttachmentOpRequest m_FinalRenderTargetRequest{};
+		std::vector<CompiledAttachment*> m_FinalRenderTargetFifs;
 
 		Ref<GraphicsPipeline> m_BindlessPipeline;
 

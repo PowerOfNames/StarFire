@@ -19,6 +19,7 @@ namespace StarFire {
 		virtual void OnUpdate(Timestep deltaTime) {};
 		
 		virtual void OnGuiRender() {};
+		virtual void OnImGuiRender() {};
 
 		virtual void OnEvent(Event& event) {};
 

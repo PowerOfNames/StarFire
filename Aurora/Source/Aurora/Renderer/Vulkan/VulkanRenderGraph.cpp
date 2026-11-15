@@ -50,6 +50,7 @@ namespace Aurora::VK {
 			rp->Destroy();		
 		m_RenderPasses.clear();
 		ClearCompilations();
+		m_FinalRenderTargetFifs.clear();
 	}
 
 	void VulkanRenderGraph::ClearCompilations()
@@ -201,7 +202,10 @@ namespace Aurora::VK {
 		// Even though AddCopyRequest must only be called after Compile, during resize copy targets need to be recompiled as well. 
 		// Hence CopyRequest compilation needs to happen here for previously added requests
 		for (const auto& [copyName, copyRequest] : m_CopyRequests)
-			CompileCopyRequest(copyName);		
+			CompileCopyRequest(copyName);
+
+		if (m_FinalRenderTargetFifs.size() > 0)
+			SetRenderTarget(m_FinalRenderTargetRequest);
 
 		return true;
 	}
@@ -430,6 +434,12 @@ namespace Aurora::VK {
 					continue;
 			}
 		}
+
+		if (m_FinalRenderTargetFifs.size() > 0)
+		{
+			VulkanImageData* renderTarget = resManager->GetImageData(m_FinalRenderTargetFifs[frameData.FrameIndex]->Handle);
+			renderContext->FinalizeRenderTarget(renderTarget, renderTarget->Layout);
+		}
 	}
 
 	void VulkanRenderGraph::DrawObjects(VkCommandBuffer cmd, VertexBufferHandle vertices, IndexBufferHandle indices, uint8_t frameIdx, ImageHandle textureHandle)
@@ -469,7 +479,34 @@ namespace Aurora::VK {
 		indexedDraw.IndexOffset = indexBufferData->Offset;
 		indexedDraw.IndexCount = static_cast<uint32_t>(indexBufferData->Size / Convert::GetIndexTypeSize(indexBufferData->IndexType));
 		indexedDraw.IndexType = indexBufferData->IndexType;
-		renderer->DrawIndexed(cmd, indexedDraw);		
+		renderer->DrawIndexed(cmd, indexedDraw);
+	}
+
+	void VulkanRenderGraph::SetRenderTarget(const AttachmentOpRequest& finalTargetRequest)
+	{
+		PROFILE_FUNCTION;
+
+		AURORA_VALIDATE(m_Compiled, "RenderGraph must be compiled before finalizing render targets.");
+		AURORA_VALIDATE(finalTargetRequest.PassName.empty() == false, "Empty PassName not allowed.");
+		AURORA_VALIDATE(finalTargetRequest.AttachmentName.empty() == false, "Empty AttachmentName not allowed.");
+
+		const std::vector<CompiledAttachment*> foundAttachments = FindAttachmentByNameInPass(finalTargetRequest.PassName, finalTargetRequest.AttachmentName);
+		AURORA_VALIDATE(foundAttachments.size() > 0, "FinalizeRenderTarget: Could not find any attachments in pass {} with name {}.",
+						 finalTargetRequest.PassName.c_str(),
+						 finalTargetRequest.AttachmentName.c_str());
+
+
+		m_FinalRenderTargetFifs.clear();
+		m_FinalRenderTargetFifs = foundAttachments;
+		m_FinalRenderTargetRequest = finalTargetRequest;
+	}
+
+	void VulkanRenderGraph::RemoveRenderTarget()
+	{
+		PROFILE_FUNCTION;
+
+		m_FinalRenderTargetFifs.clear();
+		m_FinalRenderTargetRequest = {};
 	}
 
 
@@ -482,7 +519,7 @@ namespace Aurora::VK {
 		m_RenderPasses.push_back(renderPass);
 	}
 
-	void VulkanRenderGraph::AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo)
+	void VulkanRenderGraph::AddAttachmentCopy(std::string_view copyRequestName, const AttachmentOpRequest& copyInfo)
 	{
 		PROFILE_FUNCTION;
 
@@ -575,6 +612,7 @@ namespace Aurora::VK {
 	{
 		PROFILE_FUNCTION;
 
+		// # maybe remove the first validation and just silently return if the copy request is not found. This would allow for easier cleanup without having to check if a copy request was added before.
 		std::string copyName = std::string(copyRequestName);
 		AURORA_VALIDATE(m_CopyRequests.find(copyName) != m_CopyRequests.end(), "Copy request {} was not registered in m_CopyRequests. This should never happen and might cause leaks!", copyName.c_str());
 		m_CopyRequests.erase(copyName);
@@ -594,7 +632,6 @@ namespace Aurora::VK {
 			foundAttachments[i]->CopyRequested = false;
 
 		m_CompiledCopies.erase(copyName);
-
 	}	
 
 	ImageHandle VulkanRenderGraph::GetCopyTarget(std::string_view copyRequestName)

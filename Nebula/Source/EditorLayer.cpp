@@ -29,6 +29,11 @@ namespace Nebula {
 		PROFILE_FUNCTION;
 	}
 
+	void EditorLayer::OnImGuiRender()
+	{
+		PROFILE_FUNCTION;
+	}
+
 	void EditorLayer::OnEvent(StarFire::Event& e)
 	{
 		PROFILE_FUNCTION;
