@@ -128,7 +128,7 @@ namespace StarFire {
 		}
 
 		// ========== ImGui setup ==========
-		if (m_Specification.UseImGui)
+		if (m_Specification.EnableImGui)
 		{
 			m_ImGuiLayer = new ImGuiLayer();
 			PushOverlay(m_ImGuiLayer);
@@ -200,16 +200,20 @@ namespace StarFire {
 				layer->OnUpdate(Timestep(m_DeltaTimeInS));
 			}
 
-			if (m_ImGuiLayer)
-				m_ImGuiLayer->BeginFrame();
-
 			for (Layer* layer : m_LayerStack)
 			{
 				layer->OnGuiRender();
 			}
+			
+			if (m_ImGuiLayer && m_ImGuiLayer->IsActive())
+			{
+				m_ImGuiLayer->BeginFrame();
 
-			if (m_ImGuiLayer)
+				for (Layer* layer : m_LayerStack)				
+					layer->OnImGuiRender();
+				
 				m_ImGuiLayer->EndFrame();
+			}
 
 			Aurora::EndFrame();
 			Aurora::SwapFrame();

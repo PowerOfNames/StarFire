@@ -3,16 +3,17 @@
 
 namespace Nebula {
 
-	class EditorLayer : public StarFire::Layer
+	class NebulaMainLayer : public StarFire::Layer
 	{
 	public:
-		EditorLayer();
-		~EditorLayer() = default;
+		NebulaMainLayer();
+		~NebulaMainLayer() = default;
 
 		virtual void OnAttach() override;
 		virtual void OnDetach() override;
 		virtual void OnUpdate(StarFire::Timestep deltaTime) override;
 		virtual void OnGuiRender() override;
+		virtual void OnImGuiRender() override;
 
 		virtual void OnEvent(StarFire::Event& e) override;
 

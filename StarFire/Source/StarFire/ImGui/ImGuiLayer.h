@@ -24,6 +24,8 @@ namespace StarFire {
 		void EndFrame() const;
 
 		void BlockEvents(bool state) { m_BlockEvents = state; }
+		bool IsActive() const { return m_IsActive; }
+		void SetActive(bool state) { m_IsActive = state; }
 
 		const Ref<Aurora::ImGuiRenderer> GetImGuiRenderer() const { return m_ImGuiRenderer;	}
 
@@ -31,7 +33,8 @@ namespace StarFire {
 		bool OnFramebufferResize(FramebufferResizeEvent& e);
 
 	private:
-		bool m_BlockEvents = true;
+		bool m_BlockEvents = false;
+		bool m_IsActive = true;
 
 		Ref<Aurora::ImGuiRenderer> m_ImGuiRenderer = nullptr;
 	};

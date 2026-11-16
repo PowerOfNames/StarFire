@@ -16,7 +16,7 @@ namespace StarFire {
 		std::string Name;
 		std::filesystem::path ProjectPath;
 		uint64_t MaxFrames = UINT64_MAX;
-		bool UseImGui = false;
+		bool EnableImGui = false;
 
 		struct ApplicationWindowSpecification
 		{			
@@ -64,8 +64,10 @@ namespace StarFire {
 		bool OnWindowResize(WindowResizeEvent& e);
 		bool OnFramebufferResize(FramebufferResizeEvent& e);
 
-	private:
+	protected:
 		ApplicationSpecification m_Specification;
+
+	private:
 		static Application* s_Instance;
 				
 		Scope<Window> m_MainWindow = nullptr;

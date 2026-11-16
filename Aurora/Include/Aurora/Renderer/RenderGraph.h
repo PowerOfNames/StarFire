@@ -22,10 +22,10 @@ namespace Aurora {
 	};
 
 
-	struct AttachmentCopyRequest
+	struct AttachmentOpRequest
 	{
-		std::string PassName;
-		std::string AttachmentName;
+		std::string PassName = std::string();
+		std::string AttachmentName = std::string();
 	};
 
 	class RenderGraph : public ::Substrate::RefCounted, public ::Substrate::Base<RenderGraph>
@@ -48,7 +48,7 @@ namespace Aurora {
 		// possible (cycling a deferred pass between albedo, normals, depth). Pre-baking a copy for every
 		// attachment would allocate images nobody looks at, so a copy only exists while subscribed.
 		// Compile() rebuilds every registered copy, so subscriptions survive a resize without re-adding.
-		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentCopyRequest& copyInfo) = 0;
+		virtual void AddAttachmentCopy(std::string_view copyRequestName, const AttachmentOpRequest& copyInfo) = 0;
 		virtual void RemoveAttachmentCopy(std::string_view copyRequestName) = 0;
 
 		virtual void SetBindlessPipeline(const Ref<GraphicsPipeline>& pipeline) = 0;
@@ -69,6 +69,12 @@ namespace Aurora {
 			static_assert(!std::is_pointer_v<TAppGlobals>);
 			Execute(vbHandle, ibHandle, textureHandle, rendererGlobals, std::as_bytes(std::span(&appGlobals, 1)));
 		}
+
+		/// <summary>
+		/// Hooks into RenderContext and blits the final result into the swapchain image of the current frame.
+		/// </summary>
+		virtual void SetRenderTarget(const AttachmentOpRequest& finalTargetRequest) = 0;
+		virtual void RemoveRenderTarget() = 0;		
 
 		virtual const RenderGraphSpecification& GetSpecification() const = 0;
 	};

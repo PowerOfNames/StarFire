@@ -9,23 +9,36 @@
 
 namespace Sandbox {
 
+	struct SandboxLayerSpecification
+	{
+		uint32_t ViewportWidth = 800;
+		uint32_t ViewportHeight = 600;
+	};
+
 	class SandboxLayer : public StarFire::Layer
 	{
 	public:
-		SandboxLayer();
+		SandboxLayer(const SandboxLayerSpecification& specs);
 		~SandboxLayer() = default;
 
 		virtual void OnAttach() override;
 		virtual void OnDetach() override;
 		virtual void OnUpdate(StarFire::Timestep deltaTime) override;
 		virtual void OnGuiRender() override;
+		virtual void OnImGuiRender() override;
 
 		virtual void OnEvent(StarFire::Event& e) override;
 
 	private:
+		// == Events ==
 		bool OnFramebufferResize(StarFire::FramebufferResizeEvent& e);
+		bool OnKeyPressed(StarFire::KeyPressedEvent& e);
 
+		// == Others ==
+		void HandleImGuiRenderTargetLogic(bool imGuiAvailable, bool imGuiActive);
 	private:
+		SandboxLayerSpecification m_Specification{};
+
 		bool m_OpenDemoWindow = true;
 
 		CrudeCamera m_Camera;
@@ -44,8 +57,8 @@ namespace Sandbox {
 		struct ViewportPanel
 		{
 			glm::vec2 Bounds[2] = { {0.0f, 0.0f,}, {1.0f, 1.0f} };
-			float Width = 0.0f;
-			float Height = 0.0f;
+			uint32_t Width = 0;
+			uint32_t Height = 0;
 			bool IsFocused = false;
 			bool IsHovered = false;
 		};

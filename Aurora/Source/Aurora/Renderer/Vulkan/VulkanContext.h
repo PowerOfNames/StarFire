@@ -29,7 +29,15 @@ namespace Aurora::VK {
 
 		bool Init();	
 		bool BeginFrame();
-		void Render();
+
+		/// <summary>
+		/// Checks layout of <param name="renderTarget"> and transitions it to TRANSFER_SRC
+		/// Blits <param name="renderTarget"> into the current FrameData's swapchain image
+		/// Transitions <param name="renderTarget"> back to <param name="finalSrcLayout"> layout
+		/// </summary>
+		/// <param name="renderTargetSrc">Source render target</param>
+		/// <param name="finalSrcLayout">Final layout for the source render target</param>
+		void FinalizeRenderTarget(VulkanImageData* renderTargetSrc, VkImageLayout finalSrcLayout);
 		void EndFrame();
 		void SwapFrame();
 		void Resize(uint32_t width, uint32_t height);
